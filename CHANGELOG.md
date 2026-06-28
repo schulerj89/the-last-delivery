@@ -2,6 +2,12 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.21.1] - 2026-06-28
+
+### Added
+
+- Added `docs/PERFORMANCE.md` with the project performance policy for frame timing, renderer metrics, pixel-ratio limits, asset imports, and GPU resource disposal.
+
 ## [0.21.0] - 2026-06-28
 
 ### Added
