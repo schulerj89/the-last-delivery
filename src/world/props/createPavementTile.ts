@@ -171,12 +171,16 @@ export const createPavementTileGeometry = (
       const reliefStep = ((stoneHash >>> 8) % 3) / 2;
       const y1 = height / 2 + reliefStep * pavementTileDetailConfig.relief;
       const rowOffset = row % 2 === 0 ? 0 : cellWidth * 0.16;
-      const minX = -width / 2 + column * cellWidth + gap / 2 + rowOffset;
-      const maxX = -width / 2 + (column + 1) * cellWidth - gap / 2 + rowOffset;
-      const x0 = clamp(minX, -width / 2 + gap / 2, width / 2 - gap / 2);
-      const x1 = clamp(maxX, -width / 2 + gap / 2, width / 2 - gap / 2);
-      const z0 = -depth / 2 + row * cellDepth + gap / 2;
-      const z1 = -depth / 2 + (row + 1) * cellDepth - gap / 2;
+      const tileMinX = -width / 2;
+      const tileMaxX = width / 2;
+      const tileMinZ = -depth / 2;
+      const tileMaxZ = depth / 2;
+      const minX = tileMinX + column * cellWidth + (column === 0 ? 0 : gap / 2) + rowOffset;
+      const maxX = tileMinX + (column + 1) * cellWidth - (column === columns - 1 ? 0 : gap / 2) + rowOffset;
+      const x0 = column === 0 ? tileMinX : clamp(minX, tileMinX, tileMaxX);
+      const x1 = column === columns - 1 ? tileMaxX : clamp(maxX, tileMinX, tileMaxX);
+      const z0 = row === 0 ? tileMinZ : tileMinZ + row * cellDepth + gap / 2;
+      const z1 = row === rows - 1 ? tileMaxZ : tileMinZ + (row + 1) * cellDepth - gap / 2;
 
       if (x1 <= x0 || z1 <= z0) {
         continue;

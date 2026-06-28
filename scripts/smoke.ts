@@ -174,6 +174,7 @@ import {
 import { createPlaygroundVisualBoundsDebugView } from '../src/world/playgroundVisualBoundsDebug';
 import { createMailboxProp } from '../src/world/props/createMailbox';
 import {
+  createPavementTileGeometry,
   getPavementTileGridSize,
   pavementTileDetailConfig,
 } from '../src/world/props/createPavementTile';
@@ -1742,6 +1743,15 @@ const runPlacementEditorSmoke = (): void => {
     assert(pavementTileDetailConfig.jointGap > 0, 'Pavement tiles should define visible joints.');
     assert(pavementTileDetailConfig.relief > 0, 'Pavement tiles should define subtle surface relief.');
     assert(pavementGrid.columns > 1 && pavementGrid.rows > 1, 'Pavement tile grid should create multiple stone cells.');
+    const squarePavementGeometry = createPavementTileGeometry([4, 0.05, 4], 'smoke-square-footprint');
+    const squarePavementBox = squarePavementGeometry.boundingBox;
+    assert(squarePavementBox !== null, 'Generated pavement geometry should compute a bounding box.');
+    assert(Math.abs(squarePavementBox.min.x + 2) < 0.001, 'Generated square pavement should fill its left edge.');
+    assert(Math.abs(squarePavementBox.max.x - 2) < 0.001, 'Generated square pavement should fill its right edge.');
+    assert(Math.abs(squarePavementBox.min.z + 2) < 0.001, 'Generated square pavement should fill its back edge.');
+    assert(Math.abs(squarePavementBox.max.z - 2) < 0.001, 'Generated square pavement should fill its front edge.');
+    assert(Math.abs(squarePavementBox.max.x - squarePavementBox.min.x - (squarePavementBox.max.z - squarePavementBox.min.z)) < 0.001, 'Generated square pavement should have a square X/Z footprint.');
+    squarePavementGeometry.dispose();
     pavementPreview.scale.set(pavementDraft.scaleMultiplier, 1, pavementDraft.scaleMultiplier);
     pavementPreview.updateMatrixWorld(true);
     const pavementPreviewBox = new Box3().setFromObject(pavementPreview);

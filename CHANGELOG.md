@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.55.2] - 2026-06-28
+
+### Fixed
+
+- Made generated pavement tile geometry fill the full square X/Z footprint so duplicated tiles align cleanly on all outside edges.
+- Preserved internal stone joints and color variation while keeping the tile perimeter rectangular.
+- Added smoke coverage for exact square pavement bounds.
+
 ## [0.55.1] - 2026-06-28
 
 ### Fixed
