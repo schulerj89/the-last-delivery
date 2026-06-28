@@ -8,8 +8,8 @@ export interface DeliveryDebugOverlay {
 const formatStatus = (state: DeliveryState): string => state.status.replace('-', ' ');
 
 const formatObjective = (state: DeliveryState): string => {
-  if (state.status === 'delivery-accepted') {
-    return `Deliver to ${state.activeTargetWorldObjectId ?? 'target'}`;
+  if (state.status === 'delivery-accepted' && state.activeDelivery) {
+    return `Deliver to ${state.activeDelivery.destinationName}`;
   }
 
   return 'Go to delivery board';
@@ -17,7 +17,9 @@ const formatObjective = (state: DeliveryState): string => {
 
 const formatActiveDelivery = (state: DeliveryState): string => state.activeDelivery?.title ?? 'None';
 
-const formatActiveTarget = (state: DeliveryState): string => state.activeTargetWorldObjectId ?? 'None';
+const formatActiveTarget = (state: DeliveryState): string => (
+  state.activeDelivery?.destinationName ?? state.activeTargetWorldObjectId ?? 'None'
+);
 
 export const createDeliveryDebugOverlay = (parent: HTMLElement): DeliveryDebugOverlay => {
   const overlay = document.createElement('div');

@@ -15,6 +15,8 @@ export type WorldObjectKind =
   | 'tree'
   | 'well';
 
+export type MailboxVariant = 'red' | 'blue' | 'green';
+
 export interface WorldColliderDefinition {
   position: THREE.Vector3Tuple;
   size: THREE.Vector3Tuple;
@@ -27,6 +29,11 @@ export interface WorldInteractableDefinition {
 
 export interface WorldObjectiveAnchorDefinition {
   position: THREE.Vector3Tuple;
+}
+
+export interface WorldMailboxDefinition {
+  variant: MailboxVariant;
+  destinationName: string;
 }
 
 export type WorldRenderDefinition =
@@ -43,4 +50,5 @@ export interface WorldObjectDefinition {
   collider?: WorldColliderDefinition;
   interactable?: WorldInteractableDefinition;
   objectiveAnchor?: WorldObjectiveAnchorDefinition;
+  mailbox?: WorldMailboxDefinition;
 }

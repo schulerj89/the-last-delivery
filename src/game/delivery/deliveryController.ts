@@ -49,7 +49,7 @@ export const createDeliveryController = (
       }
 
       if (activeDelivery.targetInteractableId !== targetInteractableId) {
-        return `Wrong mailbox. Deliver "${activeDelivery.title}" to ${activeDelivery.targetWorldObjectId}.`;
+        return `Wrong mailbox. Deliver "${activeDelivery.title}" to ${activeDelivery.destinationName}.`;
       }
 
       const completedDelivery = activeDelivery;

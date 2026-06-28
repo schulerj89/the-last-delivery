@@ -39,6 +39,7 @@ import {
   setObjectiveMarkerTarget,
   updateObjectiveMarker,
 } from '../src/world/playgroundObjectiveMarker';
+import { createMailboxProp } from '../src/world/props/createMailbox';
 import { villageWorldObjects } from '../src/world/villageDefinition';
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -285,13 +286,23 @@ const runWorldDefinitionSmoke = (): void => {
     assert(target.id === job.targetInteractableId, `Delivery job target ids should match current mailbox interactables: ${job.id}`);
     assert(target.interactable !== undefined, `Delivery job target should be interactable: ${job.id}`);
     assert(target.objectiveAnchor !== undefined, `Delivery job target should have an objective anchor: ${job.id}`);
+    assert(target.mailbox !== undefined, `Delivery job target should have mailbox metadata: ${job.id}`);
     assert(job.destinationName.trim().length > 0, `Delivery job should have a destination name: ${job.id}`);
-    assert(job.destinationName.includes('House Mailbox'), `Delivery job destination should be player-readable: ${job.id}`);
+    assert(job.destinationName === target.mailbox.destinationName, `Delivery job destination should match mailbox target metadata: ${job.id}`);
     assert(job.description.trim().length > 0, `Delivery job should have a description: ${job.id}`);
     assert(Number.isFinite(job.reward) && job.reward > 0, `Delivery job reward should be positive: ${job.id}`);
   });
 
+  const mailboxDestinations = new Set(mailboxObjects.map((mailbox) => mailbox.mailbox?.destinationName));
+  const mailboxVariants = new Set(mailboxObjects.map((mailbox) => mailbox.mailbox?.variant));
+
   assert(deliveryJobs.length >= 3, 'Village should define at least three delivery jobs.');
+  assert(mailboxDestinations.has('Blue House Mailbox'), 'Blue House Mailbox destination should exist.');
+  assert(mailboxDestinations.has('Hill Path Mailbox'), 'Hill Path Mailbox destination should exist.');
+  assert(mailboxDestinations.has('Post Office Return Box'), 'Post Office Return Box destination should exist.');
+  assert(mailboxVariants.has('blue'), 'A blue mailbox variant should exist.');
+  assert(mailboxVariants.has('red'), 'A red mailbox variant should exist.');
+  assert(mailboxVariants.has('green'), 'A green mailbox variant should exist.');
   assert(assetRenderedObjects.some((object) => object.id === 'crate-large' && object.render?.mode === 'asset' && object.render.assetId === 'fantasy-box-001'), 'The large crate should use the selected fantasy box prop.');
   assert(selectedNatureObjects.length >= 10, 'Village should place selected nature assets through world definitions.');
   assert(selectedFantasyObjects.length >= 12, 'Village should place selected fantasy assets through world definitions.');
@@ -305,9 +316,10 @@ const runWorldDefinitionSmoke = (): void => {
   assert(cartObjects.every((object) => object.collider), 'Large cart dressing should keep a simple collider.');
   assert(sackObjects.length >= 2, 'Village should define fantasy sack dressing props.');
   assert(sackObjects.every((object) => object.collider === undefined), 'Small sack dressing should stay non-collidable.');
-  assert(mailboxObjects.length === 2, 'Village should define exactly two mailbox placeholders.');
+  assert(mailboxObjects.length === 3, 'Village should define exactly three procedural mailbox targets.');
   assert(mailboxObjects.every((object) => object.interactable), 'Every village mailbox should be interactable.');
   assert(mailboxObjects.every((object) => object.objectiveAnchor), 'Every village mailbox should have an objective anchor.');
+  assert(mailboxObjects.every((object) => object.mailbox), 'Every village mailbox should have variant and destination metadata.');
   assert(cottageObjects.length === 3, 'Village should define exactly three cottage placeholders.');
   assert(deliveryBoard !== undefined, 'Delivery board world object should exist.');
   assert(deliveryBoard.interactable !== undefined, 'Delivery board interactable should still exist.');
@@ -342,6 +354,10 @@ const runDeliveryStateSmoke = (): void => {
   assert(delivery.getState().status === 'delivery-accepted', 'Accepted delivery should update status.');
   assert(delivery.getState().activeDeliveryId === firstDelivery.id, 'Accepting delivery should set the active delivery id.');
   assert(delivery.getState().activeTargetId === firstDelivery.targetInteractableId, 'Accepting delivery should set the active target id.');
+  const activeDeliveryTarget = villageWorldObjects.find((object) => object.id === delivery.getState().activeTargetWorldObjectId);
+  assert(activeDeliveryTarget !== undefined, 'Active delivery target should resolve to a world object.');
+  assert(activeDeliveryTarget.kind === 'mailbox', 'Active delivery target should resolve to a mailbox object.');
+  assert(activeDeliveryTarget.objectiveAnchor !== undefined, 'Active delivery mailbox should expose an objective anchor.');
 
   assert(
     delivery.completeDelivery(wrongTarget.targetInteractableId).startsWith('Wrong mailbox.'),
@@ -378,10 +394,12 @@ const runInteractionSmoke = (): void => {
   });
   const mailbox = interactables.find((interactable) => interactable.id === 'mailbox');
   const eastMailbox = interactables.find((interactable) => interactable.id === 'mailbox-east');
+  const returnBox = interactables.find((interactable) => interactable.id === 'mailbox-post-office-return');
   const board = interactables.find((interactable) => interactable.id === 'delivery-board');
 
   assert(mailbox !== undefined, 'Mailbox interactable should initialize.');
   assert(eastMailbox !== undefined, 'East mailbox interactable should initialize.');
+  assert(returnBox !== undefined, 'Post office return box interactable should initialize.');
   assert(board !== undefined, 'Delivery board interactable should initialize.');
 
   assert(typeof board.prompt === 'function' && board.prompt() === 'Open delivery board', 'Board should prompt for opening the delivery board.');
@@ -556,14 +574,31 @@ const runModuleSmoke = (): void => {
     'Collision boxes should be generated from collidable world objects.',
   );
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'mailbox'), 'Mailbox collision box should initialize.');
+  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'mailbox-post-office-return'), 'Post office return box collision should initialize.');
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'post-office'), 'Post office collision box should initialize.');
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'cottage-west'), 'Village cottage collision should initialize.');
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'town-well'), 'Town well collision should initialize.');
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'cart-south-path'), 'Large fantasy cart collision should initialize.');
 
+  const mailboxProp = createMailboxProp({
+    id: 'smoke-mailbox',
+    position: [0, 0, 0],
+    variant: 'green',
+  });
+  assert(mailboxProp.name === 'village:smoke-mailbox', 'Procedural mailbox prop should initialize.');
+  assert(mailboxProp.getObjectByName('village:smoke-mailbox:post') !== undefined, 'Procedural mailbox should include a wooden post.');
+  assert(mailboxProp.getObjectByName('village:smoke-mailbox:rounded-body') !== undefined, 'Procedural mailbox should include a rounded body.');
+  assert(mailboxProp.getObjectByName('village:smoke-mailbox:front-door') !== undefined, 'Procedural mailbox should include a front door.');
+  assert(mailboxProp.getObjectByName('village:smoke-mailbox:flag') !== undefined, 'Procedural mailbox should include a flag.');
+  assert(mailboxProp.getObjectByName('village:smoke-mailbox:mail-symbol') !== undefined, 'Procedural mailbox should include a mail symbol.');
+
   const playground = createPlayground();
   assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');
   assert(playground.children.length > 20, 'Village square should include primitive blockout children.');
+  assert(playground.getObjectByName('village:mailbox:rounded-body') !== undefined, 'Blue mailbox procedural body should initialize.');
+  assert(playground.getObjectByName('village:mailbox-east:rounded-body') !== undefined, 'Red mailbox procedural body should initialize.');
+  assert(playground.getObjectByName('village:mailbox-post-office-return:rounded-body') !== undefined, 'Green return-box procedural body should initialize.');
+  assert(playground.getObjectByName('village:mailbox:mail-symbol') !== undefined, 'Procedural mailbox mail symbol should initialize in the village.');
   assert(playground.getObjectByName('village:crate-large') !== undefined, 'Asset-targeted crate fallback should initialize.');
   assert(playground.getObjectByName('village:cottage-west:body') !== undefined, 'Fantasy cottage primitive fallback should initialize.');
   assert(playground.getObjectByName('village:post-office:body') !== undefined, 'Fantasy post office primitive fallback should initialize.');

@@ -82,6 +82,10 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     kind: 'mailbox',
     position: [-4.2, 0, 2.8],
     dimensions: [0.85, 1.24, 0.5],
+    mailbox: {
+      variant: 'blue',
+      destinationName: 'Blue House Mailbox',
+    },
     collider: {
       position: [-4.2, 0.65, 2.8],
       size: [1, 1.3, 0.75],
@@ -99,6 +103,10 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     kind: 'mailbox',
     position: [5.25, 0, 1.65],
     dimensions: [0.75, 1.18, 0.46],
+    mailbox: {
+      variant: 'red',
+      destinationName: 'Hill Path Mailbox',
+    },
     collider: {
       position: [5.25, 0.62, 1.65],
       size: [0.9, 1.2, 0.7],
@@ -109,6 +117,27 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     },
     objectiveAnchor: {
       position: [5.25, 2.08, 1.65],
+    },
+  },
+  {
+    id: 'mailbox-post-office-return',
+    kind: 'mailbox',
+    position: [3.65, 0, -5.15],
+    dimensions: [0.85, 1.34, 0.5],
+    mailbox: {
+      variant: 'green',
+      destinationName: 'Post Office Return Box',
+    },
+    collider: {
+      position: [3.65, 0.65, -5.15],
+      size: [1, 1.3, 0.75],
+    },
+    interactable: {
+      position: [3, 0, -5.15],
+      radius: 1.15,
+    },
+    objectiveAnchor: {
+      position: [3.65, 2.18, -5.15],
     },
   },
   {

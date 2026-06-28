@@ -7,10 +7,10 @@ export interface DeliveryGuidanceOverlay {
 
 const getGuidanceText = (state: DeliveryState): string => {
   if (state.status === 'delivery-accepted' && state.activeDelivery) {
-    return `Destination: ${state.activeDelivery.destinationName}`;
+    return `Active destination: ${state.activeDelivery.destinationName}`;
   }
 
-  return 'Destination: Delivery Board';
+  return 'Objective: choose a delivery at the board';
 };
 
 export const createDeliveryGuidanceOverlay = (parent: HTMLElement): DeliveryGuidanceOverlay => {

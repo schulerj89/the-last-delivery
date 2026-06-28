@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { canLoadGltfAssets, createModelInstance } from '../game/assets';
+import { createMailboxProp } from './props/createMailbox';
 import type { WorldObjectDefinition } from './types';
 import {
   deliveryBoardObject,
@@ -39,9 +40,6 @@ const materials = {
   houseWindow: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, roughness: 0.45 }),
   wellStone: new THREE.MeshStandardMaterial({ color: 0x7a827d, roughness: 0.9 }),
   wellWater: new THREE.MeshStandardMaterial({ color: 0x347da3, roughness: 0.45 }),
-  mailbox: new THREE.MeshStandardMaterial({ color: 0x1f8eea, roughness: 0.5 }),
-  mailboxDoor: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, roughness: 0.45 }),
-  mailboxFlag: new THREE.MeshStandardMaterial({ color: 0xe85c42, roughness: 0.45 }),
   board: new THREE.MeshStandardMaterial({ color: 0x164338, roughness: 0.65 }),
   boardFrame: new THREE.MeshStandardMaterial({ color: 0xf0ca72, roughness: 0.65 }),
   boardPaper: new THREE.MeshStandardMaterial({ color: 0xf3ead2, roughness: 0.75 }),
@@ -777,8 +775,6 @@ const addWell = (group: THREE.Group): void => {
 };
 
 const addMailbox = (group: THREE.Group, mailbox: WorldObjectDefinition): void => {
-  const [x, , z] = mailbox.position;
-
   if (mailbox.interactable) {
     const interactionPosition = mailbox.interactable.position;
     addGroundRing(
@@ -791,10 +787,12 @@ const addMailbox = (group: THREE.Group, mailbox: WorldObjectDefinition): void =>
     );
   }
 
-  addBox(group, `village:${mailbox.id}:post`, [0.16, 0.9, 0.16], [x, 0.45, z], materials.fence);
-  addBox(group, `village:${mailbox.id}:box`, [0.85, 0.42, 0.5], [x, 1.03, z], materials.mailbox);
-  addBox(group, `village:${mailbox.id}:door-highlight`, [0.08, 0.28, 0.36], [x - 0.44, 1.03, z], materials.mailboxDoor);
-  addBox(group, `village:${mailbox.id}:flag`, [0.08, 0.38, 0.46], [x + 0.46, 1.19, z], materials.mailboxFlag);
+  group.add(createMailboxProp({
+    id: mailbox.id,
+    position: mailbox.position,
+    rotationY: mailbox.rotation?.[1],
+    variant: mailbox.mailbox?.variant,
+  }));
 };
 
 const addMailboxes = (group: THREE.Group): void => {

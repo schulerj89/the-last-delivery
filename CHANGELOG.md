@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.24.0] - 2026-06-28
+
+### Added
+
+- Added a reusable procedural mailbox prop built from primitive Three.js geometry.
+- Added blue, red, and green mailbox variants with wooden posts, rounded bodies, flags, front doors, and mail symbols.
+- Added a Post Office Return Box target so delivery destinations map to three distinct mailbox objects.
+- Added smoke checks for procedural mailbox initialization, mailbox variants, delivery target anchors, and active target resolution.
+
+### Changed
+
+- Updated village mailbox rendering to use the in-code mailbox prop instead of inline blockout boxes.
+- Updated delivery destination text and wrong-mailbox feedback to show player-readable destination names.
+
 ## [0.23.0] - 2026-06-28
 
 ### Added
