@@ -1,6 +1,7 @@
 html,
 body,
 #app {
+  position: relative;
   width: 100%;
   height: 100%;
   margin: 0;
@@ -16,3 +17,17 @@ canvas {
   display: block;
 }
 
+.debug-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  min-width: 180px;
+  padding: 8px 10px;
+  color: #f4f0db;
+  background: rgb(16 19 24 / 78%);
+  border: 1px solid rgb(244 240 219 / 28%);
+  border-radius: 4px;
+  font: 12px/1.45 Consolas, 'Courier New', monospace;
+  white-space: pre;
+  pointer-events: none;
+}

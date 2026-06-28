@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.3.0] - 2026-06-28
+
+### Added
+
+- Added iteration 002 placeholder player movement.
+- Added a primitive placeholder player mesh.
+- Added WASD ground-plane movement with acceleration, deceleration, max speed, and rotation toward movement direction.
+- Added reset-to-spawn input and a player debug overlay for position, speed, and grounded state.
+
 ## [0.2.0] - 2026-06-28
 
 ### Added

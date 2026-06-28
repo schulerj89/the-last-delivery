@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
+import { createPlayerController, createPlayerDebugOverlay } from './game/player';
 import { createPlayground } from './world/playground';
 
 const app = document.querySelector<HTMLDivElement>('#app');
@@ -23,6 +24,11 @@ app.append(renderer.domElement);
 
 scene.add(createPlayground());
 
+const player = createPlayerController();
+scene.add(player.object);
+
+const playerDebugOverlay = createPlayerDebugOverlay(app);
+
 const ambientLight = new THREE.HemisphereLight(0xe8f1ff, 0x253329, 1.8);
 scene.add(ambientLight);
 
@@ -40,7 +46,11 @@ const handleResize = () => {
 
 window.addEventListener('resize', handleResize);
 
+const clock = new THREE.Clock();
+
 const animate = () => {
+  player.update(clock.getDelta());
+  playerDebugOverlay.update(player.getState());
   renderer.render(scene, camera);
   window.requestAnimationFrame(animate);
 };
