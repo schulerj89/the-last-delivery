@@ -110,6 +110,10 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     kind: 'crate',
     position: [2.35, 0.5, 1.65],
     dimensions: [1, 1, 1],
+    render: {
+      mode: 'asset',
+      assetId: 'crate-box-001',
+    },
     collider: {
       position: [2.35, 0.5, 1.65],
       size: [1, 1, 1],

@@ -1,4 +1,5 @@
 import { Vector3 } from 'three';
+import { assetRegistry, isKnownAssetId } from '../src/game/assets/assetRegistry';
 import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
@@ -26,6 +27,19 @@ const isFiniteVector3Tuple = (value: readonly number[]): boolean => (
   value.length === 3 && value.every((component) => Number.isFinite(component))
 );
 
+const runAssetRegistrySmoke = (): void => {
+  const assetIds = new Set<string>();
+
+  assetRegistry.forEach((asset) => {
+    assert(!assetIds.has(asset.id), `Asset id should be unique: ${asset.id}`);
+    assetIds.add(asset.id);
+    assert(asset.kind === 'gltf', `Asset should use the GLTF loader path: ${asset.id}`);
+    assert(asset.url.startsWith('/assets/models/'), `Asset should load from public assets models: ${asset.id}`);
+    assert(asset.url.endsWith('.glb'), `Asset should point to a GLB file: ${asset.id}`);
+    assert(asset.maxRecommendedBytes > 0, `Asset should define a positive size budget: ${asset.id}`);
+  });
+};
+
 const runWorldDefinitionSmoke = (): void => {
   const ids = new Set<string>();
 
@@ -39,6 +53,10 @@ const runWorldDefinitionSmoke = (): void => {
         isFiniteVector3Tuple(object.dimensions) && object.dimensions.every((component) => component > 0),
         `World object should have positive dimensions: ${object.id}`,
       );
+    }
+
+    if (object.render?.mode === 'asset') {
+      assert(isKnownAssetId(object.render.assetId), `World object assetId should reference a known asset: ${object.id}`);
     }
 
     if (object.interactable) {
@@ -57,6 +75,7 @@ const runWorldDefinitionSmoke = (): void => {
 
   const mailboxObjects = villageWorldObjects.filter((object) => object.kind === 'mailbox');
   const cottageObjects = villageWorldObjects.filter((object) => object.kind === 'cottage');
+  const assetRenderedObjects = villageWorldObjects.filter((object) => object.render?.mode === 'asset');
   const deliveryBoard = villageWorldObjects.find((object) => object.id === 'delivery-board');
   const postOffice = villageWorldObjects.find((object) => object.id === 'post-office');
   const well = villageWorldObjects.find((object) => object.id === 'town-well');
@@ -76,6 +95,8 @@ const runWorldDefinitionSmoke = (): void => {
   });
 
   assert(deliveryJobs.length >= 3, 'Village should define at least three delivery jobs.');
+  assert(assetRenderedObjects.length === 1, 'Village should only opt one low-risk prop into GLB rendering for now.');
+  assert(assetRenderedObjects[0].id === 'crate-large', 'The large crate should be the first optional GLB prop target.');
   assert(mailboxObjects.length === 2, 'Village should define exactly two mailbox placeholders.');
   assert(mailboxObjects.every((object) => object.interactable), 'Every village mailbox should be interactable.');
   assert(mailboxObjects.every((object) => object.objectiveAnchor), 'Every village mailbox should have an objective anchor.');
@@ -185,6 +206,7 @@ const runModuleSmoke = (): void => {
   const playground = createPlayground();
   assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');
   assert(playground.children.length > 20, 'Village square should include primitive blockout children.');
+  assert(playground.getObjectByName('village:crate-large') !== undefined, 'Asset-targeted crate fallback should initialize.');
   assert(playground.getObjectByName('village:label-post-office') !== undefined, 'Post office label sign should initialize.');
   assert(playground.getObjectByName('village:label-blue-house') !== undefined, 'Blue house label sign should initialize.');
   assert(playground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');
@@ -214,6 +236,7 @@ const runModuleSmoke = (): void => {
   assert(boardMarker.position.y > 0, 'Objective marker animation should keep marker above the ground.');
 };
 
+runAssetRegistrySmoke();
 runWorldDefinitionSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();

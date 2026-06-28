@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { canLoadGltfAssets, loadGltfAssetInstance } from '../game/assets';
 import type { WorldObjectDefinition } from './types';
 import {
   deliveryBoardObject,
@@ -107,6 +108,72 @@ const getDimensions = (object: WorldObjectDefinition): THREE.Vector3Tuple => {
   }
 
   return object.dimensions;
+};
+
+const getAssetId = (object: WorldObjectDefinition): string | null => (
+  object.render?.mode === 'asset' ? object.render.assetId : null
+);
+
+const disposeGeometryOnly = (object: THREE.Object3D): void => {
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.geometry.dispose();
+    }
+  });
+};
+
+const fitAssetInstanceToObject = (
+  asset: THREE.Object3D,
+  object: WorldObjectDefinition,
+): THREE.Object3D => {
+  const dimensions = new THREE.Vector3(...getDimensions(object));
+  const targetCenter = new THREE.Vector3(...object.position);
+  const sourceBox = new THREE.Box3().setFromObject(asset);
+  const sourceSize = new THREE.Vector3();
+  sourceBox.getSize(sourceSize);
+
+  if (sourceSize.x > 0 && sourceSize.y > 0 && sourceSize.z > 0) {
+    const scale = Math.min(
+      dimensions.x / sourceSize.x,
+      dimensions.y / sourceSize.y,
+      dimensions.z / sourceSize.z,
+    );
+    asset.scale.multiplyScalar(scale);
+  }
+
+  const fittedBox = new THREE.Box3().setFromObject(asset);
+  const fittedCenter = new THREE.Vector3();
+  fittedBox.getCenter(fittedCenter);
+  asset.position.add(targetCenter.sub(fittedCenter));
+  asset.name = `village:${object.id}:asset`;
+  asset.userData.label = asset.name;
+
+  return asset;
+};
+
+const tryApplyAssetRender = (
+  group: THREE.Group,
+  object: WorldObjectDefinition,
+  fallbackObjects: readonly THREE.Object3D[],
+): void => {
+  const assetId = getAssetId(object);
+
+  if (!assetId || !canLoadGltfAssets()) {
+    return;
+  }
+
+  loadGltfAssetInstance(assetId)
+    .then((asset) => {
+      fallbackObjects.forEach((fallbackObject) => {
+        group.remove(fallbackObject);
+        disposeGeometryOnly(fallbackObject);
+      });
+      group.add(fitAssetInstanceToObject(asset, object));
+      console.info(`[assets] Applied ${assetId} to ${object.id}.`);
+    })
+    .catch(() => {
+      console.info(`[assets] ${object.id} is using its primitive fallback.`);
+    });
 };
 
 const createBox = (
@@ -490,15 +557,20 @@ const addCrates = (group: THREE.Group): void => {
   getWorldObjectsByKind('crate').forEach((crate) => {
     const [width, height, depth] = getDimensions(crate);
     const [x, y, z] = crate.position;
+    const fallbackObjects: THREE.Object3D[] = [];
 
-    addBox(group, `village:${crate.id}`, [width, height, depth], [x, y, z], materials.crate);
-    addBox(
-      group,
-      `village:${crate.id}:strap`,
-      [width + 0.04, Math.max(0.06, height * 0.08), depth + 0.04],
-      [x, y + height * 0.28, z],
-      materials.crateStrap,
+    fallbackObjects.push(
+      addBox(group, `village:${crate.id}`, [width, height, depth], [x, y, z], materials.crate),
+      addBox(
+        group,
+        `village:${crate.id}:strap`,
+        [width + 0.04, Math.max(0.06, height * 0.08), depth + 0.04],
+        [x, y + height * 0.28, z],
+        materials.crateStrap,
+      ),
     );
+
+    tryApplyAssetRender(group, crate, fallbackObjects);
   });
 };
 

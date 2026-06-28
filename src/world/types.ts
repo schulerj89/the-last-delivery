@@ -24,12 +24,17 @@ export interface WorldObjectiveAnchorDefinition {
   position: THREE.Vector3Tuple;
 }
 
+export type WorldRenderDefinition =
+  | { mode: 'primitive' }
+  | { mode: 'asset'; assetId: string };
+
 export interface WorldObjectDefinition {
   id: string;
   kind: WorldObjectKind;
   position: THREE.Vector3Tuple;
   rotation?: THREE.Vector3Tuple;
   dimensions?: THREE.Vector3Tuple;
+  render?: WorldRenderDefinition;
   collider?: WorldColliderDefinition;
   interactable?: WorldInteractableDefinition;
   objectiveAnchor?: WorldObjectiveAnchorDefinition;

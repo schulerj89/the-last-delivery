@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.17.0] - 2026-06-28
+
+### Added
+
+- Added a small asset registry and Three.js GLTFLoader path for optional prop GLBs.
+- Added one optional crate GLB target under `public/assets/models/` with README placement guidance.
+- Added world `render` definitions so objects can opt into primitive or asset-backed rendering.
+- Added smoke checks for unique asset ids, known world asset references, and primitive fallback initialization.
+
+### Changed
+
+- Let `crate-large` try the optional crate GLB while preserving its primitive fallback, collider, and gameplay behavior.
+
 ## [0.16.0] - 2026-06-28
 
 ### Added
