@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.8.0] - 2026-06-28
+
+### Added
+
+- Added iteration 007 lightweight smoke validation for the current delivery loop.
+- Added a TypeScript smoke script covering delivery state transitions, interaction callbacks, key constants, collision bounds, and objective marker initialization.
+- Updated validation to run smoke checks as part of `npm run validate`.
+
 ## [0.7.1] - 2026-06-28
 
 ### Fixed

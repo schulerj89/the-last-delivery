@@ -1,20 +1,22 @@
 {
   "name": "the-last-delivery",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "private": true,
   "type": "module",
   "description": "A tiny browser Three.js game.",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke.ts",
     "build": "vite build",
-    "validate": "npm run typecheck && npm run build"
+    "validate": "npm run typecheck && npm run smoke && npm run build"
   },
   "dependencies": {
     "three": "^0.185.0"
   },
   "devDependencies": {
     "@types/three": "^0.185.0",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite": "^8.1.0"
   }

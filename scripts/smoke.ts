@@ -1,0 +1,73 @@
+import { Vector3 } from 'three';
+import { thirdPersonCameraSettings } from '../src/game/camera';
+import { resolvePlayerCollision } from '../src/game/collision';
+import { createDeliveryController } from '../src/game/delivery';
+import { playerMovementSettings } from '../src/game/player';
+import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
+import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
+import { createMailboxObjectiveMarker } from '../src/world/playgroundObjectiveMarker';
+
+function assert(condition: boolean, message: string): asserts condition {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+const runDeliveryStateSmoke = (): void => {
+  const delivery = createDeliveryController();
+
+  assert(delivery.getState().status === 'idle', 'Delivery should start idle.');
+  assert(delivery.getState().completedCount === 0, 'Completed count should start at 0.');
+
+  assert(delivery.acceptDelivery() === 'Delivery accepted.', 'Accepting delivery should return confirmation.');
+  assert(delivery.getState().status === 'delivery-accepted', 'Accepted delivery should update state.');
+
+  assert(delivery.completeDelivery() === 'Delivery completed.', 'Completing delivery should return confirmation.');
+  assert(delivery.getState().status === 'delivery-completed', 'Completed delivery should update state.');
+  assert(delivery.getState().completedCount === 1, 'Completing delivery should increment count.');
+};
+
+const runInteractionSmoke = (): void => {
+  const delivery = createDeliveryController();
+  const interactables = createPlaygroundInteractables(delivery);
+  const mailbox = interactables.find((interactable) => interactable.id === 'mailbox');
+  const board = interactables.find((interactable) => interactable.id === 'delivery-board');
+
+  assert(mailbox !== undefined, 'Mailbox interactable should initialize.');
+  assert(board !== undefined, 'Delivery board interactable should initialize.');
+
+  assert(typeof board.prompt === 'function' && board.prompt() === 'Accept delivery', 'Board should prompt for delivery acceptance.');
+  assert(board.interact() === 'Delivery accepted.', 'Board interaction should accept delivery.');
+
+  assert(typeof mailbox.prompt === 'function' && mailbox.prompt() === 'Complete delivery', 'Mailbox should prompt for completion after acceptance.');
+  assert(mailbox.interact() === 'Delivery completed.', 'Mailbox interaction should complete delivery.');
+  assert(delivery.getState().completedCount === 1, 'Mailbox completion should increment delivery count.');
+};
+
+const runModuleSmoke = (): void => {
+  assert(playerMovementSettings.maxSpeed > 0, 'Player max speed should be positive.');
+  assert(playerMovementSettings.radius > 0, 'Player collision radius should be positive.');
+  assert(thirdPersonCameraSettings.distance > 0, 'Camera distance should be positive.');
+  assert(thirdPersonCameraSettings.minPitch < thirdPersonCameraSettings.maxPitch, 'Camera pitch limits should be ordered.');
+  assert(playgroundCollisionWorld.boxes.length >= 2, 'Playground collision boxes should initialize.');
+  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'mailbox'), 'Mailbox collision box should initialize.');
+
+  const resolved = resolvePlayerCollision(
+    new Vector3(99, 0, 99),
+    playgroundCollisionWorld,
+    playerMovementSettings.radius,
+  );
+  assert(resolved.hitBounds, 'Collision should report bounds hit for out-of-bounds position.');
+  assert(resolved.position.x <= playgroundCollisionWorld.bounds.maxX, 'Collision should clamp X inside bounds.');
+  assert(resolved.position.z <= playgroundCollisionWorld.bounds.maxZ, 'Collision should clamp Z inside bounds.');
+
+  const marker = createMailboxObjectiveMarker();
+  assert(marker.name === 'objective:mailbox', 'Mailbox objective marker should initialize.');
+  assert(marker.visible === false, 'Mailbox objective marker should start hidden.');
+};
+
+runDeliveryStateSmoke();
+runInteractionSmoke();
+runModuleSmoke();
+
+console.info('Smoke checks passed.');
