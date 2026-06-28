@@ -2,6 +2,16 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.3] - 2026-06-28
+
+### Fixed
+
+- Fixed the main game boot path so the promoted authored town layout renders in gameplay instead of only grass, fence, and the updated player spawn.
+- Explicitly enabled authored collision, interactables, objective guidance, and markers for the main game while keeping the standalone town editor canvas clean.
+- Fixed generated editor copy chains so exported `templateId` values resolve back to source templates instead of generated copy ids.
+- Made layout debug labels tolerate generated replacements for important objects like the delivery board.
+- Added smoke coverage to catch the main-game authored-layout opt-in, generated-template resolution, and active-layout interactables.
+
 ## [0.53.2] - 2026-06-28
 
 ### Fixed

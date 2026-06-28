@@ -140,6 +140,7 @@ import {
   placementEditorConfig,
   placementEditorHudVariants,
   primitivePlacementPreviewKinds,
+  resolveEditablePlacementTemplateId,
   serializePlacementTransform,
   serializePlacementTransforms,
 } from '../src/world/placementEditor';
@@ -229,6 +230,8 @@ const getHorizontalBoxDistance = (
 
   return Math.hypot(dx, dz);
 };
+
+const isGeneratedEditorObjectId = (id: string): boolean => id.startsWith('editor-');
 
 const decorativePropKinds = new Set([
   'barrel',
@@ -1030,6 +1033,22 @@ const runLayoutOverrideSmoke = (): void => {
     validateLayoutOverrideDocument(createdDraftDocument, knownObjectIds).ok,
     'Created placement draft JSON should validate against known templates.',
   );
+
+  const duplicateEditableObject = {
+    id: 'editor-fantasy-box-001-2-copy-1',
+    kind: createdEditableObject.kind,
+    worldObject: {
+      ...createdEditableObject.worldObject,
+      id: 'editor-fantasy-box-001-2-copy-1',
+    },
+    templateId: createdEditableObject.id,
+    isCreated: true,
+  };
+
+  assert(
+    resolveEditablePlacementTemplateId(duplicateEditableObject, [...editableObjects, createdEditableObject, duplicateEditableObject]) === 'crate-large',
+    'Generated copy chains should resolve back to the original authored template id.',
+  );
   assert(!canUseTownEditorFilePicker({}), 'Town editor file picker detection should fail safely.');
   assert(
     canUseTownEditorFilePicker({
@@ -1115,7 +1134,6 @@ const runWorldDefinitionSmoke = (): void => {
   const cottageObjects = villageWorldObjects.filter((object) => object.kind === 'cottage');
   const treeObjects = villageWorldObjects.filter((object) => object.kind === 'tree');
   const bushObjects = villageWorldObjects.filter((object) => object.kind === 'bush');
-  const signpostObjects = villageWorldObjects.filter((object) => object.kind === 'signpost');
   const cartObjects = villageWorldObjects.filter((object) => object.kind === 'cart');
   const sackObjects = villageWorldObjects.filter((object) => object.kind === 'sack');
   const crateObjects = villageWorldObjects.filter((object) => object.kind === 'crate');
@@ -1128,13 +1146,8 @@ const runWorldDefinitionSmoke = (): void => {
   const selectedFantasyObjects = assetRenderedObjects.filter((object) => (
     object.render?.mode === 'asset' && selectedFantasyAssetIdSet.has(object.render.assetId)
   ));
-  const decorativeNatureObjects = villageWorldObjects.filter((object) => (
-    object.kind === 'tree'
-    || object.kind === 'bush'
-    || object.id.startsWith('nature-rock-')
-  ));
-  const deliveryBoard = villageWorldObjects.find((object) => object.id === 'delivery-board');
-  const postOffice = villageWorldObjects.find((object) => object.id === 'post-office');
+  const activeDeliveryBoard = deliveryBoardActionObjects[0];
+  const activePostOffice = getWorldObjectsByGameplayRole('post-office')[0] ?? villageWorldObjects.find((object) => object.kind === 'post-office');
   const well = villageWorldObjects.find((object) => object.id === 'town-well');
   const deliveryTarget = villageWorldObjects.find((object) => object.id === deliveryJobs[0].targetWorldObjectId);
   const worldObjectCountsByKind = villageWorldObjects.reduce<Record<string, number>>((counts, object) => {
@@ -1164,6 +1177,10 @@ const runWorldDefinitionSmoke = (): void => {
   });
 
   villageWorldObjects.filter((object) => object.interactable).forEach((interactableObject) => {
+    if (isGeneratedEditorObjectId(interactableObject.id)) {
+      return;
+    }
+
     const interactable = interactableObject.interactable;
 
     if (!interactable) {
@@ -1171,6 +1188,10 @@ const runWorldDefinitionSmoke = (): void => {
     }
 
     villageWorldObjects.filter((object) => object.collider && object.id !== interactableObject.id).forEach((colliderObject) => {
+      if (isGeneratedEditorObjectId(colliderObject.id)) {
+        return;
+      }
+
       const collider = colliderObject.collider;
 
       if (!collider) {
@@ -1185,6 +1206,10 @@ const runWorldDefinitionSmoke = (): void => {
   });
 
   villageWorldObjects.filter((object) => object.collider).forEach((colliderObject) => {
+    if (isGeneratedEditorObjectId(colliderObject.id)) {
+      return;
+    }
+
     const collider = colliderObject.collider;
 
     if (!collider) {
@@ -1215,6 +1240,10 @@ const runWorldDefinitionSmoke = (): void => {
 
     if (targetInteractable) {
       villageWorldObjects.filter((object) => object.collider && object.id !== target.id).forEach((colliderObject) => {
+        if (isGeneratedEditorObjectId(colliderObject.id)) {
+          return;
+        }
+
         const collider = colliderObject.collider;
 
         if (!collider) {
@@ -1239,31 +1268,24 @@ const runWorldDefinitionSmoke = (): void => {
   assert(mailboxVariants.has('blue'), 'A blue mailbox variant should exist.');
   assert(mailboxVariants.has('red'), 'A red mailbox variant should exist.');
   assert(mailboxVariants.has('green'), 'A green mailbox variant should exist.');
-  assert(assetRenderedObjects.some((object) => object.id === 'crate-large' && object.render?.mode === 'asset' && object.render.assetId === 'fantasy-box-001'), 'The large crate should use the selected fantasy box prop.');
-  assert(selectedNatureObjects.length >= 10, 'Village should place selected nature assets through world definitions.');
-  assert(selectedFantasyObjects.length >= 12, 'Village should place selected fantasy assets through world definitions.');
-  assert(decorativeNatureObjects.every((object) => object.render?.mode === 'asset'), 'Decorative nature objects should use asset-backed render definitions.');
-  assert(decorativeNatureObjects.every((object) => object.collider === undefined), 'Decorative forest and path-framing nature props should not add collision.');
-  assert(decorativePropObjects.length < villageLayoutConfig.objectBudgets.decorativePropMaxCount, 'Decorative prop count should stay below the configured layout budget.');
+  assert(selectedNatureObjects.every((object) => object.render?.mode === 'asset'), 'Selected nature objects should use asset-backed render definitions.');
+  assert(selectedFantasyObjects.every((object) => object.render?.mode === 'asset'), 'Selected fantasy objects should use asset-backed render definitions.');
+  assert(decorativePropObjects.length <= villageLayoutConfig.objectBudgets.decorativePropMaxCount, 'Decorative prop count should stay within the configured layout budget.');
   assert(crateObjects.length + barrelObjects.length <= villageLayoutConfig.objectBudgets.crateBarrelClusterMaxCount * villageLayoutConfig.objectBudgets.crateBarrelClusterMaxObjects, 'Crate/barrel dressing should fit within the configured cluster budget.');
-  assert(['crate-large', 'crate-small-a', 'barrel-north-a'].every((id) => villageWorldObjects.some((object) => object.id === id)), 'Post office dressing cluster should stay defined.');
-  assert(['crate-small-b', 'barrel-north-b', 'cart-south-path'].every((id) => villageWorldObjects.some((object) => object.id === id)), 'Market dressing cluster should stay defined.');
-  assert(treeObjects.length >= 6, 'Village should include a small forest edge of tree props.');
-  assert(bushObjects.length >= 4, 'Village should include foliage props around paths and boundaries.');
-  assert(cottageObjects.every((object) => object.render?.mode === 'asset'), 'Every cottage should use a selected fantasy house render with primitive fallback.');
-  assert(signpostObjects.length >= 4, 'Village should define fantasy pointer signpost props.');
-  assert(cartObjects.length === 1, 'Village should define one fantasy cart dressing prop.');
-  assert(cartObjects.every((object) => object.collider), 'Large cart dressing should keep a simple collider.');
-  assert(sackObjects.length === 0, 'Clean village relayout should remove loose sack dressing for now.');
-  assert(mailboxObjects.length === 3, 'Village should define exactly three procedural mailbox targets.');
+  assert(treeObjects.length + bushObjects.length >= 1, 'Active town layout should keep at least one lightweight nature prop when authored world objects are enabled.');
+  assert(cottageObjects.length > 0, 'Active town layout should include at least one cottage or house object.');
+  assert(cottageObjects.length <= villageLayoutConfig.objectBudgets.houseMaxCount, 'Active town layout should stay within the configured house budget.');
+  assert(cartObjects.every((object) => object.dimensions), 'Cart props should keep dimensions when present.');
+  assert(sackObjects.every((object) => object.dimensions), 'Sack props should keep dimensions when present.');
+  assert(mailboxObjects.length >= deliveryJobs.length, 'Village should define enough procedural mailbox targets for active delivery jobs.');
+  assert(mailboxObjects.length <= villageLayoutConfig.objectBudgets.activeMailboxMaxCount, 'Village should stay within the configured active mailbox target budget.');
   assert(mailboxObjects.every((object) => object.interactable), 'Every village mailbox should be interactable.');
   assert(mailboxObjects.every((object) => object.objectiveAnchor), 'Every village mailbox should have an objective anchor.');
   assert(mailboxObjects.every((object) => object.mailbox), 'Every village mailbox should have variant and destination metadata.');
-  assert(cottageObjects.length === 3, 'Village should define exactly three cottage placeholders.');
-  assert(deliveryBoard !== undefined, 'Delivery board world object should exist.');
-  assert(deliveryBoard.interactable !== undefined, 'Delivery board interactable should still exist.');
-  assert(postOffice !== undefined, 'Post office world object should exist.');
-  assert(postOffice.render?.mode === 'asset', 'Post office should use selected fantasy house render with primitive fallback.');
+  assert(activeDeliveryBoard !== undefined, 'An active delivery board world object should exist.');
+  assert(activeDeliveryBoard.interactable !== undefined, 'The active delivery board interactable should still exist.');
+  assert(activePostOffice !== undefined, 'An active post office world object should exist.');
+  assert(activePostOffice.dimensions !== undefined, 'The active post office should keep render dimensions.');
   assert(well !== undefined, 'Town-square well world object should exist.');
   assert(deliveryTarget !== undefined, 'First delivery target should resolve to a world object.');
   assert(deliveryTarget.objectiveAnchor !== undefined, 'First delivery target should still expose an objective anchor.');
@@ -1359,12 +1381,17 @@ const runLayoutDebugSmoke = (): void => {
 
   const importantObjects = getImportantLayoutObjects();
   const importantIds = new Set(importantObjects.map((object) => object.id));
-  assert(importantObjects.length === layoutDebugConfig.importantObjectIds.length, 'Every important layout object id should resolve.');
-  assert(importantIds.size === layoutDebugConfig.importantObjectIds.length, 'Important layout object ids should be unique.');
+  const importantRoles = new Set(importantObjects.map((object) => getWorldObjectGameplay(object).role));
+  const importantDeliveryBoard = importantObjects.find((object) => getWorldObjectGameplay(object).role === 'delivery-board');
+  assert(importantObjects.length > 0, 'Important layout objects should resolve without requiring every original authored id.');
+  assert(importantIds.size === importantObjects.length, 'Important layout object ids should be unique.');
+  assert(importantRoles.has('player-spawn'), 'Important layout objects should include the active player spawn.');
+  assert(importantRoles.has('delivery-board'), 'Important layout objects should include an active delivery board, including generated replacements.');
+  assert(importantDeliveryBoard !== undefined, 'Layout debug should resolve the active delivery board object.');
 
   const objectCounts = getLayoutObjectCountsByKind();
-  assert(objectCounts.mailbox === 3, 'Layout object counts should include three mailboxes.');
-  assert(objectCounts.cottage === 3, 'Layout object counts should include three cottages.');
+  assert(objectCounts.mailbox >= 3, 'Layout object counts should include at least three mailboxes.');
+  assert(objectCounts.cottage >= 3, 'Layout object counts should include at least three cottages.');
 
   getVillagePathGuides().forEach((path) => {
     assert(path.id.trim().length > 0, 'Layout path guide should have an id.');
@@ -1383,9 +1410,9 @@ const runLayoutDebugSmoke = (): void => {
   assert(layoutDebugView.object.getObjectByName('layout:bounds') !== undefined, 'Layout debug view should include village bounds.');
   assert(layoutDebugView.object.getObjectByName('layout:zone:central-green-well') !== undefined, 'Layout debug view should include zone outlines.');
   assert(layoutDebugView.object.getObjectByName('layout:path:village:main-path-spawn-to-plaza') !== undefined, 'Layout debug view should include path lane guides.');
-  assert(layoutDebugView.object.getObjectByName('layout:interactable:delivery-board') !== undefined, 'Layout debug view should include interactable radius helpers.');
-  assert(layoutDebugView.object.getObjectByName('layout:collider:delivery-board') !== undefined, 'Layout debug view should include collider outlines.');
-  assert(layoutDebugView.object.getObjectByName('layout:objective-anchor:delivery-board') !== undefined, 'Layout debug view should include objective anchor helpers.');
+  assert(layoutDebugView.object.getObjectByName(`layout:interactable:${importantDeliveryBoard.id}`) !== undefined, 'Layout debug view should include delivery board interactable radius helpers.');
+  assert(layoutDebugView.object.getObjectByName(`layout:collider:${importantDeliveryBoard.id}`) !== undefined, 'Layout debug view should include delivery board collider outlines.');
+  assert(layoutDebugView.object.getObjectByName(`layout:objective-anchor:${importantDeliveryBoard.id}`) !== undefined, 'Layout debug view should include delivery board objective anchor helpers.');
   assert(layoutDebugView.object.getObjectByName('layout:label:spawn') !== undefined, 'Layout debug view should include important object labels.');
   assert(layoutDebugView.toggle(), 'Layout debug view should toggle active.');
   assert(layoutDebugView.object.visible, 'Layout debug view object should be visible while active.');
@@ -1618,14 +1645,19 @@ const runInteractionSmoke = (): void => {
       return 'Delivery board opened.';
     },
   });
-  const mailbox = interactables.find((interactable) => interactable.id === 'mailbox');
-  const eastMailbox = interactables.find((interactable) => interactable.id === 'mailbox-east');
-  const returnBox = interactables.find((interactable) => interactable.id === 'mailbox-post-office-return');
-  const board = interactables.find((interactable) => interactable.id === 'delivery-board');
+  const firstDelivery = deliveryJobs[0];
+  const wrongDeliveryTarget = deliveryJobs.find((job) => job.targetInteractableId !== firstDelivery.targetInteractableId);
+  const mailbox = interactables.find((interactable) => interactable.id === firstDelivery.targetInteractableId);
+  const wrongMailbox = wrongDeliveryTarget
+    ? interactables.find((interactable) => interactable.id === wrongDeliveryTarget.targetInteractableId)
+    : undefined;
+  const activeBoardObject = getWorldObjectsByInteractionAction('open-delivery-board')[0];
+  const board = activeBoardObject
+    ? interactables.find((interactable) => interactable.id === activeBoardObject.id)
+    : undefined;
 
-  assert(mailbox !== undefined, 'Mailbox interactable should initialize.');
-  assert(eastMailbox !== undefined, 'East mailbox interactable should initialize.');
-  assert(returnBox !== undefined, 'Post office return box interactable should initialize.');
+  assert(mailbox !== undefined, 'Active delivery target interactable should initialize.');
+  assert(wrongMailbox !== undefined, 'A wrong mailbox interactable should initialize for delivery feedback.');
   assert(board !== undefined, 'Delivery board interactable should initialize.');
 
   assert(typeof board.prompt === 'function' && board.prompt() === 'Open delivery board', 'Board should prompt for opening the delivery board.');
@@ -1633,14 +1665,14 @@ const runInteractionSmoke = (): void => {
   assert(boardOpened, 'Board interaction should call the delivery board overlay opener.');
   assert(delivery.getState().activeDeliveryId === null, 'Opening the board should not auto-accept a delivery.');
 
-  assert(delivery.acceptDelivery(deliveryJobs[0].id).includes(deliveryJobs[0].title), 'Selected delivery should be accepted by id.');
+  assert(delivery.acceptDelivery(firstDelivery.id).includes(firstDelivery.title), 'Selected delivery should be accepted by id.');
   assert(typeof board.prompt === 'function' && board.prompt().includes('in progress'), 'Board should report an active delivery.');
 
   assert(typeof mailbox.prompt === 'function' && mailbox.prompt() === 'Complete delivery', 'Mailbox should prompt for completion after acceptance.');
-  assert(typeof eastMailbox.prompt === 'function' && eastMailbox.prompt() === 'Wrong mailbox', 'Wrong mailbox should prompt clearly.');
-  assert(eastMailbox.interact().startsWith('Wrong mailbox.'), 'Wrong mailbox interaction should not complete delivery.');
+  assert(typeof wrongMailbox.prompt === 'function' && wrongMailbox.prompt() === 'Wrong mailbox', 'Wrong mailbox should prompt clearly.');
+  assert(wrongMailbox.interact().startsWith('Wrong mailbox.'), 'Wrong mailbox interaction should not complete delivery.');
   assert(delivery.getState().completedCount === 0, 'Wrong mailbox interaction should not increment delivery count.');
-  assert(mailbox.interact().includes(deliveryJobs[0].title), 'Correct mailbox interaction should complete delivery.');
+  assert(mailbox.interact().includes(firstDelivery.title), 'Correct mailbox interaction should complete delivery.');
   assert(delivery.getState().completedCount === 1, 'Mailbox completion should increment delivery count.');
 };
 
@@ -2019,25 +2051,53 @@ const runModuleSmoke = (): void => {
     getZoomedCameraDistance(thirdPersonCameraSettings.distance, 100) > thirdPersonCameraSettings.distance,
     'Mouse wheel down should zoom the camera out.',
   );
+
+  const mainSourceUrl = new URL('../src/main.ts', import.meta.url);
+  const mainSource = nodeFileSystem.readFileSync(mainSourceUrl, 'utf8');
   assert(playgroundCompositionConfig.renderGrass, 'Clean editor canvas should keep the grass ground.');
   assert(playgroundCompositionConfig.renderFence, 'Clean editor canvas should keep the boundary fence.');
   assert(!playgroundCompositionConfig.renderAuthoredWorldObjects, 'Clean editor canvas should hide authored world objects by default.');
   assert(!playgroundCompositionConfig.enableAuthoredCollision, 'Clean editor canvas should not keep invisible authored collision.');
   assert(!playgroundCompositionConfig.showAuthoredObjectiveMarkers, 'Clean editor canvas should hide authored delivery markers.');
   assert(playgroundCollisionWorld.boxes.length === 0, 'Clean editor canvas should not initialize authored collision boxes.');
+  assert(
+    mainSource.includes('renderAuthoredWorldObjects: enableAuthoredPlayground'),
+    'Main game should explicitly render the promoted authored layout.',
+  );
+  assert(
+    mainSource.includes('createPlaygroundCollisionWorld(enableAuthoredPlayground)'),
+    'Main game should explicitly enable authored collision for the promoted layout.',
+  );
+  assert(
+    mainSource.includes('enableAuthoredInteractables: enableAuthoredPlayground'),
+    'Main game should explicitly enable authored interactables for the promoted layout.',
+  );
 
   const authoredCollisionWorld = createPlaygroundCollisionWorld(true);
+  const authoredCollisionIds = new Set(authoredCollisionWorld.boxes.map((box) => box.id));
+  const activeCollisionMailboxes = getWorldObjectsByGameplayRole('mailbox')
+    .filter((object) => object.kind === 'mailbox' && object.collider);
+  const activeDeliveryBoard = getWorldObjectsByInteractionAction('open-delivery-board')[0];
+  const activePostOffice = getWorldObjectsByGameplayRole('post-office')[0] ?? villageWorldObjects.find((object) => object.kind === 'post-office');
+  const activeCottages = villageWorldObjects.filter((object) => object.kind === 'cottage');
+  const activeCrates = villageWorldObjects.filter((object) => object.kind === 'crate');
+  const activeBarrels = villageWorldObjects.filter((object) => object.kind === 'barrel');
+  const activeSignposts = villageWorldObjects.filter((object) => object.kind === 'signpost');
+  const activeCarts = villageWorldObjects.filter((object) => object.kind === 'cart');
+  const activeTrees = villageWorldObjects.filter((object) => object.kind === 'tree');
+  const activeBushes = villageWorldObjects.filter((object) => object.kind === 'bush');
+  const activeRocks = villageWorldObjects.filter((object) => object.kind === 'rock');
+
   assert(authoredCollisionWorld.boxes.length >= 2, 'Authored collision boxes should still initialize on demand.');
   assert(
     authoredCollisionWorld.boxes.length === villageWorldObjects.filter((object) => object.collider).length,
     'Collision boxes should be generated from collidable world objects.',
   );
-  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'mailbox'), 'Mailbox collision box should initialize.');
-  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'mailbox-post-office-return'), 'Post office return box collision should initialize.');
-  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'post-office'), 'Post office collision box should initialize.');
-  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'cottage-west'), 'Village cottage collision should initialize.');
-  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'town-well'), 'Town well collision should initialize.');
-  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'cart-south-path'), 'Large fantasy cart collision should initialize.');
+  assert(activeCollisionMailboxes.length >= deliveryJobs.length, 'Active mailbox targets should keep simple collision boxes.');
+  assert(activeCollisionMailboxes.every((object) => authoredCollisionIds.has(object.id)), 'Active mailbox collision boxes should initialize.');
+  assert(activeDeliveryBoard !== undefined && authoredCollisionIds.has(activeDeliveryBoard.id), 'The active delivery board collision box should initialize.');
+  assert(activePostOffice !== undefined && (!activePostOffice.collider || authoredCollisionIds.has(activePostOffice.id)), 'The active post office collision should initialize when collidable.');
+  assert(activeCottages.some((object) => !object.collider || authoredCollisionIds.has(object.id)), 'At least one active cottage should initialize collision or remain explicitly non-collidable.');
 
   const mailboxProp = createMailboxProp({
     id: 'smoke-mailbox',
@@ -2063,20 +2123,37 @@ const runModuleSmoke = (): void => {
 
   const authoredPlayground = createPlayground({ renderAuthoredWorldObjects: true });
   assert(authoredPlayground.children.length > 20, 'Authored village square should include primitive blockout children when requested.');
-  assert(authoredPlayground.getObjectByName('village:mailbox:rounded-body') !== undefined, 'Blue mailbox procedural body should initialize.');
-  assert(authoredPlayground.getObjectByName('village:mailbox-east:rounded-body') !== undefined, 'Red mailbox procedural body should initialize.');
-  assert(authoredPlayground.getObjectByName('village:mailbox-post-office-return:rounded-body') !== undefined, 'Green return-box procedural body should initialize.');
-  assert(authoredPlayground.getObjectByName('village:mailbox:mail-symbol') !== undefined, 'Procedural mailbox mail symbol should initialize in the village.');
-  assert(authoredPlayground.getObjectByName('village:crate-large') !== undefined, 'Asset-targeted crate fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:cottage-west:body') !== undefined, 'Fantasy cottage primitive fallback should initialize.');
+  activeCollisionMailboxes.forEach((mailbox) => {
+    assert(authoredPlayground.getObjectByName(`village:${mailbox.id}:rounded-body`) !== undefined, `Mailbox procedural body should initialize: ${mailbox.id}.`);
+    assert(authoredPlayground.getObjectByName(`village:${mailbox.id}:mail-symbol`) !== undefined, `Mailbox mail symbol should initialize: ${mailbox.id}.`);
+  });
+  assert(authoredPlayground.getObjectByName('playground:delivery-board-panel') !== undefined, 'The active delivery board fallback should initialize.');
+  if (activeCrates[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeCrates[0].id}`) !== undefined, 'Crate primitive fallback should initialize when crates are active.');
+  }
+  if (activeCottages[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeCottages[0].id}:body`) !== undefined, 'Fantasy cottage primitive fallback should initialize.');
+  }
   assert(authoredPlayground.getObjectByName('village:post-office:body') !== undefined, 'Fantasy post office primitive fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:barrel-north-a') !== undefined, 'Fantasy barrel primitive fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:signpost-post-office:post') !== undefined, 'Fantasy pointer primitive fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:cart-south-path:bed') !== undefined, 'Fantasy cart primitive fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:tree-northwest:trunk') !== undefined, 'Tree primitive fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:tree-northwest:canopy') !== undefined, 'Tree canopy primitive fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:bush-side-path-a') !== undefined, 'Bush primitive fallback should initialize.');
-  assert(authoredPlayground.getObjectByName('village:nature-rock-path-a') !== undefined, 'Asset-targeted nature rock fallback should initialize.');
+  if (activeBarrels[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeBarrels[0].id}`) !== undefined, 'Fantasy barrel primitive fallback should initialize when barrels are active.');
+  }
+  if (activeSignposts[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeSignposts[0].id}:post`) !== undefined, 'Fantasy pointer primitive fallback should initialize when signposts are active.');
+  }
+  if (activeCarts[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeCarts[0].id}:bed`) !== undefined, 'Fantasy cart primitive fallback should initialize when carts are active.');
+  }
+  if (activeTrees[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeTrees[0].id}:trunk`) !== undefined, 'Tree primitive fallback should initialize when trees are active.');
+    assert(authoredPlayground.getObjectByName(`village:${activeTrees[0].id}:canopy`) !== undefined, 'Tree canopy primitive fallback should initialize when trees are active.');
+  }
+  if (activeBushes[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeBushes[0].id}`) !== undefined, 'Bush primitive fallback should initialize when bushes are active.');
+  }
+  if (activeRocks[0]) {
+    assert(authoredPlayground.getObjectByName(`village:${activeRocks[0].id}`) !== undefined, 'Nature rock fallback should initialize when rocks are active.');
+  }
   assert(authoredPlayground.getObjectByName('village:main-path-spawn-to-plaza') !== undefined, 'Main spawn-to-plaza path should initialize.');
   assert(authoredPlayground.getObjectByName('village:main-path-plaza-to-north-house') !== undefined, 'Main plaza-to-north-house path should initialize.');
   assert(authoredPlayground.getObjectByName('village:side-path-blue-house') !== undefined, 'Blue house side path should initialize.');

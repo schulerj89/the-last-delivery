@@ -31,8 +31,7 @@ import {
 import { createWorldEnvironment } from './world/environment';
 import { createPlacementEditor } from './world/placementEditor';
 import { createPlayground } from './world/playground';
-import { playgroundCompositionConfig } from './world/playgroundComposition';
-import { playgroundCollisionWorld } from './world/playgroundCollision';
+import { createPlaygroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
 import { createPlaygroundInteractables } from './world/playgroundInteractables';
 import {
@@ -61,11 +60,16 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 app.append(renderer.domElement);
 
+const enableAuthoredPlayground = true;
 const visualBoundsDebugView = createPlaygroundVisualBoundsDebugView();
-const playground = appResources.trackObject3D(createPlayground({ visualBoundsDebugView }));
+const playground = appResources.trackObject3D(createPlayground({
+  visualBoundsDebugView,
+  renderAuthoredWorldObjects: enableAuthoredPlayground,
+}));
 scene.add(playground);
 scene.add(visualBoundsDebugView.object);
 
+const playgroundCollisionWorld = createPlaygroundCollisionWorld(enableAuthoredPlayground);
 const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisionWorld);
 appResources.trackObject3D(collisionDebugView.object);
 scene.add(collisionDebugView.object);
@@ -115,7 +119,7 @@ followCamera = createThirdPersonCameraController({
   domElement: renderer.domElement,
 });
 const deliveryGuidanceOverlay = createDeliveryGuidanceOverlay(app, {
-  enabled: playgroundCompositionConfig.showAuthoredObjectiveMarkers,
+  enabled: enableAuthoredPlayground,
 });
 const debugUi = createDevDebugPanelManager(app);
 const layoutObjectCountsByKind = getLayoutObjectCountsByKind();
@@ -131,6 +135,7 @@ const deliveryBoardOverlay = createDeliveryBoardOverlay({
 const interaction = createInteractionController({
   player: player.object,
   interactables: createPlaygroundInteractables(delivery, {
+    enableAuthoredInteractables: enableAuthoredPlayground,
     openDeliveryBoard: deliveryBoardOverlay.open,
   }),
   parent: app,
@@ -288,9 +293,9 @@ const animate = (): void => {
   interaction.update(deltaSeconds);
   placementEditor.update(deltaSeconds);
   const deliveryState = delivery.getState();
-  deliveryBoardObjectiveMarker.visible = playgroundCompositionConfig.showAuthoredObjectiveMarkers
+  deliveryBoardObjectiveMarker.visible = enableAuthoredPlayground
     && deliveryState.status !== 'delivery-accepted';
-  deliveryTargetObjectiveMarker.visible = playgroundCompositionConfig.showAuthoredObjectiveMarkers
+  deliveryTargetObjectiveMarker.visible = enableAuthoredPlayground
     && deliveryState.status === 'delivery-accepted'
     && setObjectiveMarkerTarget(deliveryTargetObjectiveMarker, deliveryState.activeTargetWorldObjectId);
   updateObjectiveMarker(deliveryBoardObjectiveMarker, elapsedSeconds);

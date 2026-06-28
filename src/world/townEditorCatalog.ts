@@ -105,7 +105,8 @@ const getAssetCandidateObjectIds = (
   editableObjects: readonly EditablePlacementObject[],
 ): readonly string[] => {
   const candidateKinds = worldAssetKindRules[asset.id] ?? [];
-  const kindMatches = editableObjects
+  const templateObjects = editableObjects.filter((object) => object.isCreated !== true);
+  const kindMatches = templateObjects
     .filter((object) => candidateKinds.includes(object.kind))
     .map((object) => object.id);
 
@@ -113,7 +114,7 @@ const getAssetCandidateObjectIds = (
     return kindMatches;
   }
 
-  const exactMatches = editableObjects
+  const exactMatches = templateObjects
     .filter((object) => object.worldObject.render?.mode === 'asset' && object.worldObject.render.assetId === asset.id)
     .map((object) => object.id);
 
@@ -145,7 +146,7 @@ export const getTownEditorGeneratedPaletteItems = (
   editableObjects: readonly EditablePlacementObject[] = createEditablePlacementObjects(),
 ): readonly TownEditorPaletteItem[] => (
   editableObjects
-    .filter((object) => object.kind === 'pavement')
+    .filter((object) => object.kind === 'pavement' && object.isCreated !== true)
     .map((object) => ({
       type: 'generated',
       id: object.id,

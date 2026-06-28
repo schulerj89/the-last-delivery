@@ -63,6 +63,57 @@ const isFiniteTuple3 = (value) => (
   && value.every((component) => typeof component === 'number' && Number.isFinite(component))
 );
 
+const inferBaseTemplateIdFromObjectId = (objectId, knownObjectIds) => {
+  if (!objectId.startsWith('editor-')) {
+    return null;
+  }
+
+  return Array.from(knownObjectIds)
+    .sort((a, b) => b.length - a.length)
+    .find((knownObjectId) => objectId.startsWith(`editor-${knownObjectId}-`))
+    ?? null;
+};
+
+const createRawOverridesById = (overrides) => {
+  const overridesById = new Map();
+
+  overrides.forEach((override) => {
+    if (isRecord(override) && typeof override.id === 'string') {
+      overridesById.set(override.id, override);
+    }
+  });
+
+  return overridesById;
+};
+
+const resolveGeneratedTemplateId = (objectId, templateId, overridesById, knownObjectIds) => {
+  let nextTemplateId = templateId;
+  const seenObjectIds = new Set([objectId]);
+
+  while (nextTemplateId) {
+    if (knownObjectIds.has(nextTemplateId)) {
+      return nextTemplateId;
+    }
+
+    if (seenObjectIds.has(nextTemplateId)) {
+      return null;
+    }
+
+    seenObjectIds.add(nextTemplateId);
+    const templateOverride = overridesById.get(nextTemplateId);
+
+    if (isRecord(templateOverride)) {
+      nextTemplateId = typeof templateOverride.templateId === 'string'
+        ? templateOverride.templateId
+        : inferBaseTemplateIdFromObjectId(nextTemplateId, knownObjectIds);
+    } else {
+      nextTemplateId = inferBaseTemplateIdFromObjectId(nextTemplateId, knownObjectIds);
+    }
+  }
+
+  return inferBaseTemplateIdFromObjectId(objectId, knownObjectIds);
+};
+
 const validateLayoutDocument = (value, knownObjectIds) => {
   const errors = [];
   const seenIds = new Set();
@@ -84,6 +135,8 @@ const validateLayoutDocument = (value, knownObjectIds) => {
     return errors;
   }
 
+  const rawOverridesById = createRawOverridesById(value.overrides);
+
   value.overrides.forEach((override, index) => {
     if (!isRecord(override)) {
       errors.push(`Override at index ${index} must be an object.`);
@@ -100,6 +153,18 @@ const validateLayoutDocument = (value, knownObjectIds) => {
     }
 
     seenIds.add(override.id);
+    const rawTemplateId = typeof override.templateId === 'string' && override.templateId.trim().length > 0
+      ? override.templateId
+      : undefined;
+    const resolvedTemplateId = resolveGeneratedTemplateId(
+      override.id,
+      rawTemplateId,
+      rawOverridesById,
+      knownObjectIds,
+    );
+    const hasTemplateReference = (
+      rawTemplateId !== undefined && knownObjectIds.has(rawTemplateId)
+    ) || resolvedTemplateId !== null;
 
     if (override.kind !== undefined && !worldObjectKinds.has(override.kind)) {
       errors.push(`Override ${override.id} kind must be a valid world object kind.`);
@@ -107,18 +172,19 @@ const validateLayoutDocument = (value, knownObjectIds) => {
 
     if (
       override.templateId !== undefined
-      && (typeof override.templateId !== 'string' || !knownObjectIds.has(override.templateId))
+      && (typeof override.templateId !== 'string' || (!knownObjectIds.has(override.templateId) && resolvedTemplateId === null))
     ) {
       errors.push(`Override ${override.id} templateId must reference a known object id.`);
     }
 
-    if (!knownObjectIds.has(override.id) && override.kind === undefined) {
+    if (!knownObjectIds.has(override.id) && override.kind === undefined && !hasTemplateReference) {
       errors.push(`Unknown layout override object id ${override.id} must include kind to create a new object.`);
     }
 
     if (
       !knownObjectIds.has(override.id)
       && override.templateId === undefined
+      && !hasTemplateReference
       && (override.position === undefined || override.dimensions === undefined)
     ) {
       errors.push(`Unknown layout override object id ${override.id} must include templateId or both position and dimensions.`);
@@ -286,6 +352,29 @@ const createGeneratedSource = (document) => `import type { LayoutOverrideDocumen
 export const generatedVillageLayoutOverrides: LayoutOverrideDocument = ${JSON.stringify(document, null, 2)};
 `;
 
+const normalizeLayoutDocument = (document, knownObjectIds) => {
+  const rawOverridesById = createRawOverridesById(document.overrides);
+
+  return {
+    ...document,
+    overrides: document.overrides.map((override) => {
+      const rawTemplateId = typeof override.templateId === 'string' && override.templateId.trim().length > 0
+        ? override.templateId
+        : undefined;
+      const resolvedTemplateId = resolveGeneratedTemplateId(
+        override.id,
+        rawTemplateId,
+        rawOverridesById,
+        knownObjectIds,
+      );
+
+      return resolvedTemplateId && resolvedTemplateId !== override.templateId
+        ? { ...override, templateId: resolvedTemplateId }
+        : override;
+    }),
+  };
+};
+
 const knownObjectIds = readKnownObjectIds();
 const knownAssetIds = readKnownAssetIds();
 const document = readLayoutDocument();
@@ -312,5 +401,5 @@ if (checkOnly) {
   process.exit(0);
 }
 
-writeFileSync(generatedOutputPath, createGeneratedSource(document), 'utf8');
+writeFileSync(generatedOutputPath, createGeneratedSource(normalizeLayoutDocument(document, knownObjectIds)), 'utf8');
 console.info(`[layout] Wrote ${formatRelative(generatedOutputPath)} from ${formatRelative(editsPath)}.`);

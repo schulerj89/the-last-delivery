@@ -106,6 +106,66 @@ const addDelta = (
   value[2] + delta[2],
 ];
 
+const inferBaseTemplateIdFromObjectId = (
+  objectId: string,
+  knownObjectIdSet: ReadonlySet<string>,
+): string | null => {
+  if (!objectId.startsWith('editor-')) {
+    return null;
+  }
+
+  const matchingTemplateId = Array.from(knownObjectIdSet)
+    .sort((a, b) => b.length - a.length)
+    .find((knownObjectId) => objectId.startsWith(`editor-${knownObjectId}-`));
+
+  return matchingTemplateId ?? null;
+};
+
+const resolveGeneratedTemplateId = (
+  objectId: string,
+  templateId: string | undefined,
+  overridesById: ReadonlyMap<string, unknown>,
+  knownObjectIdSet: ReadonlySet<string>,
+): string | null => {
+  let nextTemplateId = templateId;
+  const seenObjectIds = new Set([objectId]);
+
+  while (nextTemplateId) {
+    if (knownObjectIdSet.has(nextTemplateId)) {
+      return nextTemplateId;
+    }
+
+    if (seenObjectIds.has(nextTemplateId)) {
+      return null;
+    }
+
+    seenObjectIds.add(nextTemplateId);
+    const templateOverride = overridesById.get(nextTemplateId);
+
+    if (isRecord(templateOverride)) {
+      nextTemplateId = typeof templateOverride.templateId === 'string'
+        ? templateOverride.templateId
+        : inferBaseTemplateIdFromObjectId(nextTemplateId, knownObjectIdSet) ?? undefined;
+    } else {
+      nextTemplateId = inferBaseTemplateIdFromObjectId(nextTemplateId, knownObjectIdSet) ?? undefined;
+    }
+  }
+
+  return inferBaseTemplateIdFromObjectId(objectId, knownObjectIdSet);
+};
+
+const createRawOverridesById = (overrides: readonly unknown[]): ReadonlyMap<string, unknown> => {
+  const overridesById = new Map<string, unknown>();
+
+  overrides.forEach((entry) => {
+    if (isRecord(entry) && typeof entry.id === 'string') {
+      overridesById.set(entry.id, entry);
+    }
+  });
+
+  return overridesById;
+};
+
 export const createEmptyLayoutOverrideDocument = (
   updatedAt = new Date().toISOString(),
 ): LayoutOverrideDocument => ({
@@ -148,6 +208,9 @@ export const validateLayoutOverrideDocument = (
 
   const seenIds = new Set<string>();
   const overrides: LayoutTransformOverride[] = [];
+  const rawOverridesById = Array.isArray(value.overrides)
+    ? createRawOverridesById(value.overrides)
+    : new Map<string, unknown>();
 
   if (Array.isArray(value.overrides)) {
     value.overrides.forEach((entry, index) => {
@@ -170,6 +233,12 @@ export const validateLayoutOverrideDocument = (
       seenIds.add(id);
 
       const override: LayoutTransformOverride = { id };
+      const rawTemplateId = typeof entry.templateId === 'string' && entry.templateId.trim().length > 0
+        ? entry.templateId
+        : undefined;
+      const resolvedTemplateId = requireKnownIds
+        ? resolveGeneratedTemplateId(id, rawTemplateId, rawOverridesById, knownObjectIdSet)
+        : null;
 
       if (entry.kind !== undefined) {
         if (isWorldObjectKind(entry.kind)) {
@@ -180,12 +249,12 @@ export const validateLayoutOverrideDocument = (
       }
 
       if (entry.templateId !== undefined) {
-        if (typeof entry.templateId === 'string' && entry.templateId.trim().length > 0) {
-          if (!requireKnownIds || knownObjectIdSet.has(entry.templateId)) {
-            override.templateId = entry.templateId;
-          } else {
-            errors.push(`Override ${id} templateId must reference a known object id.`);
-          }
+        if (rawTemplateId && (!requireKnownIds || knownObjectIdSet.has(rawTemplateId))) {
+          override.templateId = rawTemplateId;
+        } else if (resolvedTemplateId) {
+          override.templateId = resolvedTemplateId;
+        } else if (rawTemplateId) {
+          errors.push(`Override ${id} templateId must reference a known object id.`);
         } else {
           errors.push(`Override ${id} templateId must be a non-empty string when provided.`);
         }
@@ -193,11 +262,22 @@ export const validateLayoutOverrideDocument = (
 
       const isKnownObjectId = !requireKnownIds || knownObjectIdSet.has(id);
 
-      if (!isKnownObjectId && entry.kind === undefined) {
+      if (!isKnownObjectId && entry.templateId === undefined && resolvedTemplateId) {
+        override.templateId = resolvedTemplateId;
+      }
+
+      const hasTemplateReference = override.templateId !== undefined;
+
+      if (!isKnownObjectId && entry.kind === undefined && !hasTemplateReference) {
         errors.push(`Unknown layout override object id ${id} must include kind to create a new object.`);
       }
 
-      if (!isKnownObjectId && entry.templateId === undefined && (entry.position === undefined || entry.dimensions === undefined)) {
+      if (
+        !isKnownObjectId
+        && !hasTemplateReference
+        && entry.templateId === undefined
+        && (entry.position === undefined || entry.dimensions === undefined)
+      ) {
         errors.push(`Unknown layout override object id ${id} must include templateId or both position and dimensions.`);
       }
 
@@ -509,103 +589,103 @@ const applyLayoutTransformOverride = (
     nextObject.kind = override.kind;
   }
 
-    if (override.active !== undefined) {
-      nextObject.active = override.active;
+  if (override.active !== undefined) {
+    nextObject.active = override.active;
+  }
+
+  if (override.position) {
+    const delta: THREE.Vector3Tuple = [
+      override.position[0] - object.position[0],
+      override.position[1] - object.position[1],
+      override.position[2] - object.position[2],
+    ];
+
+    nextObject.position = cloneTuple(override.position);
+
+    if (nextObject.collider) {
+      nextObject.collider.position = addDelta(nextObject.collider.position, delta);
     }
 
-    if (override.position) {
-      const delta: THREE.Vector3Tuple = [
-        override.position[0] - object.position[0],
-        override.position[1] - object.position[1],
-        override.position[2] - object.position[2],
-      ];
-
-      nextObject.position = cloneTuple(override.position);
-
-      if (nextObject.collider) {
-        nextObject.collider.position = addDelta(nextObject.collider.position, delta);
-      }
-
-      if (nextObject.interactable) {
-        nextObject.interactable.position = addDelta(nextObject.interactable.position, delta);
-      }
-
-      if (nextObject.objectiveAnchor) {
-        nextObject.objectiveAnchor.position = addDelta(nextObject.objectiveAnchor.position, delta);
-      }
+    if (nextObject.interactable) {
+      nextObject.interactable.position = addDelta(nextObject.interactable.position, delta);
     }
 
-    if (override.dimensions) {
-      nextObject.dimensions = cloneTuple(override.dimensions);
+    if (nextObject.objectiveAnchor) {
+      nextObject.objectiveAnchor.position = addDelta(nextObject.objectiveAnchor.position, delta);
     }
+  }
 
-    if (override.rotation) {
-      nextObject.rotation = cloneTuple(override.rotation);
+  if (override.dimensions) {
+    nextObject.dimensions = cloneTuple(override.dimensions);
+  }
 
-      if (nextObject.render?.mode === 'asset') {
-        nextObject.render = {
-          ...nextObject.render,
-          rotation: cloneTuple(override.rotation),
-        };
-      }
+  if (override.rotation) {
+    nextObject.rotation = cloneTuple(override.rotation);
+
+    if (nextObject.render?.mode === 'asset') {
+      nextObject.render = {
+        ...nextObject.render,
+        rotation: cloneTuple(override.rotation),
+      };
     }
+  }
 
-    if (override.renderMode === 'primitive') {
-      nextObject.render = { mode: 'primitive' };
-    } else if (override.assetId !== undefined || override.renderMode === 'asset') {
-      const currentAssetRender = nextObject.render?.mode === 'asset' ? nextObject.render : undefined;
-      const assetId = override.assetId ?? currentAssetRender?.assetId;
+  if (override.renderMode === 'primitive') {
+    nextObject.render = { mode: 'primitive' };
+  } else if (override.assetId !== undefined || override.renderMode === 'asset') {
+    const currentAssetRender = nextObject.render?.mode === 'asset' ? nextObject.render : undefined;
+    const assetId = override.assetId ?? currentAssetRender?.assetId;
 
-      if (assetId) {
-        nextObject.render = {
-          mode: 'asset',
-          assetId,
-          scaleMultiplier: currentAssetRender?.scaleMultiplier,
-          yOffset: currentAssetRender?.yOffset,
-          rotation: currentAssetRender?.rotation,
-          fitMode: currentAssetRender?.fitMode,
-        };
-      }
+    if (assetId) {
+      nextObject.render = {
+        mode: 'asset',
+        assetId,
+        scaleMultiplier: currentAssetRender?.scaleMultiplier,
+        yOffset: currentAssetRender?.yOffset,
+        rotation: currentAssetRender?.rotation,
+        fitMode: currentAssetRender?.fitMode,
+      };
     }
+  }
 
-    if (override.scaleMultiplier !== undefined || override.yOffset !== undefined || override.fitMode !== undefined) {
-      if (nextObject.render?.mode === 'asset') {
-        nextObject.render = {
-          ...nextObject.render,
-          scaleMultiplier: override.scaleMultiplier ?? nextObject.render.scaleMultiplier,
-          yOffset: override.yOffset ?? nextObject.render.yOffset,
-          fitMode: override.fitMode ?? nextObject.render.fitMode,
-        };
-      } else {
-        nextObject.layoutTransform = {
-          ...nextObject.layoutTransform,
-          scaleMultiplier: override.scaleMultiplier ?? nextObject.layoutTransform?.scaleMultiplier,
-          yOffset: override.yOffset ?? nextObject.layoutTransform?.yOffset,
-        };
-      }
+  if (override.scaleMultiplier !== undefined || override.yOffset !== undefined || override.fitMode !== undefined) {
+    if (nextObject.render?.mode === 'asset') {
+      nextObject.render = {
+        ...nextObject.render,
+        scaleMultiplier: override.scaleMultiplier ?? nextObject.render.scaleMultiplier,
+        yOffset: override.yOffset ?? nextObject.render.yOffset,
+        fitMode: override.fitMode ?? nextObject.render.fitMode,
+      };
+    } else {
+      nextObject.layoutTransform = {
+        ...nextObject.layoutTransform,
+        scaleMultiplier: override.scaleMultiplier ?? nextObject.layoutTransform?.scaleMultiplier,
+        yOffset: override.yOffset ?? nextObject.layoutTransform?.yOffset,
+      };
     }
+  }
 
-    if (override.collider !== undefined) {
-      nextObject.collider = override.collider === null ? undefined : cloneCollider(override.collider);
-    }
+  if (override.collider !== undefined) {
+    nextObject.collider = override.collider === null ? undefined : cloneCollider(override.collider);
+  }
 
-    if (override.interactable !== undefined) {
-      nextObject.interactable = override.interactable === null ? undefined : cloneInteractable(override.interactable);
-    }
+  if (override.interactable !== undefined) {
+    nextObject.interactable = override.interactable === null ? undefined : cloneInteractable(override.interactable);
+  }
 
-    if (override.objectiveAnchor !== undefined) {
-      nextObject.objectiveAnchor = override.objectiveAnchor === null ? undefined : cloneObjectiveAnchor(override.objectiveAnchor);
-    }
+  if (override.objectiveAnchor !== undefined) {
+    nextObject.objectiveAnchor = override.objectiveAnchor === null ? undefined : cloneObjectiveAnchor(override.objectiveAnchor);
+  }
 
-    if (override.mailbox !== undefined) {
-      nextObject.mailbox = override.mailbox === null ? undefined : cloneMailbox(override.mailbox);
-    }
+  if (override.mailbox !== undefined) {
+    nextObject.mailbox = override.mailbox === null ? undefined : cloneMailbox(override.mailbox);
+  }
 
-    if (override.gameplay !== undefined) {
-      nextObject.gameplay = override.gameplay === null ? undefined : cloneGameplay(override.gameplay);
-    }
+  if (override.gameplay !== undefined) {
+    nextObject.gameplay = override.gameplay === null ? undefined : cloneGameplay(override.gameplay);
+  }
 
-    return nextObject;
+  return nextObject;
 };
 
 export const createWorldObjectFromLayoutOverride = (
@@ -628,14 +708,31 @@ export const mergeWorldObjectOverrides = (
   worldObjects: readonly WorldObjectDefinition[],
   document: LayoutOverrideDocument,
 ): readonly WorldObjectDefinition[] => {
-  const overridesById = new Map(document.overrides.map((override) => [override.id, override]));
   const baseObjectIds = new Set(worldObjects.map((object) => object.id));
+  const rawOverridesById = new Map<string, unknown>(document.overrides.map((override) => [override.id, override]));
+  const normalizedOverrides = document.overrides.map((override): LayoutTransformOverride => {
+    if (override.templateId && baseObjectIds.has(override.templateId)) {
+      return override;
+    }
+
+    const resolvedTemplateId = resolveGeneratedTemplateId(
+      override.id,
+      override.templateId,
+      rawOverridesById,
+      baseObjectIds,
+    );
+
+    return resolvedTemplateId && resolvedTemplateId !== override.templateId
+      ? { ...override, templateId: resolvedTemplateId }
+      : override;
+  });
+  const overridesById = new Map(normalizedOverrides.map((override) => [override.id, override]));
   const mergedObjects = worldObjects.map((object) => {
     const override = overridesById.get(object.id);
     return override ? applyLayoutTransformOverride(object, override) : cloneWorldObject(object);
   });
 
-  document.overrides.forEach((override) => {
+  normalizedOverrides.forEach((override) => {
     if (baseObjectIds.has(override.id)) {
       return;
     }

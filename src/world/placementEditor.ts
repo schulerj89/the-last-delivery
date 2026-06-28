@@ -21,7 +21,11 @@ import type {
   WorldObjectDefinition,
 } from './types';
 import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
-import { authoredVillageWorldObjects } from './villageDefinition';
+import {
+  authoredVillageWorldObjects,
+  baseVillageWorldObjects,
+} from './villageDefinition';
+import { generatedVillageLayoutOverrides } from './villageOverrides.generated';
 import {
   getDefaultActionForRole,
   getWorldObjectGameplay,
@@ -182,6 +186,11 @@ const getObjectAssetId = (object: WorldObjectDefinition): string | null => (
   getAssetRenderSettings(object)?.assetId ?? null
 );
 
+const baseVillageWorldObjectIds = new Set(baseVillageWorldObjects.map((object) => object.id));
+const generatedLayoutOverridesById = new Map(
+  generatedVillageLayoutOverrides.overrides.map((override) => [override.id, override]),
+);
+
 const sanitizePlacementObjectIdPart = (value: string): string => (
   value
     .trim()
@@ -207,11 +216,18 @@ export const createEditablePlacementObjects = (
 ): readonly EditablePlacementObject[] => (
   worldObjects
     .filter((object) => object.dimensions)
-    .map((object) => ({
-      id: object.id,
-      kind: object.kind,
-      worldObject: object,
-    }))
+    .map((object) => {
+      const generatedOverride = generatedLayoutOverridesById.get(object.id);
+      const isCreated = !baseVillageWorldObjectIds.has(object.id);
+
+      return {
+        id: object.id,
+        kind: object.kind,
+        worldObject: object,
+        templateId: generatedOverride?.templateId,
+        isCreated,
+      };
+    })
 );
 
 export const getEditablePlacementObjectById = (
@@ -663,10 +679,41 @@ const isChangedDraft = (
     || draft.mailboxVariant !== initial.mailboxVariant;
 };
 
+export const resolveEditablePlacementTemplateId = (
+  editableObject: EditablePlacementObject,
+  editableObjects: readonly EditablePlacementObject[] = createEditablePlacementObjects(),
+): string => {
+  const editableObjectsById = new Map(editableObjects.map((object) => [object.id, object]));
+  let templateId = editableObject.templateId ?? editableObject.id;
+  const seenObjectIds = new Set([editableObject.id]);
+
+  while (templateId) {
+    if (baseVillageWorldObjectIds.has(templateId)) {
+      return templateId;
+    }
+
+    if (seenObjectIds.has(templateId)) {
+      break;
+    }
+
+    seenObjectIds.add(templateId);
+    const templateObject = editableObjectsById.get(templateId);
+
+    if (!templateObject?.templateId) {
+      return templateId;
+    }
+
+    templateId = templateObject.templateId;
+  }
+
+  return editableObject.templateId ?? editableObject.id;
+};
+
 const createOverrideFromDraft = (
   editableObject: EditablePlacementObject,
   draft: PlacementTransformDraft,
   updatedAt: string,
+  editableObjects: readonly EditablePlacementObject[],
 ): LayoutTransformOverride | null => {
   const object = editableObject.worldObject;
   const initial = createPlacementTransformDraft(object);
@@ -678,7 +725,7 @@ const createOverrideFromDraft = (
 
   if (forceFullRecord) {
     override.kind = object.kind;
-    override.templateId = editableObject.templateId;
+    override.templateId = resolveEditablePlacementTemplateId(editableObject, editableObjects);
 
     if (object.dimensions) {
       override.dimensions = [...object.dimensions];
@@ -752,7 +799,7 @@ export const createLayoutOverrideDocumentFromPlacementDrafts = (
   overrides: editableObjects
     .map((object) => {
       const draft = draftsByObjectId.get(object.id);
-      return draft ? createOverrideFromDraft(object, draft, updatedAt) : null;
+      return draft ? createOverrideFromDraft(object, draft, updatedAt, editableObjects) : null;
     })
     .filter((override): override is LayoutTransformOverride => override !== null),
 });
@@ -2180,7 +2227,7 @@ export const createPlacementEditor = ({
       draft,
       getCurrentSnap(),
     );
-    const templateId = selectedObject.templateId ?? selectedObject.id;
+    const templateId = resolveEditablePlacementTemplateId(selectedObject, editableObjects);
     const override: LayoutTransformOverride = {
       id: objectId,
       kind: selectedObject.kind,

@@ -1,247 +1,2419 @@
 {
   "version": 1,
-  "updatedAt": "2026-06-28T00:00:00.000Z",
+  "updatedAt": "2026-06-28T19:43:05.104Z",
   "overrides": [
     {
-      "id": "post-office",
-      "position": [-6.75, 0.93, 6.45],
-      "rotation": [0, 0.08, 0],
-      "scaleMultiplier": 0.95,
-      "yOffset": 0,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "player-spawn",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "position": [
+        5.25,
+        0,
+        42.75
+      ]
     },
     {
       "id": "delivery-board",
-      "scaleMultiplier": 1.08,
-      "yOffset": 0.02,
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "active": false
     },
     {
       "id": "cottage-west",
-      "position": [-9.7, 0.9, -2.7],
-      "rotation": [0, 0.18, 0],
-      "scaleMultiplier": 0.92,
-      "yOffset": 0,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "position": [
+        -2,
+        0.9,
+        19.25
+      ],
+      "active": false,
+      "renderMode": "primitive"
     },
     {
       "id": "cottage-east",
-      "position": [9.65, 0.9, -2.35],
-      "rotation": [0, -0.18, 0],
-      "scaleMultiplier": 0.92,
-      "yOffset": 0,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "cottage-north",
-      "position": [0, 0.9, -9.45],
-      "rotation": [0, 0, 0],
-      "scaleMultiplier": 0.94,
-      "yOffset": 0,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "mailbox",
-      "rotation": [0, 3.141592653589793, 0],
-      "scaleMultiplier": 1.03,
-      "yOffset": 0,
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "mailbox-east",
-      "rotation": [0, 0, 0],
-      "scaleMultiplier": 1.03,
-      "yOffset": 0,
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "mailbox-post-office-return",
-      "rotation": [0, 1.5707963267948966, 0],
-      "scaleMultiplier": 1.03,
-      "yOffset": 0,
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "tree-northwest",
-      "position": [-12.8, 1.28, -10.8],
-      "scaleMultiplier": 0.92,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "tree-north",
-      "position": [-5.9, 1.24, -11.35],
-      "scaleMultiplier": 0.88,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "tree-northeast",
-      "position": [8.2, 1.34, -10.95],
-      "scaleMultiplier": 0.9,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "position": [
+        -13.25,
+        0.9,
+        11.5
+      ],
+      "scaleMultiplier": 4.719999999999992
     },
     {
       "id": "tree-east",
-      "position": [12.75, 1.22, 1.4],
-      "scaleMultiplier": 0.86,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "tree-southeast",
-      "position": [11.8, 1.26, 11.15],
-      "scaleMultiplier": 0.86,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "position": [
+        12.5,
+        1.3,
+        1.75
+      ],
+      "active": false,
+      "renderMode": "primitive"
     },
     {
       "id": "tree-south",
-      "position": [-5.7, 1.25, 12.65],
-      "scaleMultiplier": 0.86,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "tree-west",
-      "position": [-12.85, 1.24, 2.15],
-      "scaleMultiplier": 0.88,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "bush-side-path-a",
-      "position": [-5.25, 0.32, 10.65],
-      "scaleMultiplier": 0.82,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "bush-side-path-b",
-      "position": [3.85, 0.3, 12.05],
-      "scaleMultiplier": 0.82,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "bush-blue-house",
-      "position": [-11.45, 0.34, -0.45],
-      "scaleMultiplier": 0.78,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "bush-red-house",
-      "position": [11.45, 0.32, 0.3],
-      "scaleMultiplier": 0.78,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "active": false,
+      "renderMode": "primitive"
     },
     {
       "id": "crate-large",
-      "position": [-8.45, 0.5, 8.85],
-      "rotation": [0, 0.18, 0],
-      "scaleMultiplier": 0.9,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "position": [
+        -7.5,
+        0.5,
+        8.75
+      ],
+      "active": false,
+      "renderMode": "primitive"
     },
     {
       "id": "crate-small-a",
-      "position": [-7.55, 0.35, 9.35],
-      "rotation": [0, -0.28, 0],
-      "scaleMultiplier": 0.82,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "barrel-north-a",
-      "position": [-9.05, 0.32, 9.25],
-      "rotation": [0, 0.35, 0],
-      "scaleMultiplier": 0.88,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
-    },
-    {
-      "id": "crate-small-b",
-      "position": [10.7, 0.35, 10.35],
-      "rotation": [0, 0.42, 0],
-      "scaleMultiplier": 0.82,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "active": false,
+      "renderMode": "primitive"
     },
     {
       "id": "barrel-north-b",
-      "position": [12.15, 0.29, 9.25],
-      "rotation": [0, -0.2, 0],
-      "scaleMultiplier": 0.86,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "position": [
+        10.75,
+        0.29,
+        9
+      ],
+      "active": false,
+      "renderMode": "primitive"
     },
     {
       "id": "cart-south-path",
-      "position": [11.55, 0.45, 10.35],
-      "rotation": [0, -0.35, 0],
-      "scaleMultiplier": 0.92,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "position": [
+        10,
+        0.45,
+        9.5
+      ],
+      "active": false,
+      "renderMode": "primitive"
     },
     {
-      "id": "nature-rock-board-edge",
-      "position": [-10.75, 0.18, 5.6],
-      "scaleMultiplier": 0.8,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "editor-pavement-tile-square-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        1,
+        0.025,
+        38.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
     },
     {
-      "id": "nature-rock-path-a",
-      "position": [-11.65, 0.22, -7.25],
-      "scaleMultiplier": 0.82,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "editor-pavement-tile-square-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        1,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
     },
     {
-      "id": "nature-rock-north-edge",
-      "position": [4.6, 0.22, -10.85],
-      "scaleMultiplier": 0.82,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "editor-pavement-tile-plaza-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-plaza",
+      "dimensions": [
+        6,
+        0.05,
+        6
+      ],
+      "position": [
+        1,
+        0.025,
+        41.25
+      ],
+      "active": false,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
     },
     {
-      "id": "signpost-post-office",
-      "position": [-5.15, 0.7, 8.55],
-      "rotation": [0, 0.55, 0],
-      "scaleMultiplier": 0.82,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "editor-pavement-tile-square-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        1,
+        0.025,
+        42.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
     },
     {
-      "id": "signpost-blue-house",
-      "position": [-6.75, 0.65, -2.7],
-      "rotation": [0, 0.7, 0],
-      "scaleMultiplier": 0.78,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "editor-pavement-tile-long-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-long",
+      "dimensions": [
+        7,
+        0.05,
+        2
+      ],
+      "position": [
+        1,
+        0.025,
+        43.75
+      ],
+      "active": false,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
     },
     {
-      "id": "signpost-red-house",
-      "position": [6.75, 0.65, -2.05],
-      "rotation": [0, -0.7, 0],
-      "scaleMultiplier": 0.78,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        5,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
     },
     {
-      "id": "signpost-side-path",
-      "position": [4.15, 0.65, 1.85],
-      "rotation": [0, -0.85, 0],
-      "scaleMultiplier": 0.76,
-      "fitMode": "contain",
-      "updatedAt": "2026-06-28T00:00:00.000Z"
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        5,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        5,
+        0.025,
+        38.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -3,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -3,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -3,
+        0.025,
+        38.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-long-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-long",
+      "dimensions": [
+        7,
+        0.05,
+        2
+      ],
+      "position": [
+        -13.25,
+        0.025,
+        37
+      ],
+      "active": false,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-3",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -3,
+        0.025,
+        42.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-2-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        5,
+        0.025,
+        42.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        5,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        1,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-2-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-2-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -3,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-3",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        38.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-4",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        42.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-2-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        9,
+        0.025,
+        42.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        9,
+        0.025,
+        38.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        9,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        9,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        9,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-house-003-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "cottage",
+      "templateId": "cottage-west",
+      "dimensions": [
+        2.8,
+        1.8,
+        2.4
+      ],
+      "position": [
+        22.5,
+        0.9,
+        26.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        -3.1415926535897936,
+        0
+      ],
+      "scaleMultiplier": 3.2499999999999964,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-house-003",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        13,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        13,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        17,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        17,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        13,
+        0.025,
+        34.5
+      ],
+      "active": false,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        17,
+        0.025,
+        34.5
+      ],
+      "active": false,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-2-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        13,
+        0.025,
+        38.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-2-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        17,
+        0.025,
+        38.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-2-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        13,
+        0.025,
+        42.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-2-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        17,
+        0.025,
+        42.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        13,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-2-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        17,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        21,
+        0.025,
+        26.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        1,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        22.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        18.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        14.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        10.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -11,
+        0.025,
+        10.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -11,
+        0.025,
+        14.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        4,
+        0.025,
+        22.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        8,
+        0.025,
+        22.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        4,
+        0.025,
+        18.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        8,
+        0.025,
+        18.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        4,
+        0.025,
+        14.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        8,
+        0.025,
+        14.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        4,
+        0.025,
+        10.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        8,
+        0.025,
+        10.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        4,
+        0.025,
+        6.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        8,
+        0.025,
+        6.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        4,
+        0.025,
+        2.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        8,
+        0.025,
+        2.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-delivery-board-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "delivery-board",
+      "templateId": "delivery-board",
+      "dimensions": [
+        1.8,
+        1.8,
+        0.45
+      ],
+      "position": [
+        -4.458949888492465,
+        0,
+        37.14012239347566
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        4.71238898038469,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "delivery-board",
+        "action": "open-delivery-board"
+      }
+    },
+    {
+      "id": "editor-mailbox-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "mailbox",
+      "templateId": "mailbox",
+      "dimensions": [
+        0.85,
+        1.24,
+        0.5
+      ],
+      "position": [
+        19.25,
+        0,
+        29.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": {
+        "variant": "blue",
+        "destinationName": "Blue House Mailbox"
+      },
+      "gameplay": {
+        "role": "mailbox",
+        "action": "complete-delivery",
+        "destinationName": "Blue House Mailbox",
+        "mailboxVariant": "blue"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        21,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        21,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        25,
+        0.025,
+        30.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        25,
+        0.025,
+        34.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-mailbox-east-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "mailbox",
+      "templateId": "mailbox-east",
+      "dimensions": [
+        0.75,
+        1.18,
+        0.46
+      ],
+      "position": [
+        -12.14952679858623,
+        0,
+        7.630396858210666
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": {
+        "variant": "red",
+        "destinationName": "Hill Path Mailbox"
+      },
+      "gameplay": {
+        "role": "mailbox",
+        "action": "complete-delivery",
+        "destinationName": "Hill Path Mailbox",
+        "mailboxVariant": "red"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-4",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -11,
+        0.025,
+        6.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-5",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -7,
+        0.025,
+        6.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-5-copy-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -15,
+        0.025,
+        6.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-house-002-1",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "cottage",
+      "templateId": "cottage-west",
+      "dimensions": [
+        2.8,
+        1.8,
+        2.4
+      ],
+      "position": [
+        -17.923220323501862,
+        0.9,
+        33.47276635315046
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 3.899999999999994,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-house-002",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-2",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -11,
+        0.025,
+        33.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-3",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -14.75,
+        0.025,
+        33.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-4",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -18.75,
+        0.025,
+        33.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-5",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -11,
+        0.025,
+        29.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-6",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -15,
+        0.025,
+        29.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-7",
+      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -19,
+        0.025,
+        29.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
     }
   ]
 }

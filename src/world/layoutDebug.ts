@@ -126,15 +126,26 @@ export const getLayoutObjectCountsByKind = (): Record<string, number> => (
 );
 
 export const getImportantLayoutObjects = (): readonly WorldObjectDefinition[] => (
-  layoutDebugConfig.importantObjectIds.map((objectId) => {
+  Array.from(layoutDebugConfig.importantObjectIds.reduce<Map<string, WorldObjectDefinition>>((objectsById, objectId) => {
     const object = villageWorldObjects.find((worldObject) => worldObject.id === objectId);
 
-    if (!object) {
-      throw new Error(`Missing important layout object: ${objectId}`);
+    if (object) {
+      objectsById.set(object.id, object);
     }
 
-    return object;
-  })
+    return objectsById;
+  }, new Map()).values())
+    .concat(villageWorldObjects.filter((worldObject) => {
+      if (layoutDebugConfig.importantObjectIds.includes(worldObject.id as ImportantLayoutObjectId)) {
+        return false;
+      }
+
+      const role = getWorldObjectGameplay(worldObject).role;
+      return role === 'player-spawn'
+        || role === 'post-office'
+        || role === 'delivery-board'
+        || role === 'mailbox';
+    }))
 );
 
 const createLineMaterial = (color: number): THREE.LineBasicMaterial => (
@@ -368,16 +379,17 @@ const createGroundLabel = (
 
 const getObjectLabelText = (object: WorldObjectDefinition): string => {
   const mailbox = getWorldObjectMailbox(object);
+  const gameplay = getWorldObjectGameplay(object);
 
   if (mailbox) {
     return mailbox.destinationName.replace(' Mailbox', '');
   }
 
-  if (getWorldObjectGameplay(object).role === 'player-spawn') {
+  if (gameplay.role === 'player-spawn') {
     return 'Spawn';
   }
 
-  if (object.id === 'delivery-board') {
+  if (gameplay.role === 'delivery-board' || object.id === 'delivery-board') {
     return 'Board';
   }
 
@@ -385,7 +397,7 @@ const getObjectLabelText = (object: WorldObjectDefinition): string => {
     return 'Well';
   }
 
-  if (object.id === 'post-office') {
+  if (gameplay.role === 'post-office' || object.id === 'post-office') {
     return 'Post Office';
   }
 
