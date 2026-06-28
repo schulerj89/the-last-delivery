@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.17] - 2026-06-28
+
+### Fixed
+
+- Added asset-specific collision footprint scales for `fantasy-house-001` and `fantasy-house-002` so their blockers cover the building core instead of the full visual footprint.
+- Added smoke coverage for the tightened house collision scales.
+
 ## [0.53.16] - 2026-06-28
 
 ### Fixed

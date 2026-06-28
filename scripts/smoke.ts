@@ -151,6 +151,7 @@ import { createPlayground } from '../src/world/playground';
 import { playgroundCompositionConfig } from '../src/world/playgroundComposition';
 import {
   createPlaygroundCollisionWorld,
+  playgroundAssetCollisionFootprintScale,
   playgroundCollisionFootprintScale,
   playgroundCollisionWorld,
 } from '../src/world/playgroundCollision';
@@ -2283,6 +2284,11 @@ const runModuleSmoke = (): void => {
   const activeBushes = villageWorldObjects.filter((object) => object.kind === 'bush');
   const activeRocks = villageWorldObjects.filter((object) => object.kind === 'rock');
   const activePavements = villageWorldObjects.filter((object) => object.kind === 'pavement');
+  const activeTightHouseCollisionObjects = villageWorldObjects.filter((object) => (
+    object.collider
+    && object.render?.mode === 'asset'
+    && (object.render.assetId === 'fantasy-house-001' || object.render.assetId === 'fantasy-house-002')
+  ));
 
   assert(authoredCollisionWorld.boxes.length >= 2, 'Authored collision boxes should still initialize on demand.');
   assert(
@@ -2310,6 +2316,27 @@ const runModuleSmoke = (): void => {
   assert(activeCottages.length === 0 || activeCottages.some((object) => !object.collider || authoredCollisionIds.has(object.id)), 'Active cottages should initialize collision or remain explicitly non-collidable.');
   assert(playgroundCollisionFootprintScale.cottage !== undefined && playgroundCollisionFootprintScale.cottage < 1, 'Cottage collision should be smaller than the visual footprint for mailbox access.');
   assert(playgroundCollisionFootprintScale['post-office'] !== undefined && playgroundCollisionFootprintScale['post-office'] < 1, 'Post office collision should be smaller than the visual footprint for nearby interactions.');
+  assert(
+    playgroundAssetCollisionFootprintScale['fantasy-house-001'] < playgroundCollisionFootprintScale['post-office'],
+    'Fantasy house 001 should use a tighter collision footprint than generic post office buildings.',
+  );
+  assert(
+    playgroundAssetCollisionFootprintScale['fantasy-house-002'] < playgroundCollisionFootprintScale.cottage,
+    'Fantasy house 002 should use a tighter collision footprint than generic cottages.',
+  );
+  activeTightHouseCollisionObjects.forEach((house) => {
+    if (!house.collider || house.render?.mode !== 'asset') {
+      throw new Error(`Missing collidable house asset for smoke: ${house.id}`);
+    }
+
+    const box = authoredCollisionWorld.boxes.find((collisionBox) => collisionBox.id === house.id);
+    const assetScale = playgroundAssetCollisionFootprintScale[house.render.assetId];
+
+    assert(box !== undefined, `House asset should create a collision box: ${house.id}.`);
+    assert(assetScale !== undefined, `House asset should have a tight collision scale: ${house.render.assetId}.`);
+    assert(Math.abs(box.size.x - house.collider.size[0] * assetScale) < 0.001, `House asset collision X footprint should use asset-specific scale: ${house.id}.`);
+    assert(Math.abs(box.size.z - house.collider.size[2] * assetScale) < 0.001, `House asset collision Z footprint should use asset-specific scale: ${house.id}.`);
+  });
   activeCollidableCottages.forEach((cottage) => {
     const box = authoredCollisionWorld.boxes.find((collisionBox) => collisionBox.id === cottage.id);
     assert(box !== undefined, `Collidable cottage should create a collision box: ${cottage.id}.`);

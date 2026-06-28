@@ -11,8 +11,17 @@ export const playgroundCollisionFootprintScale: Partial<Record<WorldObjectKind, 
   'post-office': 0.78,
 };
 
+export const playgroundAssetCollisionFootprintScale: Readonly<Record<string, number>> = {
+  'fantasy-house-001': 0.42,
+  'fantasy-house-002': 0.42,
+};
+
 const getCollisionFootprintScale = (object: WorldObjectDefinition): number => (
-  playgroundCollisionFootprintScale[object.kind] ?? 1
+  (
+    object.render?.mode === 'asset'
+      ? playgroundAssetCollisionFootprintScale[object.render.assetId]
+      : undefined
+  ) ?? playgroundCollisionFootprintScale[object.kind] ?? 1
 );
 
 const createWorldObjectCollisionBox = (object: WorldObjectDefinition) => {
