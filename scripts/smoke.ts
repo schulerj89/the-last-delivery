@@ -48,6 +48,7 @@ import {
   updateObjectiveMarker,
 } from '../src/world/playgroundObjectiveMarker';
 import { createMailboxProp } from '../src/world/props/createMailbox';
+import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
 import { villageWorldObjects } from '../src/world/villageDefinition';
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -363,6 +364,41 @@ const runWorldDefinitionSmoke = (): void => {
     + (deliveryBoard.position[2] - postOffice.position[2]) ** 2
   );
   assert(boardToPostOfficeDistanceSq < 8, 'Delivery board should stay near the post office placeholder.');
+};
+
+const runVillageLayoutConfigSmoke = (): void => {
+  const { bounds, densityBudget, spacing, zones } = villageLayoutConfig;
+  const densityTotal = (
+    densityBudget.openWalkableSpace
+    + densityBudget.landmarkStructures
+    + densityBudget.decorativeClutter
+  );
+
+  assert(villageLayoutConfig.coordinateSystem.x === 'left/right', 'Village layout should document the X axis.');
+  assert(villageLayoutConfig.coordinateSystem.y === 'height', 'Village layout should document the Y axis.');
+  assert(villageLayoutConfig.coordinateSystem.z === 'forward/back', 'Village layout should document the Z axis.');
+  assert(bounds.minX === -14 && bounds.maxX === 14, 'Village layout should define intended X bounds.');
+  assert(bounds.minZ === -12 && bounds.maxZ === 14, 'Village layout should define intended Z bounds.');
+  assert(spacing.mainPathMinWidth === 3, 'Village layout should define the minimum main path width.');
+  assert(spacing.mainPathMaxWidth === 4, 'Village layout should define the maximum main path width.');
+  assert(spacing.mainPathMinWidth < spacing.mainPathMaxWidth, 'Village layout main path width range should be ordered.');
+  assert(spacing.plazaOpenRadius === 4, 'Village layout should define the open plaza radius.');
+  assert(spacing.interactableClearanceRadius === 2, 'Village layout should define interactable clearance.');
+  assert(spacing.decorativeClusterMinProps === 3, 'Village layout should define minimum decorative cluster size.');
+  assert(spacing.decorativeClusterMaxProps === 5, 'Village layout should define maximum decorative cluster size.');
+  assert(spacing.decorativeClusterMinProps < spacing.decorativeClusterMaxProps, 'Decorative cluster range should be ordered.');
+  assert(Math.abs(densityTotal - 1) < 0.001, 'Village layout density budget should total 100%.');
+
+  const zoneIds = new Set(zones.map((zone) => zone.id));
+  assert(zones.length === 8, 'Village layout should define all intended major zones.');
+  assert(zoneIds.has('spawn-start-path'), 'Village layout should include the spawn/start path zone.');
+  assert(zoneIds.has('post-office-delivery-board'), 'Village layout should include the post office and delivery board zone.');
+  assert(zoneIds.has('central-plaza-well'), 'Village layout should include the central plaza and well zone.');
+  assert(zoneIds.has('blue-house-target'), 'Village layout should include the blue house target zone.');
+  assert(zoneIds.has('red-house-target'), 'Village layout should include the red house target zone.');
+  assert(zoneIds.has('north-house-target'), 'Village layout should include the north house target zone.');
+  assert(zoneIds.has('forest-edge-boundary'), 'Village layout should include the forest edge boundary zone.');
+  assert(zoneIds.has('market-cart-dressing'), 'Village layout should include the market cart dressing zone.');
 };
 
 const runDeliveryStateSmoke = (): void => {
@@ -693,6 +729,7 @@ const runModuleSmoke = (): void => {
 runAssetRegistrySmoke();
 await runAssetCacheSmoke();
 runWorldDefinitionSmoke();
+runVillageLayoutConfigSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();
 runPerformanceSmoke();

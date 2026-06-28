@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.26.0] - 2026-06-28
+
+### Added
+
+- Added `docs/WORLD_LAYOUT.md` with the first-village coordinate system, intended bounds, major zones, spacing rules, density budget, and ASCII top-down map.
+- Added a typed `villageLayoutConfig` module for intended bounds, spacing, density, and zone definitions.
+- Added smoke checks for the layout config so future layout edits keep the documented rules valid.
+
 ## [0.25.0] - 2026-06-28
 
 ### Added
