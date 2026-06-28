@@ -24,7 +24,7 @@ Expected local source folders:
 
 Registry entries should include `id`, `url`, `sourcePack`, `defaultScale`, and optional `notes`. The asset loader builds primitive fallbacks first and treats GLB models as optional visuals.
 
-Prefer GLB when available. If a selected source pack only provides FBX, convert only the chosen source files outside `public/`, then copy the selected runtime GLBs into `public/assets/models/`. Avoid full packs, character models, animations, DRACO, KTX2, and meshopt until the runtime path is intentionally expanded.
+Prefer GLB when available. If a selected source pack only provides FBX, convert only the chosen source files outside `public/`, then copy the selected runtime GLBs into `public/assets/models/`. Avoid full packs, animation sets, DRACO, KTX2, and meshopt until the runtime path is intentionally expanded.
 
 ## Current Runtime Nature Selection
 
@@ -48,3 +48,11 @@ The Fantasy Free Low Poly source folder remains source-only. The current village
 - `bag_001.glb` for small non-blocking sack dressing
 
 These assets are optional visuals with primitive fallbacks. Major blockers still use simple world-definition colliders; small dressing props stay non-collidable unless explicitly marked otherwise.
+
+## Current Runtime Character Selection
+
+The Creative Characters FREE source folder remains source-only. The current player uses one selected assembled GLB under `public/assets/models/characters/`:
+
+- `courier-creative-character.glb` from `Creative_Character_free.glb`
+
+The player controller still owns movement, collision, reset, and camera targeting. The character GLB is a visual child only, with the primitive player mesh retained as the fallback.

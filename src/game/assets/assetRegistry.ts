@@ -119,6 +119,15 @@ export const assetRegistry: readonly AssetDefinition[] = [
     notes: 'Selected low-poly fantasy bag prop for non-blocking dressing.',
     maxRecommendedBytes: 900_000,
   },
+  {
+    id: 'creative-courier-character',
+    kind: 'gltf',
+    url: '/assets/models/characters/courier-creative-character.glb',
+    sourcePack: 'creative-characters-free',
+    defaultScale: 1,
+    notes: 'Selected assembled low-poly character visual for the player courier. Movement and collision still use the existing player controller.',
+    maxRecommendedBytes: 2_500_000,
+  },
 ];
 
 export const selectedNatureAssetIds = [
@@ -136,6 +145,10 @@ export const selectedFantasyAssetIds = [
   'fantasy-pointer-001',
   'fantasy-cart-001',
   'fantasy-bag-001',
+] as const;
+
+export const selectedCharacterAssetIds = [
+  'creative-courier-character',
 ] as const;
 
 export const getAssetDefinition = (assetId: string): AssetDefinition | undefined => (
@@ -162,6 +175,18 @@ export const getSelectedFantasyAssets = (): readonly AssetDefinition[] => (
 
     if (!asset) {
       throw new Error(`Missing selected fantasy asset: ${assetId}`);
+    }
+
+    return asset;
+  })
+);
+
+export const getSelectedCharacterAssets = (): readonly AssetDefinition[] => (
+  selectedCharacterAssetIds.map((assetId) => {
+    const asset = getAssetDefinition(assetId);
+
+    if (!asset) {
+      throw new Error(`Missing selected character asset: ${assetId}`);
     }
 
     return asset;

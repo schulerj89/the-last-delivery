@@ -10,16 +10,24 @@ import {
 import {
   assetRegistry,
   createAssetCache,
+  getSelectedCharacterAssets,
   getSelectedFantasyAssets,
   getSelectedNatureAssets,
   isKnownAssetId,
+  selectedCharacterAssetIds,
   selectedFantasyAssetIds,
   selectedNatureAssetIds,
 } from '../src/game/assets';
 import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
-import { playerMovementSettings } from '../src/game/player';
+import {
+  createPlayerFallbackVisual,
+  createPlayerVisual,
+  playerCharacterAssetId,
+  playerCharacterVisualSettings,
+  playerMovementSettings,
+} from '../src/game/player';
 import {
   clampFrameDelta,
   createPerformanceMonitor,
@@ -64,6 +72,7 @@ const importNodeModule = async <T>(specifier: string): Promise<T> => (
 const nodeFileSystem = await importNodeModule<NodeFileSystem>('node:fs');
 const selectedNatureAssetIdSet = new Set<string>(selectedNatureAssetIds);
 const selectedFantasyAssetIdSet = new Set<string>(selectedFantasyAssetIds);
+const selectedCharacterAssetIdSet = new Set<string>(selectedCharacterAssetIds);
 
 const isFiniteVector3Tuple = (value: readonly number[]): boolean => (
   value.length === 3 && value.every((component) => Number.isFinite(component))
@@ -140,6 +149,26 @@ const runAssetRegistrySmoke = (): void => {
   assert(selectedFantasyAssets.length === 8, 'Exactly eight selected fantasy assets should be registered for this pass.');
   assert(selectedFantasyBytes > 0, 'Selected fantasy runtime asset size should be measurable.');
   console.info(`Selected fantasy runtime assets: ${selectedFantasyAssets.length} files, ${formatBytes(selectedFantasyBytes)}.`);
+
+  const selectedCharacterAssets = getSelectedCharacterAssets();
+  const selectedCharacterBytes = selectedCharacterAssets.reduce((totalBytes, asset) => {
+    const assetFileUrl = getRuntimeAssetFileUrl(asset.url);
+
+    assert(asset.sourcePack === 'creative-characters-free', `Selected character asset should identify the character source pack: ${asset.id}`);
+    assert(asset.url.startsWith('/assets/models/characters/'), `Selected character asset should live in the runtime characters folder: ${asset.id}`);
+    assert(nodeFileSystem.existsSync(assetFileUrl), `Selected character asset file should exist: ${asset.url}`);
+
+    const stats = nodeFileSystem.statSync(assetFileUrl);
+    assert(stats.isFile(), `Selected character asset should be a file: ${asset.url}`);
+    assert(stats.size > 0, `Selected character asset should not be empty: ${asset.url}`);
+    assert(stats.size <= asset.maxRecommendedBytes, `Selected character asset should stay within its size budget: ${asset.id}`);
+
+    return totalBytes + stats.size;
+  }, 0);
+
+  assert(selectedCharacterAssets.length === 1, 'Exactly one selected character asset should be registered for this pass.');
+  assert(selectedCharacterBytes > 0, 'Selected character runtime asset size should be measurable.');
+  console.info(`Selected character runtime assets: ${selectedCharacterAssets.length} file, ${formatBytes(selectedCharacterBytes)}.`);
 };
 
 const runAssetCacheSmoke = async (): Promise<void> => {
@@ -566,6 +595,28 @@ const runResourceTrackerSmoke = (): void => {
 const runModuleSmoke = (): void => {
   assert(playerMovementSettings.maxSpeed > 0, 'Player max speed should be positive.');
   assert(playerMovementSettings.radius > 0, 'Player collision radius should be positive.');
+  assert(playerCharacterAssetId === 'creative-courier-character', 'Player character asset id should point to the selected courier asset.');
+  assert(selectedCharacterAssetIdSet.has(playerCharacterAssetId), 'Player character asset id should be part of selected character assets.');
+  assert(isKnownAssetId(playerCharacterVisualSettings.assetId), 'Player character visual asset should be registered.');
+  assert(playerCharacterVisualSettings.scale > 0, 'Player character visual scale should be positive.');
+  assert(Number.isFinite(playerCharacterVisualSettings.rotationY), 'Player character visual rotation should be finite.');
+  assert(isFiniteVector3Tuple(playerCharacterVisualSettings.offset), 'Player character visual offset should be a valid vector.');
+  assert(playerCharacterVisualSettings.visibleMeshNames.length > 0, 'Player character visual should select a courier-style mesh subset.');
+
+  const fallbackVisual = createPlayerFallbackVisual();
+  assert(fallbackVisual.name === 'player:placeholder', 'Player fallback visual should initialize.');
+  assert(fallbackVisual.getObjectByName('player:placeholder-body') !== undefined, 'Player fallback body should initialize.');
+  assert(fallbackVisual.getObjectByName('player:facing-marker') !== undefined, 'Player fallback facing marker should initialize.');
+
+  const playerVisual = createPlayerVisual({
+    info: () => undefined,
+    warn: () => undefined,
+  });
+  assert(playerVisual.object.name === 'player', 'Player visual root should initialize.');
+  assert(playerVisual.fallback.visible, 'Player fallback should start visible until the character model loads.');
+  assert(playerVisual.object.getObjectByName('player:placeholder-body') !== undefined, 'Player visual should contain primitive fallback geometry.');
+  playerVisual.dispose();
+
   assert(thirdPersonCameraSettings.distance > 0, 'Camera distance should be positive.');
   assert(thirdPersonCameraSettings.minPitch < thirdPersonCameraSettings.maxPitch, 'Camera pitch limits should be ordered.');
   assert(playgroundCollisionWorld.boxes.length >= 2, 'Playground collision boxes should initialize.');

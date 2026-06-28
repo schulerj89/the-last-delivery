@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.25.0] - 2026-06-28
+
+### Added
+
+- Added one selected Creative Characters FREE runtime GLB for the player courier visual.
+- Added a player visual module with character scale, rotation, offset, and visible-mesh tuning constants.
+- Added fallback-safe character attachment to the existing player controller while preserving movement, collision, reset, and camera behavior.
+- Added GLB animation-name metadata logging when loaded assets provide animations.
+- Added smoke checks for the selected character asset, runtime file presence, player fallback visual initialization, and player visual config.
+
+### Changed
+
+- Updated asset scan reporting and asset docs to include selected character runtime assets.
+
 ## [0.24.0] - 2026-06-28
 
 ### Added

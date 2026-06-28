@@ -24,6 +24,8 @@ const formatBytes = (bytes) => {
   return `${bytes} B`;
 };
 
+const formatFileCount = (count) => `${count} ${count === 1 ? 'file' : 'files'}`;
+
 const pathExists = async (targetPath) => {
   try {
     await stat(targetPath);
@@ -148,6 +150,11 @@ const selectedFantasyRuntimeFiles = runtimeFiles.filter((file) => (
   && (file.extension === '.glb' || file.extension === '.gltf')
 ));
 const selectedFantasyRuntimeBytes = selectedFantasyRuntimeFiles.reduce((sum, file) => sum + file.bytes, 0);
+const selectedCharacterRuntimeFiles = runtimeFiles.filter((file) => (
+  file.relativePath.startsWith('characters/')
+  && (file.extension === '.glb' || file.extension === '.gltf')
+));
+const selectedCharacterRuntimeBytes = selectedCharacterRuntimeFiles.reduce((sum, file) => sum + file.bytes, 0);
 
 console.info('Asset scan');
 console.info(`Raw asset root: ${path.relative(repoRoot, rawAssetRoot)}`);
@@ -186,8 +193,9 @@ if (totalsByPack.length === 0) {
 console.info('');
 console.info('Runtime asset budget:');
 console.info(`- public/assets/models total size: ${formatBytes(runtimeModelBytes)}`);
-console.info(`- selected nature runtime assets: ${selectedNatureRuntimeFiles.length} files, ${formatBytes(selectedNatureRuntimeBytes)}`);
-console.info(`- selected fantasy runtime assets: ${selectedFantasyRuntimeFiles.length} files, ${formatBytes(selectedFantasyRuntimeBytes)}`);
+console.info(`- selected nature runtime assets: ${formatFileCount(selectedNatureRuntimeFiles.length)}, ${formatBytes(selectedNatureRuntimeBytes)}`);
+console.info(`- selected fantasy runtime assets: ${formatFileCount(selectedFantasyRuntimeFiles.length)}, ${formatBytes(selectedFantasyRuntimeBytes)}`);
+console.info(`- selected character runtime assets: ${formatFileCount(selectedCharacterRuntimeFiles.length)}, ${formatBytes(selectedCharacterRuntimeBytes)}`);
 
 console.info('');
 console.info('Files:');

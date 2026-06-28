@@ -6,6 +6,7 @@ import { getAssetDefinition, type AssetDefinition } from './assetRegistry';
 export interface CachedGltfAsset {
   asset: AssetDefinition;
   source: THREE.Group;
+  animationNames: readonly string[];
 }
 
 export interface AssetRuntimeStats {
@@ -53,11 +54,24 @@ const applyDefaultScale = (asset: AssetDefinition, scene: THREE.Group): void => 
   scene.scale.multiplyScalar(asset.defaultScale);
 };
 
-const configureAssetScene = (asset: AssetDefinition, scene: THREE.Group): THREE.Group => {
+const getAnimationNames = (animations: readonly THREE.AnimationClip[]): readonly string[] => (
+  animations.map((animation, index) => animation.name || `animation-${index + 1}`)
+);
+
+const getSceneAnimationNames = (scene: THREE.Object3D): readonly string[] => (
+  Array.isArray(scene.userData.animationNames) ? scene.userData.animationNames : []
+);
+
+const configureAssetScene = (
+  asset: AssetDefinition,
+  scene: THREE.Group,
+  animationNames: readonly string[] = [],
+): THREE.Group => {
   const root = scene;
   applyDefaultScale(asset, root);
   root.name = `asset:${asset.id}:source`;
   root.userData.assetId = asset.id;
+  root.userData.animationNames = [...animationNames];
   root.traverse((object) => {
     object.userData.assetId = asset.id;
 
@@ -75,7 +89,7 @@ const loadGltfSource = (asset: AssetDefinition): Promise<THREE.Group> => (
     loader.load(
       asset.url,
       (gltf) => {
-        resolve(configureAssetScene(asset, gltf.scene));
+        resolve(configureAssetScene(asset, gltf.scene, getAnimationNames(gltf.animations)));
       },
       undefined,
       reject,
@@ -185,10 +199,14 @@ export const createAssetCache = ({
           throw new Error(`GLB asset cache was disposed before ${asset.id} finished loading.`);
         }
 
-        const entry = { asset, source };
+        const animationNames = getSceneAnimationNames(source);
+        const entry = { asset, source, animationNames };
         loadedEntries.set(asset.id, entry);
         failedAssets.delete(asset.id);
         log.info(`[assets] Loaded model ${asset.id}.`);
+        if (animationNames.length > 0) {
+          log.info(`[assets] ${asset.id} animations: ${animationNames.join(', ')}.`);
+        }
         return entry;
       })
       .catch((error: unknown) => {

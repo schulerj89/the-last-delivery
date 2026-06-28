@@ -1,9 +1,11 @@
 export {
   assetRegistry,
   getAssetDefinition,
+  getSelectedCharacterAssets,
   getSelectedFantasyAssets,
   getSelectedNatureAssets,
   isKnownAssetId,
+  selectedCharacterAssetIds,
   selectedFantasyAssetIds,
   selectedNatureAssetIds,
 } from './assetRegistry';

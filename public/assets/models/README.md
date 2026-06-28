@@ -16,7 +16,8 @@ Current registry entry:
 - `fantasy/pointer_001.glb` - selected fantasy pointer signpost prop.
 - `fantasy/cart_001.glb` - selected fantasy cart prop.
 - `fantasy/bag_001.glb` - selected fantasy bag/sack prop.
+- `characters/courier-creative-character.glb` - selected player courier character visual.
 
 The game always creates primitive placeholders first. If a GLB is missing, too large, or fails to load, the primitive placeholder remains and gameplay continues with the existing collider and interactions.
 
-Keep test props small and focused. Do not place full asset packs, character models, animation sets, or compressed models that require DRACO, KTX2, or meshopt here yet.
+Keep test props small and focused. Do not place full asset packs, animation sets, or compressed models that require DRACO, KTX2, or meshopt here yet.

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { resolvePlayerCollision } from '../collision';
 import type { PlayerController, PlayerControllerOptions, PlayerMovementSettings, PlayerState } from './types';
+import { createPlayerVisual } from './playerVisual';
 import { playerSpawnPosition } from '../../world/villageDefinition';
 
 const spawnPosition = new THREE.Vector3(...playerSpawnPosition);
@@ -15,39 +16,7 @@ export const playerMovementSettings: PlayerMovementSettings = {
   maxDeltaSeconds: 0.05,
 };
 
-const playerMaterial = new THREE.MeshStandardMaterial({ color: 0xf2d16b, roughness: 0.55 });
-const facingMaterial = new THREE.MeshStandardMaterial({ color: 0x2f5f8f, roughness: 0.55 });
-
 const movementKeys = new Set(['w', 'a', 's', 'd']);
-
-const createPlayerMesh = (): THREE.Group => {
-  const player = new THREE.Group();
-  player.name = 'player:placeholder';
-  player.userData.label = 'player:placeholder';
-
-  const body = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.32, 0.38, 0.9, 12),
-    playerMaterial,
-  );
-  body.name = 'player:placeholder-body';
-  body.userData.label = body.name;
-  body.position.y = 0.45;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  player.add(body);
-
-  const facingMarker = new THREE.Mesh(
-    new THREE.BoxGeometry(0.18, 0.18, 0.5),
-    facingMaterial,
-  );
-  facingMarker.name = 'player:facing-marker';
-  facingMarker.userData.label = facingMarker.name;
-  facingMarker.position.set(0, 0.55, -0.38);
-  facingMarker.castShadow = true;
-  player.add(facingMarker);
-
-  return player;
-};
 
 const applyDeceleration = (velocity: THREE.Vector3, deltaSeconds: number): void => {
   const speed = velocity.length();
@@ -95,7 +64,8 @@ const rotateToward = (object: THREE.Object3D, targetYaw: number, deltaSeconds: n
 };
 
 export const createPlayerController = ({ collisionWorld }: PlayerControllerOptions = {}): PlayerController => {
-  const object = createPlayerMesh();
+  const visual = createPlayerVisual();
+  const object = visual.object;
   const pressedKeys = new Set<string>();
   const velocity = new THREE.Vector3();
   const inputDirection = new THREE.Vector3();
@@ -186,6 +156,7 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
     dispose() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      visual.dispose();
     },
   };
 };
