@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.18.0] - 2026-06-28
+
+### Added
+
+- Added source-only `raw-assets/` ignore policy for downloaded Fab asset packs.
+- Added asset pipeline and asset catalog documentation for separating source packs from runtime models.
+- Added `npm run assets:scan` to inventory expected raw asset packs and report model file counts and sizes.
+
 ## [0.17.0] - 2026-06-28
 
 ### Added
