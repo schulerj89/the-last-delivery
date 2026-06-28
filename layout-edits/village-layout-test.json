@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-28T00:00:00.000Z",
+  "overrides": [
+    {
+      "id": "player-spawn",
+      "position": [
+        0,
+        0,
+        38
+      ],
+      "updatedAt": "2026-06-28T00:00:00.000Z"
+    },
+    {
+      "id": "editor-pavement-tile-square-test-1",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "active": true,
+      "position": [
+        2,
+        0.01,
+        2
+      ],
+      "dimensions": [
+        2,
+        0.02,
+        2
+      ],
+      "renderMode": "primitive",
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      },
+      "updatedAt": "2026-06-28T00:00:00.000Z"
+    },
+    {
+      "id": "editor-pavement-tile-square-test-copy-1",
+      "kind": "pavement",
+      "templateId": "editor-pavement-tile-square-test-1",
+      "active": true,
+      "position": [
+        4,
+        0.01,
+        2
+      ],
+      "dimensions": [
+        2,
+        0.02,
+        2
+      ],
+      "renderMode": "primitive",
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      },
+      "updatedAt": "2026-06-28T00:00:00.000Z"
+    }
+  ]
+}

@@ -3,11 +3,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const editsPath = path.join(repoRoot, 'layout-edits', 'village-layout.json');
 const villageDefinitionPath = path.join(repoRoot, 'src', 'world', 'villageDefinition.ts');
 const assetRegistryPath = path.join(repoRoot, 'src', 'game', 'assets', 'assetRegistry.ts');
-const generatedOutputPath = path.join(repoRoot, 'src', 'world', 'villageOverrides.generated.ts');
-const checkOnly = process.argv.includes('--check');
+const args = process.argv.slice(2);
+const checkOnly = args.includes('--check');
 const layoutOverrideDocumentVersion = 1;
 const assetFitModes = new Set(['none', 'contain', 'cover', 'exact']);
 const worldObjectKinds = new Set([
@@ -30,6 +29,35 @@ const worldObjectKinds = new Set([
 const gameplayRoles = new Set(['decorative', 'player-spawn', 'post-office', 'delivery-board', 'mailbox']);
 const interactionActions = new Set(['none', 'open-delivery-board', 'complete-delivery']);
 const mailboxVariants = new Set(['blue', 'red', 'green']);
+
+const getOptionValue = (name) => {
+  const inlineValue = args
+    .find((argument) => argument.startsWith(`${name}=`))
+    ?.slice(name.length + 1);
+
+  if (inlineValue !== undefined) {
+    return inlineValue;
+  }
+
+  const optionIndex = args.indexOf(name);
+  const nextArgument = optionIndex >= 0 ? args[optionIndex + 1] : undefined;
+
+  if (optionIndex >= 0 && (!nextArgument || nextArgument.startsWith('--'))) {
+    console.error(`[layout] ${name} requires a path value.`);
+    process.exit(1);
+  }
+
+  return nextArgument;
+};
+
+const resolveRepoPath = (value) => (
+  path.isAbsolute(value) ? value : path.join(repoRoot, value)
+);
+
+const editsPath = resolveRepoPath(getOptionValue('--input') ?? path.join('layout-edits', 'village-layout.json'));
+const generatedOutputPath = resolveRepoPath(
+  getOptionValue('--output') ?? path.join('src', 'world', 'villageOverrides.generated.ts'),
+);
 
 const formatRelative = (filePath) => path.relative(repoRoot, filePath).replaceAll(path.sep, '/');
 

@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.4] - 2026-06-28
+
+### Fixed
+
+- Added a dedicated `layout-edits/village-layout-test.json` fixture so validation does not use the main authored layout JSON as a test target.
+- Added `npm run layout:check:test` and wired `npm run validate` to use the test fixture check.
+- Added `--input` and `--output` support to the layout override script for safer test and tooling workflows.
+- Documented the split between promoted layout JSON and `*-test.json` layout fixtures.
+
 ## [0.53.3] - 2026-06-28
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
   "name": "the-last-delivery",
-  "version": "0.53.3",
+  "version": "0.53.4",
   "private": true,
   "type": "module",
   "description": "A tiny browser Three.js game.",
@@ -9,10 +9,11 @@
     "assets:scan": "node scripts/scanAssets.mjs",
     "layout:apply": "node scripts/applyLayoutOverrides.mjs",
     "layout:check": "node scripts/applyLayoutOverrides.mjs --check",
+    "layout:check:test": "node scripts/applyLayoutOverrides.mjs --check --input layout-edits/village-layout-test.json",
     "typecheck": "tsc --noEmit",
     "smoke": "tsx scripts/smoke.ts",
     "build": "vite build",
-    "validate": "npm run typecheck && npm run smoke && npm run build"
+    "validate": "npm run typecheck && npm run smoke && npm run layout:check:test && npm run build"
   },
   "dependencies": {
     "three": "^0.185.0"

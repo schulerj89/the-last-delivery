@@ -756,6 +756,8 @@ const runTownEditorRouteSmoke = (): void => {
 
 const runLayoutOverrideSmoke = (): void => {
   const knownObjectIds = baseVillageWorldObjects.map((object) => object.id);
+  const layoutTestFixtureUrl = new URL('../layout-edits/village-layout-test.json', import.meta.url);
+  const layoutTestFixture = JSON.parse(nodeFileSystem.readFileSync(layoutTestFixtureUrl, 'utf8')) as unknown;
   const validDocument: LayoutOverrideDocument = {
     version: layoutOverrideDocumentVersion,
     updatedAt: '2026-06-28T00:00:00.000Z',
@@ -803,8 +805,17 @@ const runLayoutOverrideSmoke = (): void => {
     ],
   };
   const validation = validateLayoutOverrideDocument(validDocument, knownObjectIds);
+  const testFixtureValidation = validateLayoutOverrideDocument(layoutTestFixture, knownObjectIds);
 
   assert(validation.ok && validation.document !== null, 'Layout override JSON should validate.');
+  assert(testFixtureValidation.ok && testFixtureValidation.document !== null, 'Layout test fixture JSON should validate without using the main layout file.');
+  assert(
+    testFixtureValidation.document.overrides.some((override) => (
+      override.id === 'editor-pavement-tile-square-test-copy-1'
+      && override.templateId === 'pavement-tile-square'
+    )),
+    'Layout test fixture should normalize generated copy-chain template ids back to authored templates.',
+  );
   assert(
     !validateLayoutOverrideDocument({
       ...validDocument,
@@ -1870,6 +1881,20 @@ const runResourceTrackerSmoke = (): void => {
 };
 
 const runModuleSmoke = (): void => {
+  const packageJsonUrl = new URL('../package.json', import.meta.url);
+  const packageJson = JSON.parse(nodeFileSystem.readFileSync(packageJsonUrl, 'utf8')) as {
+    scripts?: Record<string, string>;
+  };
+
+  assert(
+    packageJson.scripts?.['layout:check:test']?.includes('village-layout-test.json') === true,
+    'Layout test validation should use a dedicated *-test.json fixture.',
+  );
+  assert(
+    packageJson.scripts?.validate?.includes('layout:check:test') === true,
+    'npm run validate should check the layout test fixture instead of the main authored layout JSON.',
+  );
+
   assert(playerMovementSettings.maxSpeed > 0, 'Player max speed should be positive.');
   assert(playerMovementSettings.radius > 0, 'Player collision radius should be positive.');
 

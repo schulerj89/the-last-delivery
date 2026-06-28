@@ -159,3 +159,10 @@ Local drafts are loaded on page reload in dev mode. They are not source-controll
 - Unknown object ids without generated-object metadata, duplicate ids, invalid tuples, and invalid scale values are rejected.
 
 The apply script does not rewrite `src/world/villageDefinition.ts`. The base layout stays readable, and generated overrides are merged at runtime.
+
+## Test Layout Files
+
+- Keep automated test fixtures in `layout-edits/*-test.json`.
+- `npm run layout:check:test` validates `layout-edits/village-layout-test.json`.
+- `npm run validate` uses the test fixture check so routine validation does not depend on or modify the main authored `layout-edits/village-layout.json`.
+- Only run `npm run layout:apply` when you intentionally want to promote `layout-edits/village-layout.json` into `src/world/villageOverrides.generated.ts`.
