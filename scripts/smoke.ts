@@ -679,6 +679,7 @@ const runTownEditorRouteSmoke = (): void => {
   assert(townEditorScript.includes("hudVariant: 'builder'"), 'Town editor should use the save-focused builder HUD variant.');
   assert(townEditorScript.includes('getAssetThumbnailDataUrl'), 'Town editor should render asset thumbnails for palette cards.');
   assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load GLB assets through the existing asset loader.');
+  assert(townEditorScript.includes('group.scale.setScalar'), 'Town editor thumbnails should scale the centered wrapper, not push model pivots off-center.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
   assert(assetItems.length > 0, 'Town editor asset palette should initialize.');

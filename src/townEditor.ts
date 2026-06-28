@@ -174,7 +174,7 @@ const getAssetThumbnailDataUrl = (assetId: string): Promise<string> => {
         }
 
         instance.object.position.sub(center);
-        instance.object.scale.multiplyScalar(2.55 / maxDimension);
+        group.scale.setScalar(2.55 / maxDimension);
         group.rotation.y = -Math.PI / 5;
         group.rotation.x = THREE.MathUtils.degToRad(4);
         group.updateMatrixWorld(true);

@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.49.1] - 2026-06-28
+
+### Fixed
+
+- Centered town editor GLB asset thumbnails by scaling the preview wrapper after model recentering instead of scaling the model away from its corrected pivot.
+- Added smoke coverage for the thumbnail wrapper-scale behavior.
+
 ## [0.49.0] - 2026-06-28
 
 ### Added
