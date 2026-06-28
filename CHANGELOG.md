@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.54.1] - 2026-06-28
+
+### Fixed
+
+- Smoothed objective marker animation by rotating the diamond visual independently instead of spinning the whole marker root.
+- Kept objective marker halos on a readable plane with a subtle pulse so the circle no longer flips edge-on while the diamond spins.
+- Added smoke coverage for marker diamond spin and halo readability.
+
 ## [0.54.0] - 2026-06-28
 
 ### Added

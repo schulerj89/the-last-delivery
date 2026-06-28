@@ -5,9 +5,13 @@ import { deliveryBoardObject, tryGetWorldObject } from './villageDefinition';
 export const objectiveMarkerSettings = {
   bobAmplitude: 0.12,
   bobSpeed: 2.6,
+  haloPulseAmplitude: 0.06,
+  haloPulseSpeed: 2.2,
   rotationSpeed: 1.25,
   verticalClearance: 0.68,
 };
+
+const fullTurnRadians = Math.PI * 2;
 
 const createObjectiveMarker = (
   name: string,
@@ -51,6 +55,7 @@ const createObjectiveMarker = (
   );
   halo.name = `${name}:halo`;
   halo.userData.label = halo.name;
+  halo.rotation.x = Math.PI / 2;
   halo.renderOrder = 20;
   marker.add(halo);
 
@@ -137,5 +142,21 @@ export const createDeliveryTargetObjectiveMarker = (): THREE.Group => (
 export const updateObjectiveMarker = (marker: THREE.Object3D, elapsedSeconds: number): void => {
   const baseY = typeof marker.userData.baseY === 'number' ? marker.userData.baseY : marker.position.y;
   marker.position.y = baseY + Math.sin(elapsedSeconds * objectiveMarkerSettings.bobSpeed) * objectiveMarkerSettings.bobAmplitude;
-  marker.rotation.y = elapsedSeconds * objectiveMarkerSettings.rotationSpeed;
+
+  const spinRadians = (elapsedSeconds * objectiveMarkerSettings.rotationSpeed) % fullTurnRadians;
+  const haloScale = 1
+    + Math.sin(elapsedSeconds * objectiveMarkerSettings.haloPulseSpeed) * objectiveMarkerSettings.haloPulseAmplitude;
+  const diamond = marker.getObjectByName(`${marker.name}:diamond`);
+  const halo = marker.getObjectByName(`${marker.name}:halo`);
+
+  marker.rotation.set(0, 0, 0);
+
+  if (diamond) {
+    diamond.rotation.y = spinRadians;
+  }
+
+  if (halo) {
+    halo.rotation.set(Math.PI / 2, 0, -spinRadians * 0.5);
+    halo.scale.setScalar(haloScale);
+  }
 };

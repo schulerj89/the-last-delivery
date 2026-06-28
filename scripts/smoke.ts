@@ -2539,7 +2539,19 @@ const runModuleSmoke = (): void => {
   assert(boardMarker.name === 'objective:delivery-board', 'Delivery board objective marker should initialize.');
   assert(boardMarker.getObjectByName('objective:delivery-board:stem') === undefined, 'Delivery board objective marker should not include a stem.');
   updateObjectiveMarker(boardMarker, 1);
+  const boardMarkerDiamond = boardMarker.getObjectByName('objective:delivery-board:diamond');
+  const boardMarkerHalo = boardMarker.getObjectByName('objective:delivery-board:halo');
   assert(boardMarker.position.y > 0, 'Objective marker animation should keep marker above the ground.');
+  assert(boardMarker.rotation.y === 0, 'Objective marker root should not spin the halo edge-on.');
+  assert(boardMarkerDiamond !== undefined && boardMarkerDiamond.rotation.y > 0, 'Objective marker diamond should spin around its own vertical axis.');
+  assert(
+    boardMarkerHalo !== undefined && Math.abs(boardMarkerHalo.rotation.x - Math.PI / 2) < 0.001,
+    'Objective marker halo should stay on a readable horizontal plane.',
+  );
+  assert(
+    objectiveMarkerSettings.haloPulseAmplitude > 0 && objectiveMarkerSettings.haloPulseAmplitude < 0.2,
+    'Objective marker halo pulse should stay subtle.',
+  );
 };
 
 runAssetRegistrySmoke();
