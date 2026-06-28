@@ -35,3 +35,30 @@ canvas {
 .debug-overlay--camera {
   top: 122px;
 }
+
+.interaction-prompt,
+.interaction-message {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 12px;
+  color: #f8f2dc;
+  background: rgb(16 19 24 / 82%);
+  border: 1px solid rgb(248 242 220 / 30%);
+  border-radius: 4px;
+  font: 14px/1.35 Arial, sans-serif;
+  pointer-events: none;
+}
+
+.interaction-prompt {
+  bottom: 28px;
+}
+
+.interaction-message {
+  top: 24px;
+}
+
+.interaction-prompt[hidden],
+.interaction-message[hidden] {
+  display: none;
+}

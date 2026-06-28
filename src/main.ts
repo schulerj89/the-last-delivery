@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import './style.css';
 import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
+import { createInteractionController } from './game/interaction';
 import { createPlayerController, createPlayerDebugOverlay } from './game/player';
 import { createPlayground } from './world/playground';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
+import { playgroundInteractables } from './world/playgroundInteractables';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -38,6 +40,11 @@ const followCamera = createThirdPersonCameraController({
   domElement: renderer.domElement,
 });
 const cameraDebugOverlay = createCameraDebugOverlay(app);
+const interaction = createInteractionController({
+  player: player.object,
+  interactables: playgroundInteractables,
+  parent: app,
+});
 
 const ambientLight = new THREE.HemisphereLight(0xe8f1ff, 0x253329, 1.8);
 scene.add(ambientLight);
@@ -67,6 +74,7 @@ const animate = () => {
   const deltaSeconds = clock.getDelta();
 
   player.update(deltaSeconds);
+  interaction.update(deltaSeconds);
   followCamera.update(deltaSeconds);
   playerDebugOverlay.update(player.getState());
   cameraDebugOverlay.update(followCamera.getState());

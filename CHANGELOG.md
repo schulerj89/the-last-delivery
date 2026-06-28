@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.6.0] - 2026-06-28
+
+### Added
+
+- Added iteration 005 basic interaction system.
+- Added nearby interaction prompts for the mailbox and delivery board.
+- Added `E` key interaction handling with simple on-screen result messages.
+- Added playground interactable data separate from full delivery state.
+
 ## [0.5.0] - 2026-06-28
 
 ### Added
