@@ -37,6 +37,7 @@ export const playerCharacterVisualSettings = {
   animationFadeDuration: 0.18,
   walkAnimationTimeScale: 1,
   runAnimationTimeScale: 1.05,
+  lockHipPositionXZ: true,
   visibleMeshNames: [
     'Body_010',
     'Male_emotion_usual_001',
@@ -255,12 +256,54 @@ export const isPlayerRootMotionTrackName = (trackName: string): boolean => (
   || trackName.includes('bones[Root].position')
 );
 
+export const isPlayerHipPositionTrackName = (trackName: string): boolean => (
+  trackName === 'Hips.position'
+  || trackName.endsWith('/Hips.position')
+  || trackName.endsWith('.Hips.position')
+  || trackName.includes('bones[Hips].position')
+);
+
+export interface PlayerAnimationClipSanitizeOptions {
+  stripRootMotion?: boolean;
+  lockHipPositionXZ?: boolean;
+}
+
+const lockVectorTrackXZ = (track: THREE.KeyframeTrack): THREE.KeyframeTrack => {
+  const clone = track.clone();
+
+  if (clone.getValueSize() !== 3) {
+    return clone;
+  }
+
+  const values = clone.values as ArrayLike<number> & { [index: number]: number };
+  const baseX = values[0] ?? 0;
+  const baseZ = values[2] ?? 0;
+
+  for (let index = 0; index < values.length; index += 3) {
+    values[index] = baseX;
+    values[index + 2] = baseZ;
+  }
+
+  return clone;
+};
+
 export const createInPlacePlayerAnimationClip = (
   clip: THREE.AnimationClip,
+  options: PlayerAnimationClipSanitizeOptions = {},
 ): THREE.AnimationClip => {
-  const tracks = clip.tracks
-    .filter((track) => !isPlayerRootMotionTrackName(track.name))
-    .map((track) => track.clone());
+  const stripRootMotion = options.stripRootMotion ?? true;
+  const lockHipPositionXZ = options.lockHipPositionXZ ?? playerCharacterVisualSettings.lockHipPositionXZ;
+  const tracks = clip.tracks.flatMap((track) => {
+    if (stripRootMotion && isPlayerRootMotionTrackName(track.name)) {
+      return [];
+    }
+
+    if (lockHipPositionXZ && isPlayerHipPositionTrackName(track.name)) {
+      return [lockVectorTrackXZ(track)];
+    }
+
+    return [track.clone()];
+  });
   const inPlaceClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
   inPlaceClip.blendMode = clip.blendMode;
   return inPlaceClip;

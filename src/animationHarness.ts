@@ -9,7 +9,9 @@ import {
 } from './game/assets';
 import { getCappedPixelRatio } from './game/performance';
 import {
+  createInPlacePlayerAnimationClip,
   fitAndAlignCharacterModel,
+  isPlayerHipPositionTrackName,
   isPlayerRootMotionTrackName,
   playerCharacterAnimationAssetId,
   playerCharacterAssetId,
@@ -44,7 +46,7 @@ const state: HarnessState = {
   playbackSpeed: 1,
   playing: true,
   stripRootMotion: true,
-  lockHipXZ: false,
+  lockHipXZ: true,
   showSkeleton: false,
   showAllMeshes: false,
 };
@@ -211,39 +213,12 @@ const clamp = (value: number, min: number, max: number): number => (
 
 const formatSeconds = (value: number): string => value.toFixed(3);
 
-const isHipPositionTrack = (trackName: string): boolean => (
-  trackName === 'Hips.position'
-  || trackName.endsWith('/Hips.position')
-  || trackName.endsWith('.Hips.position')
-  || trackName.includes('bones[Hips].position')
+const createHarnessClip = (clip: THREE.AnimationClip): THREE.AnimationClip => (
+  createInPlacePlayerAnimationClip(clip, {
+    stripRootMotion: state.stripRootMotion,
+    lockHipPositionXZ: state.lockHipXZ,
+  })
 );
-
-const createHarnessClip = (clip: THREE.AnimationClip): THREE.AnimationClip => {
-  const tracks = clip.tracks.flatMap((track) => {
-    if (state.stripRootMotion && isPlayerRootMotionTrackName(track.name)) {
-      return [];
-    }
-
-    const clone = track.clone();
-
-    if (state.lockHipXZ && isHipPositionTrack(clone.name) && clone.getValueSize() === 3) {
-      const values = clone.values as ArrayLike<number> & { [index: number]: number };
-      const baseX = values[0] ?? 0;
-      const baseZ = values[2] ?? 0;
-
-      for (let index = 0; index < values.length; index += 3) {
-        values[index] = baseX;
-        values[index + 2] = baseZ;
-      }
-    }
-
-    return [clone];
-  });
-
-  const nextClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
-  nextClip.blendMode = clip.blendMode;
-  return nextClip;
-};
 
 const getClipByName = (clipName: string): THREE.AnimationClip => {
   const clip = sourceClips.find((candidate) => candidate.name === clipName) ?? sourceClips[0];
@@ -361,9 +336,9 @@ const updateControls = (): void => {
   playButton.textContent = state.playing ? 'Pause' : 'Play';
 
   const rootDelta = getTrackDelta(sourceClip, isPlayerRootMotionTrackName);
-  const hipDelta = getTrackDelta(sourceClip, isHipPositionTrack);
+  const hipDelta = getTrackDelta(sourceClip, isPlayerHipPositionTrackName);
   const rootTracks = sourceClip.tracks.filter((track) => isPlayerRootMotionTrackName(track.name));
-  const hipTracks = sourceClip.tracks.filter((track) => isHipPositionTrack(track.name));
+  const hipTracks = sourceClip.tracks.filter((track) => isPlayerHipPositionTrackName(track.name));
   const renderInfo = renderer.info.render;
   const memoryInfo = renderer.info.memory;
 

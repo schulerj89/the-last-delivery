@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.40.1] - 2026-06-28
+
+### Fixed
+
+- Locked courier `Hips.position` X/Z values during runtime animation sanitizing so walk/run clips keep vertical hip bounce without moving the visual root forward or sideways.
+- Updated the animation harness to default `Lock Hips X/Z` on, matching runtime playback, while still allowing it to be toggled off for diagnosis.
+- Added smoke checks for hip-track detection, default hip X/Z locking, preserved hip Y motion, and opt-out behavior.
+
 ## [0.40.0] - 2026-06-28
 
 ### Added

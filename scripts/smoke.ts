@@ -55,6 +55,7 @@ import {
   fitAndAlignCharacterModel,
   getPlayerMotionAnimationState,
   getPlayerYawForDirection,
+  isPlayerHipPositionTrackName,
   isPlayerRootMotionTrackName,
   playerCharacterAnimationAssetId,
   playerCharacterAssetId,
@@ -580,6 +581,10 @@ const runAnimationHarnessSmoke = (): void => {
   assert(
     harnessScript.includes('Strip Root.position'),
     'Animation harness should expose root-motion stripping controls.',
+  );
+  assert(
+    harnessScript.includes('lockHipXZ: true'),
+    'Animation harness should default to the same hip X/Z lock as runtime playback.',
   );
   assert(
     harnessScript.includes('loopStart') && harnessScript.includes('loopEnd'),
@@ -1401,6 +1406,7 @@ const runModuleSmoke = (): void => {
   assert(playerCharacterVisualSettings.animationFadeDuration > 0, 'Player animation fade duration should be positive.');
   assert(playerCharacterVisualSettings.walkAnimationTimeScale > 0, 'Player walk animation time scale should be positive.');
   assert(playerCharacterVisualSettings.runAnimationTimeScale > 0, 'Player run animation time scale should be positive.');
+  assert(playerCharacterVisualSettings.lockHipPositionXZ, 'Player runtime animations should lock hip X/Z by default.');
 
   const filterFallback = resolveVisibleCharacterMeshNames(['Body_010', 'Outerwear_036'], ['missing-mesh-name'], 'configured');
   assert(filterFallback.usedFallbackAll, 'Player mesh filtering should fall back to all meshes if the configured filter hides everything.');
@@ -1427,9 +1433,11 @@ const runModuleSmoke = (): void => {
   assert(isPlayerRootMotionTrackName('Root.position'), 'Player animation cleanup should detect direct Root.position tracks.');
   assert(isPlayerRootMotionTrackName('.bones[Root].position'), 'Player animation cleanup should detect bone Root.position tracks.');
   assert(!isPlayerRootMotionTrackName('Hips.position'), 'Player animation cleanup should keep local hip motion for gait readability.');
+  assert(isPlayerHipPositionTrackName('Hips.position'), 'Player animation cleanup should detect direct Hips.position tracks.');
+  assert(isPlayerHipPositionTrackName('.bones[Hips].position'), 'Player animation cleanup should detect bone Hips.position tracks.');
   const rootMotionClip = new AnimationClip('Run_Forward', 1, [
     new VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 0, 0, 2]),
-    new VectorKeyframeTrack('Hips.position', [0, 1], [0, 0.7, 0, 0, 0.7, 0.1]),
+    new VectorKeyframeTrack('Hips.position', [0, 1], [0.2, 0.7, -0.1, 0.8, 0.9, 0.4]),
   ]);
   const inPlaceClip = createInPlacePlayerAnimationClip(rootMotionClip);
   assert(
@@ -1440,6 +1448,16 @@ const runModuleSmoke = (): void => {
     inPlaceClip.tracks.some((track) => track.name === 'Hips.position'),
     'Player animation cleanup should preserve local hip translation tracks.',
   );
+  const lockedHipTrack = inPlaceClip.tracks.find((track) => track.name === 'Hips.position');
+  assert(lockedHipTrack !== undefined, 'Player animation cleanup should include a sanitized hip track.');
+  assert(lockedHipTrack.values[0] === lockedHipTrack.values[3], 'Player animation cleanup should lock hip X motion.');
+  assert(lockedHipTrack.values[2] === lockedHipTrack.values[5], 'Player animation cleanup should lock hip Z motion.');
+  assert(lockedHipTrack.values[1] !== lockedHipTrack.values[4], 'Player animation cleanup should preserve hip Y motion.');
+  const unlockedHipClip = createInPlacePlayerAnimationClip(rootMotionClip, { lockHipPositionXZ: false });
+  const unlockedHipTrack = unlockedHipClip.tracks.find((track) => track.name === 'Hips.position');
+  assert(unlockedHipTrack !== undefined, 'Player animation cleanup should keep hip track when X/Z locking is disabled.');
+  assert(unlockedHipTrack.values[0] !== unlockedHipTrack.values[3], 'Player animation cleanup should allow hip X motion when disabled.');
+  assert(unlockedHipTrack.values[2] !== unlockedHipTrack.values[5], 'Player animation cleanup should allow hip Z motion when disabled.');
   assert(getPlayerMotionAnimationState(0) === 'idle', 'Player animation should idle at zero speed.');
   assert(
     getPlayerMotionAnimationState(playerCharacterVisualSettings.idleSpeedThreshold + 0.01) === 'walk',

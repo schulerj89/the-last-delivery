@@ -13,6 +13,7 @@ export {
   createPlayerFallbackVisual,
   createPlayerVisual,
   getPlayerMotionAnimationState,
+  isPlayerHipPositionTrackName,
   isPlayerRootMotionTrackName,
   playerCharacterAnimationAssetId,
   playerCharacterAssetId,
