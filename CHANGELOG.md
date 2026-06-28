@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.20.0] - 2026-06-28
+
+### Added
+
+- Added selected Low Poly Nature Pack Lite runtime GLBs for tree, rock, and bush props.
+- Added decorative forest-edge trees plus path-framing rocks and foliage through world definitions.
+- Added runtime model payload reporting to `npm run assets:scan`.
+- Added smoke checks for selected nature asset ids, runtime file presence, world asset references, and fallback initialization.
+
+### Changed
+
+- Kept new nature assets decorative by preserving existing collision proxies and delivery behavior.
+- Documented the selected nature asset workflow and runtime model budget.
+
 ## [0.19.0] - 2026-06-28
 
 ### Changed

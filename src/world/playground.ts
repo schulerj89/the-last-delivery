@@ -24,6 +24,9 @@ const materials = {
   crateStrap: new THREE.MeshStandardMaterial({ color: 0x5a3826, roughness: 0.8 }),
   barrel: new THREE.MeshStandardMaterial({ color: 0x7c4f34, roughness: 0.82 }),
   rock: new THREE.MeshStandardMaterial({ color: 0x68716d, roughness: 0.9 }),
+  treeTrunk: new THREE.MeshStandardMaterial({ color: 0x5d3c25, roughness: 0.86 }),
+  treeCanopy: new THREE.MeshStandardMaterial({ color: 0x2f6f48, roughness: 0.9 }),
+  bush: new THREE.MeshStandardMaterial({ color: 0x4f8a4f, roughness: 0.92 }),
   houseWall: new THREE.MeshStandardMaterial({ color: 0xb9a178, roughness: 0.85 }),
   houseWallBlue: new THREE.MeshStandardMaterial({ color: 0x4f88b8, roughness: 0.82 }),
   houseWallRed: new THREE.MeshStandardMaterial({ color: 0xb35d52, roughness: 0.82 }),
@@ -169,11 +172,8 @@ const tryApplyAssetRender = (
         disposeGeometryOnly(fallbackObject);
       });
       group.add(fitAssetInstanceToObject(asset, object));
-      console.info(`[assets] Applied ${assetId} to ${object.id}.`);
     })
-    .catch(() => {
-      console.info(`[assets] ${object.id} is using its primitive fallback.`);
-    });
+    .catch(() => undefined);
 };
 
 const createBox = (
@@ -246,6 +246,24 @@ const addCylinder = (
   material: THREE.Material,
 ): THREE.Mesh => {
   const mesh = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, height, 12), material);
+  mesh.name = name;
+  mesh.userData.label = name;
+  mesh.position.set(...position);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
+};
+
+const addCone = (
+  group: THREE.Group,
+  name: string,
+  radius: number,
+  height: number,
+  position: THREE.Vector3Tuple,
+  material: THREE.Material,
+): THREE.Mesh => {
+  const mesh = new THREE.Mesh(new THREE.ConeGeometry(radius, height, 10), material);
   mesh.name = name;
   mesh.userData.label = name;
   mesh.position.set(...position);
@@ -574,6 +592,53 @@ const addCrates = (group: THREE.Group): void => {
   });
 };
 
+const addTreeFallback = (
+  group: THREE.Group,
+  tree: WorldObjectDefinition,
+): readonly THREE.Object3D[] => {
+  const [width, height, depth] = getDimensions(tree);
+  const [x, y, z] = tree.position;
+  const baseY = y - height / 2;
+  const trunkHeight = height * 0.45;
+  const canopyHeight = height * 0.68;
+  const trunkRadius = Math.min(width, depth) * 0.14;
+  const canopyRadius = Math.max(width, depth) * 0.54;
+
+  const trunk = addCylinder(
+    group,
+    `village:${tree.id}:trunk`,
+    trunkRadius,
+    trunkHeight,
+    [x, baseY + trunkHeight / 2, z],
+    materials.treeTrunk,
+  );
+  const canopy = addCone(
+    group,
+    `village:${tree.id}:canopy`,
+    canopyRadius,
+    canopyHeight,
+    [x, baseY + trunkHeight + canopyHeight / 2 - height * 0.08, z],
+    materials.treeCanopy,
+  );
+
+  return [trunk, canopy];
+};
+
+const addBushFallback = (
+  group: THREE.Group,
+  bush: WorldObjectDefinition,
+): readonly THREE.Object3D[] => {
+  const shrub = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), materials.bush);
+  shrub.name = `village:${bush.id}`;
+  shrub.userData.label = shrub.name;
+  shrub.position.set(...bush.position);
+  shrub.scale.set(...getDimensions(bush));
+  shrub.castShadow = true;
+  shrub.receiveShadow = true;
+  group.add(shrub);
+  return [shrub];
+};
+
 const addVillageProps = (group: THREE.Group): void => {
   getWorldObjectsByKind('barrel').forEach((barrel) => {
     const [diameter, height] = getDimensions(barrel);
@@ -581,7 +646,20 @@ const addVillageProps = (group: THREE.Group): void => {
   });
 
   getWorldObjectsByKind('rock').forEach((rock) => {
-    addRock(group, `village:${rock.id}`, rock.position, getDimensions(rock));
+    const fallbackObjects = [
+      addRock(group, `village:${rock.id}`, rock.position, getDimensions(rock)),
+    ];
+    tryApplyAssetRender(group, rock, fallbackObjects);
+  });
+};
+
+const addNatureProps = (group: THREE.Group): void => {
+  getWorldObjectsByKind('tree').forEach((tree) => {
+    tryApplyAssetRender(group, tree, addTreeFallback(group, tree));
+  });
+
+  getWorldObjectsByKind('bush').forEach((bush) => {
+    tryApplyAssetRender(group, bush, addBushFallback(group, bush));
   });
 };
 
@@ -685,6 +763,7 @@ export const createPlayground = (): THREE.Group => {
   addWell(playground);
   addCrates(playground);
   addVillageProps(playground);
+  addNatureProps(playground);
   addMailboxes(playground);
   addDeliveryBoard(playground);
   addVillageLabels(playground);

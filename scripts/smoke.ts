@@ -1,5 +1,10 @@
 import { Vector3 } from 'three';
-import { assetRegistry, isKnownAssetId } from '../src/game/assets/assetRegistry';
+import {
+  assetRegistry,
+  getSelectedNatureAssets,
+  isKnownAssetId,
+  selectedNatureAssetIds,
+} from '../src/game/assets/assetRegistry';
 import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
@@ -23,9 +28,41 @@ function assert(condition: boolean, message: string): asserts condition {
   }
 }
 
+interface RuntimeFileStats {
+  size: number;
+  isFile: () => boolean;
+}
+
+interface NodeFileSystem {
+  existsSync: (path: string | URL) => boolean;
+  statSync: (path: string | URL) => RuntimeFileStats;
+}
+
+const importNodeModule = async <T>(specifier: string): Promise<T> => (
+  await (Function('specifier', 'return import(specifier)') as (moduleSpecifier: string) => Promise<T>)(specifier)
+);
+const nodeFileSystem = await importNodeModule<NodeFileSystem>('node:fs');
+const selectedNatureAssetIdSet = new Set<string>(selectedNatureAssetIds);
+
 const isFiniteVector3Tuple = (value: readonly number[]): boolean => (
   value.length === 3 && value.every((component) => Number.isFinite(component))
 );
+
+const getRuntimeAssetFileUrl = (assetUrl: string): URL => (
+  new URL(`../public${assetUrl}`, import.meta.url)
+);
+
+const formatBytes = (bytes: number): string => {
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${bytes} B`;
+};
 
 const runAssetRegistrySmoke = (): void => {
   const assetIds = new Set<string>();
@@ -42,6 +79,26 @@ const runAssetRegistrySmoke = (): void => {
     assert(Number.isFinite(asset.defaultScale) && asset.defaultScale > 0, `Asset should define a positive default scale: ${asset.id}`);
     assert(asset.maxRecommendedBytes > 0, `Asset should define a positive size budget: ${asset.id}`);
   });
+
+  const selectedNatureAssets = getSelectedNatureAssets();
+  const selectedNatureBytes = selectedNatureAssets.reduce((totalBytes, asset) => {
+    const assetFileUrl = getRuntimeAssetFileUrl(asset.url);
+
+    assert(asset.sourcePack === 'low-poly-nature-pack-lite', `Selected nature asset should identify the nature source pack: ${asset.id}`);
+    assert(asset.url.startsWith('/assets/models/nature/'), `Selected nature asset should live in the runtime nature folder: ${asset.id}`);
+    assert(nodeFileSystem.existsSync(assetFileUrl), `Selected nature asset file should exist: ${asset.url}`);
+
+    const stats = nodeFileSystem.statSync(assetFileUrl);
+    assert(stats.isFile(), `Selected nature asset should be a file: ${asset.url}`);
+    assert(stats.size > 0, `Selected nature asset should not be empty: ${asset.url}`);
+    assert(stats.size <= asset.maxRecommendedBytes, `Selected nature asset should stay within its size budget: ${asset.id}`);
+
+    return totalBytes + stats.size;
+  }, 0);
+
+  assert(selectedNatureAssets.length === 3, 'Exactly three selected nature assets should be registered for this pass.');
+  assert(selectedNatureBytes > 0, 'Selected nature runtime asset size should be measurable.');
+  console.info(`Selected nature runtime assets: ${selectedNatureAssets.length} files, ${formatBytes(selectedNatureBytes)}.`);
 };
 
 const runWorldDefinitionSmoke = (): void => {
@@ -79,7 +136,17 @@ const runWorldDefinitionSmoke = (): void => {
 
   const mailboxObjects = villageWorldObjects.filter((object) => object.kind === 'mailbox');
   const cottageObjects = villageWorldObjects.filter((object) => object.kind === 'cottage');
+  const treeObjects = villageWorldObjects.filter((object) => object.kind === 'tree');
+  const bushObjects = villageWorldObjects.filter((object) => object.kind === 'bush');
   const assetRenderedObjects = villageWorldObjects.filter((object) => object.render?.mode === 'asset');
+  const selectedNatureObjects = assetRenderedObjects.filter((object) => (
+    object.render?.mode === 'asset' && selectedNatureAssetIdSet.has(object.render.assetId)
+  ));
+  const decorativeNatureObjects = villageWorldObjects.filter((object) => (
+    object.kind === 'tree'
+    || object.kind === 'bush'
+    || object.id.startsWith('nature-rock-')
+  ));
   const deliveryBoard = villageWorldObjects.find((object) => object.id === 'delivery-board');
   const postOffice = villageWorldObjects.find((object) => object.id === 'post-office');
   const well = villageWorldObjects.find((object) => object.id === 'town-well');
@@ -99,8 +166,12 @@ const runWorldDefinitionSmoke = (): void => {
   });
 
   assert(deliveryJobs.length >= 3, 'Village should define at least three delivery jobs.');
-  assert(assetRenderedObjects.length === 1, 'Village should only opt one low-risk prop into GLB rendering for now.');
-  assert(assetRenderedObjects[0].id === 'crate-large', 'The large crate should be the first optional GLB prop target.');
+  assert(assetRenderedObjects.some((object) => object.id === 'crate-large'), 'The large crate should still use the optional GLB prop path.');
+  assert(selectedNatureObjects.length >= 10, 'Village should place selected nature assets through world definitions.');
+  assert(decorativeNatureObjects.every((object) => object.render?.mode === 'asset'), 'Decorative nature objects should use asset-backed render definitions.');
+  assert(decorativeNatureObjects.every((object) => object.collider === undefined), 'Decorative forest and path-framing nature props should not add collision.');
+  assert(treeObjects.length >= 6, 'Village should include a small forest edge of tree props.');
+  assert(bushObjects.length >= 4, 'Village should include foliage props around paths and boundaries.');
   assert(mailboxObjects.length === 2, 'Village should define exactly two mailbox placeholders.');
   assert(mailboxObjects.every((object) => object.interactable), 'Every village mailbox should be interactable.');
   assert(mailboxObjects.every((object) => object.objectiveAnchor), 'Every village mailbox should have an objective anchor.');
@@ -211,6 +282,10 @@ const runModuleSmoke = (): void => {
   assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');
   assert(playground.children.length > 20, 'Village square should include primitive blockout children.');
   assert(playground.getObjectByName('village:crate-large') !== undefined, 'Asset-targeted crate fallback should initialize.');
+  assert(playground.getObjectByName('village:tree-northwest:trunk') !== undefined, 'Tree primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:tree-northwest:canopy') !== undefined, 'Tree canopy primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:bush-side-path-a') !== undefined, 'Bush primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:nature-rock-path-a') !== undefined, 'Asset-targeted nature rock fallback should initialize.');
   assert(playground.getObjectByName('village:label-post-office') !== undefined, 'Post office label sign should initialize.');
   assert(playground.getObjectByName('village:label-blue-house') !== undefined, 'Blue house label sign should initialize.');
   assert(playground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');

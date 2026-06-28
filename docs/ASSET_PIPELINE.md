@@ -24,4 +24,14 @@ Expected local source folders:
 
 Registry entries should include `id`, `url`, `sourcePack`, `defaultScale`, and optional `notes`. The asset loader builds primitive fallbacks first and treats GLB models as optional visuals.
 
-Prefer GLB when available. Avoid full packs, character models, animations, DRACO, KTX2, and meshopt until the runtime path is intentionally expanded.
+Prefer GLB when available. If a selected source pack only provides FBX, convert only the chosen source files outside `public/`, then copy the selected runtime GLBs into `public/assets/models/`. Avoid full packs, character models, animations, DRACO, KTX2, and meshopt until the runtime path is intentionally expanded.
+
+## Current Runtime Nature Selection
+
+The Low Poly Nature Pack Lite source folder is source-only. The current village uses three selected converted GLBs under `public/assets/models/nature/`:
+
+- `nature-tree01.glb` from `tree01.fbx`
+- `nature-rock.glb` from `rock.fbx`
+- `nature-simple-bush.glb` from `simple_bush.fbx`
+
+These are decorative visuals with primitive fallbacks. Collision remains authored separately in world definitions, and the new forest-edge trees and path foliage intentionally do not add colliders.

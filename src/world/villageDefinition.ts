@@ -106,6 +106,126 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     },
   },
   {
+    id: 'tree-northwest',
+    kind: 'tree',
+    position: [-7.4, 1.35, -5.55],
+    dimensions: [1.35, 2.7, 1.35],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  },
+  {
+    id: 'tree-north',
+    kind: 'tree',
+    position: [-4.4, 1.3, -6],
+    dimensions: [1.25, 2.6, 1.25],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  },
+  {
+    id: 'tree-northeast',
+    kind: 'tree',
+    position: [3.2, 1.45, -6.05],
+    dimensions: [1.45, 2.9, 1.45],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  },
+  {
+    id: 'tree-east',
+    kind: 'tree',
+    position: [8, 1.3, -1.6],
+    dimensions: [1.25, 2.6, 1.25],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  },
+  {
+    id: 'tree-southeast',
+    kind: 'tree',
+    position: [7.35, 1.4, 5.15],
+    dimensions: [1.35, 2.8, 1.35],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  },
+  {
+    id: 'tree-south',
+    kind: 'tree',
+    position: [-1.6, 1.35, 6],
+    dimensions: [1.3, 2.7, 1.3],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  },
+  {
+    id: 'tree-west',
+    kind: 'tree',
+    position: [-8, 1.35, 1.4],
+    dimensions: [1.3, 2.7, 1.3],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  },
+  {
+    id: 'bush-side-path-a',
+    kind: 'bush',
+    position: [1.15, 0.32, -1.9],
+    dimensions: [0.75, 0.64, 0.75],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-simple-bush',
+    },
+  },
+  {
+    id: 'bush-side-path-b',
+    kind: 'bush',
+    position: [-0.95, 0.3, -1.35],
+    dimensions: [0.7, 0.6, 0.7],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-simple-bush',
+    },
+  },
+  {
+    id: 'bush-blue-house',
+    kind: 'bush',
+    position: [-5.05, 0.34, 1.65],
+    dimensions: [0.78, 0.68, 0.78],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-simple-bush',
+    },
+  },
+  {
+    id: 'bush-red-house',
+    kind: 'bush',
+    position: [6.4, 0.32, 0.9],
+    dimensions: [0.76, 0.64, 0.76],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-simple-bush',
+    },
+  },
+  {
+    id: 'bush-south-path',
+    kind: 'bush',
+    position: [0.85, 0.3, 4.95],
+    dimensions: [0.72, 0.6, 0.72],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-simple-bush',
+    },
+  },
+  {
     id: 'crate-large',
     kind: 'crate',
     position: [2.35, 0.5, 1.65],
@@ -167,6 +287,36 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     collider: {
       position: [-7.2, 0.24, -0.9],
       size: [0.95, 0.48, 0.75],
+    },
+  },
+  {
+    id: 'nature-rock-path-a',
+    kind: 'rock',
+    position: [-2.15, 0.22, 1.05],
+    dimensions: [0.75, 0.44, 0.75],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-rock',
+    },
+  },
+  {
+    id: 'nature-rock-board-edge',
+    kind: 'rock',
+    position: [2.6, 0.18, -2.15],
+    dimensions: [0.62, 0.36, 0.62],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-rock',
+    },
+  },
+  {
+    id: 'nature-rock-north-edge',
+    kind: 'rock',
+    position: [0.1, 0.22, -5.8],
+    dimensions: [0.72, 0.44, 0.72],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-rock',
     },
   },
   {

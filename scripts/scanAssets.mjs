@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rawAssetRoot = path.join(repoRoot, 'raw-assets');
+const publicModelsRoot = path.join(repoRoot, 'public', 'assets', 'models');
 const expectedPacks = [
   'low-poly-nature-pack-lite',
   'fantasy-free-low-poly',
@@ -74,10 +75,42 @@ const walkFiles = async (targetPath, packName) => {
   return files;
 };
 
+const walkRuntimeFiles = async (targetPath) => {
+  if (!(await pathExists(targetPath))) {
+    return [];
+  }
+
+  const files = [];
+  const entries = await readdir(targetPath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(targetPath, entry.name);
+
+    if (entry.isDirectory()) {
+      files.push(...await walkRuntimeFiles(fullPath));
+      continue;
+    }
+
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    const fileStats = await stat(fullPath);
+    files.push({
+      extension: path.extname(entry.name).toLowerCase(),
+      bytes: fileStats.size,
+      relativePath: path.relative(publicModelsRoot, fullPath).replaceAll(path.sep, '/'),
+    });
+  }
+
+  return files;
+};
+
 const packFolders = await readDirectories(rawAssetRoot);
 const foundExpectedPacks = expectedPacks.filter((packName) => packFolders.includes(packName));
 const missingExpectedPacks = expectedPacks.filter((packName) => !packFolders.includes(packName));
 const allFiles = [];
+const runtimeFiles = await walkRuntimeFiles(publicModelsRoot);
 
 for (const packName of foundExpectedPacks) {
   allFiles.push(...await walkFiles(path.join(rawAssetRoot, packName), packName));
@@ -104,6 +137,12 @@ const totalsByPack = foundExpectedPacks.map((packName) => {
     bytes,
   };
 });
+const runtimeModelBytes = runtimeFiles.reduce((sum, file) => sum + file.bytes, 0);
+const selectedNatureRuntimeFiles = runtimeFiles.filter((file) => (
+  file.relativePath.startsWith('nature/')
+  && (file.extension === '.glb' || file.extension === '.gltf')
+));
+const selectedNatureRuntimeBytes = selectedNatureRuntimeFiles.reduce((sum, file) => sum + file.bytes, 0);
 
 console.info('Asset scan');
 console.info(`Raw asset root: ${path.relative(repoRoot, rawAssetRoot)}`);
@@ -138,6 +177,11 @@ if (totalsByPack.length === 0) {
     console.info(`- ${packName}: ${count} tracked files, ${formatBytes(bytes)}`);
   });
 }
+
+console.info('');
+console.info('Runtime asset budget:');
+console.info(`- public/assets/models total size: ${formatBytes(runtimeModelBytes)}`);
+console.info(`- selected nature runtime assets: ${selectedNatureRuntimeFiles.length} files, ${formatBytes(selectedNatureRuntimeBytes)}`);
 
 console.info('');
 console.info('Files:');

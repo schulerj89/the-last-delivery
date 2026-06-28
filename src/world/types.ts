@@ -2,12 +2,14 @@ import type * as THREE from 'three';
 
 export type WorldObjectKind =
   | 'barrel'
+  | 'bush'
   | 'cottage'
   | 'crate'
   | 'delivery-board'
   | 'mailbox'
   | 'post-office'
   | 'rock'
+  | 'tree'
   | 'well';
 
 export interface WorldColliderDefinition {

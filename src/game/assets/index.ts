@@ -1,7 +1,9 @@
 export {
   assetRegistry,
   getAssetDefinition,
+  getSelectedNatureAssets,
   isKnownAssetId,
+  selectedNatureAssetIds,
 } from './assetRegistry';
 export {
   canLoadGltfAssets,
