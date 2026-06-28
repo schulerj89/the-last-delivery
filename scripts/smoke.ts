@@ -2334,6 +2334,8 @@ const runModuleSmoke = (): void => {
     assert(authoredPlayground.getObjectByName(`village:${activeDeliveryBoard.id}:panel`) !== undefined, 'The active delivery board fallback should initialize.');
     assert(authoredPlayground.getObjectByName(`village:${activeDeliveryBoard.id}:interaction-ring`) === undefined, 'Delivery board destination circle should not render.');
   }
+  assert(authoredPlayground.getObjectByName('playground:player-spawn-ring') === undefined, 'Playable playground should not render a spawn circle.');
+  assert(authoredPlayground.getObjectByName('playground:player-spawn-forward-arrow') === undefined, 'Playable playground should not render a spawn forward arrow block.');
   if (activeCrates[0]) {
     assert(authoredPlayground.getObjectByName(`village:${activeCrates[0].id}`) !== undefined, 'Crate primitive fallback should initialize when crates are active.');
   }

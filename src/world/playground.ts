@@ -9,7 +9,6 @@ import {
   deliveryBoardObject,
   getWorldObjectsByKind,
   getWorldObjectsByGameplayRole,
-  playerSpawnPosition,
   villageWorldObjects,
 } from './villageDefinition';
 import { villageLayoutConfig } from './villageLayoutConfig';
@@ -56,7 +55,6 @@ const materials = {
   boardFrame: new THREE.MeshStandardMaterial({ color: 0xf0ca72, roughness: 0.65 }),
   boardPaper: new THREE.MeshStandardMaterial({ color: 0xf3ead2, roughness: 0.75 }),
   boardPin: new THREE.MeshStandardMaterial({ color: 0xef5d45, roughness: 0.5 }),
-  spawnPad: new THREE.MeshStandardMaterial({ color: 0xf2d16b, roughness: 0.75 }),
   signPost: new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 0.78 }),
   signPanel: new THREE.MeshStandardMaterial({ color: 0xf0ca72, roughness: 0.72 }),
   signFallback: new THREE.MeshBasicMaterial({ color: 0xf8f2dc }),
@@ -992,12 +990,6 @@ const addDeliveryBoard = (group: THREE.Group): void => {
   );
 };
 
-const addSpawnMarker = (group: THREE.Group): void => {
-  const [x, , z] = playerSpawnPosition;
-  addGroundRing(group, 'playground:player-spawn-ring', 0.58, 0.025, [x, 0.035, z], materials.spawnPad);
-  addBox(group, 'playground:player-spawn-forward-arrow', [0.18, 0.04, 0.52], [x + 0.34, 0.045, z - 0.34], materials.spawnPad);
-};
-
 export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group => {
   const playground = nameObject(new THREE.Group(), 'village:square-blockout');
 
@@ -1009,7 +1001,6 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
   }
 
   addPavementTiles(playground);
-  addSpawnMarker(playground);
   addPostOffice(playground, options);
   addHouses(playground, options);
   addWell(playground);

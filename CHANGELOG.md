@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.13] - 2026-06-28
+
+### Fixed
+
+- Removed the in-game player spawn circle and forward arrow block from the playable playground.
+- Added smoke coverage to keep spawn placement visuals out of the game scene while preserving editor spawn tools.
+
 ## [0.53.12] - 2026-06-28
 
 ### Added
