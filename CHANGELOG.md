@@ -2,6 +2,18 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.39.0] - 2026-06-28
+
+### Added
+
+- Added speed-driven courier animation states for idle, walk, and run using the existing Creative Characters animation source.
+- Added expanded debug reporting for the active animation state and clip.
+- Added smoke checks for motion animation selection, speed thresholds, and root-motion track cleanup.
+
+### Fixed
+
+- Removed top-level `Root.position` tracks from runtime player animation clips so walk/run animations stay in-place and the player controller remains the only owner of player movement.
+
 ## [0.38.0] - 2026-06-28
 
 ### Added

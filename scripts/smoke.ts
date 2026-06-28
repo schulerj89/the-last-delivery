@@ -14,6 +14,7 @@ import {
   SkinnedMesh,
   Texture,
   Uint16BufferAttribute,
+  VectorKeyframeTrack,
   Vector3,
 } from 'three';
 import {
@@ -48,15 +49,19 @@ import {
 } from '../src/game/debug/debugUiManager';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
 import {
+  createInPlacePlayerAnimationClip,
   createPlayerFallbackVisual,
   createPlayerVisual,
   fitAndAlignCharacterModel,
+  getPlayerMotionAnimationState,
+  isPlayerRootMotionTrackName,
   playerCharacterAnimationAssetId,
   playerCharacterAssetId,
   playerCharacterVisualSettings,
   playerMovementSettings,
   resolveVisibleCharacterMeshNames,
   selectPlayerIdleAnimationClip,
+  selectPlayerMotionAnimationClip,
 } from '../src/game/player';
 import {
   clampFrameDelta,
@@ -1310,6 +1315,14 @@ const runModuleSmoke = (): void => {
   assert(isFiniteVector3Tuple(playerCharacterVisualSettings.offset), 'Player character visual offset should be a valid vector.');
   assert(playerCharacterVisualSettings.visibleMeshNames.length > 0, 'Player character visual should select a courier-style mesh subset.');
   assert(playerCharacterVisualSettings.visibleMeshNames.includes('Outerwear_036'), 'Player character mesh filter should use the actual outerwear mesh name.');
+  assert(playerCharacterVisualSettings.idleSpeedThreshold > 0, 'Player idle animation speed threshold should be positive.');
+  assert(
+    playerCharacterVisualSettings.runSpeedThreshold > playerCharacterVisualSettings.idleSpeedThreshold,
+    'Player run animation speed threshold should be above idle.',
+  );
+  assert(playerCharacterVisualSettings.animationFadeDuration > 0, 'Player animation fade duration should be positive.');
+  assert(playerCharacterVisualSettings.walkAnimationTimeScale > 0, 'Player walk animation time scale should be positive.');
+  assert(playerCharacterVisualSettings.runAnimationTimeScale > 0, 'Player run animation time scale should be positive.');
 
   const filterFallback = resolveVisibleCharacterMeshNames(['Body_010', 'Outerwear_036'], ['missing-mesh-name'], 'configured');
   assert(filterFallback.usedFallbackAll, 'Player mesh filtering should fall back to all meshes if the configured filter hides everything.');
@@ -1322,6 +1335,7 @@ const runModuleSmoke = (): void => {
   const idleClip = new AnimationClip('Idle_Relaxed', -1, []);
   const aPoseClip = new AnimationClip('A-pose', -1, []);
   const walkClip = new AnimationClip('Walk_Forward', -1, []);
+  const runClip = new AnimationClip('Run_Forward', -1, []);
   assert(
     selectPlayerIdleAnimationClip([aPoseClip, walkClip, idleClip]) === idleClip,
     'Player animation selection should prefer configured idle clips.',
@@ -1329,6 +1343,33 @@ const runModuleSmoke = (): void => {
   assert(
     selectPlayerIdleAnimationClip([aPoseClip, walkClip]) === walkClip,
     'Player animation selection should avoid A-pose when a runtime clip is available.',
+  );
+  assert(selectPlayerMotionAnimationClip([idleClip, walkClip, runClip], 'walk') === walkClip, 'Player walk animation selection should prefer Walk_Forward.');
+  assert(selectPlayerMotionAnimationClip([idleClip, walkClip, runClip], 'run') === runClip, 'Player run animation selection should prefer Run_Forward.');
+  assert(isPlayerRootMotionTrackName('Root.position'), 'Player animation cleanup should detect direct Root.position tracks.');
+  assert(isPlayerRootMotionTrackName('.bones[Root].position'), 'Player animation cleanup should detect bone Root.position tracks.');
+  assert(!isPlayerRootMotionTrackName('Hips.position'), 'Player animation cleanup should keep local hip motion for gait readability.');
+  const rootMotionClip = new AnimationClip('Run_Forward', 1, [
+    new VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 0, 0, 2]),
+    new VectorKeyframeTrack('Hips.position', [0, 1], [0, 0.7, 0, 0, 0.7, 0.1]),
+  ]);
+  const inPlaceClip = createInPlacePlayerAnimationClip(rootMotionClip);
+  assert(
+    inPlaceClip.tracks.every((track) => track.name !== 'Root.position'),
+    'Player animation cleanup should remove root translation tracks.',
+  );
+  assert(
+    inPlaceClip.tracks.some((track) => track.name === 'Hips.position'),
+    'Player animation cleanup should preserve local hip translation tracks.',
+  );
+  assert(getPlayerMotionAnimationState(0) === 'idle', 'Player animation should idle at zero speed.');
+  assert(
+    getPlayerMotionAnimationState(playerCharacterVisualSettings.idleSpeedThreshold + 0.01) === 'walk',
+    'Player animation should walk above the idle threshold.',
+  );
+  assert(
+    getPlayerMotionAnimationState(playerCharacterVisualSettings.runSpeedThreshold) === 'run',
+    'Player animation should run at the run threshold.',
   );
 
   const emptyAlignment = fitAndAlignCharacterModel(new Group(), playerMovementSettings.radius);
@@ -1361,6 +1402,7 @@ const runModuleSmoke = (): void => {
   assert(initialVisualStatus.animationAssetId === playerCharacterAnimationAssetId, 'Player visual status should expose the selected animation asset id.');
   assert(initialVisualStatus.assetUrl.endsWith('.glb'), 'Player visual status should expose the selected asset URL.');
   assert(initialVisualStatus.animationAssetUrl.endsWith('.glb'), 'Player visual status should expose the selected animation asset URL.');
+  assert(initialVisualStatus.activeAnimationState === 'idle', 'Player visual status should initialize with idle animation state.');
   assert(initialVisualStatus.fallbackVisible, 'Player fallback should remain available if the GLB cannot load.');
   assert(initialVisualStatus.totalMeshCount >= initialVisualStatus.visibleMeshCount, 'Player visual mesh counts should be ordered.');
   playerVisual.forceFallbackVisual();

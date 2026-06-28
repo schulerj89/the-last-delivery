@@ -12,6 +12,7 @@ export const playerCharacterAnimationAssetId = 'creative-courier-character-anima
 
 export type PlayerVisualMode = 'fallback' | 'loading' | 'loaded' | 'error';
 export type PlayerMeshFilterMode = 'configured' | 'all';
+export type PlayerMotionAnimationState = 'idle' | 'walk' | 'run';
 
 export const playerCharacterVisualSettings = {
   assetId: playerCharacterAssetId,
@@ -25,6 +26,17 @@ export const playerCharacterVisualSettings = {
     'Idle_Breathing',
     'Idle_Look_Around',
   ],
+  preferredWalkAnimationNames: [
+    'Walk_Forward',
+  ],
+  preferredRunAnimationNames: [
+    'Run_Forward',
+  ],
+  idleSpeedThreshold: 0.08,
+  runSpeedThreshold: 2.2,
+  animationFadeDuration: 0.18,
+  walkAnimationTimeScale: 1,
+  runAnimationTimeScale: 1.05,
   visibleMeshNames: [
     'Body_010',
     'Male_emotion_usual_001',
@@ -47,6 +59,7 @@ export interface PlayerVisualStatus {
   totalMeshCount: number;
   visibleMeshCount: number;
   animationNames: readonly string[];
+  activeAnimationState: PlayerMotionAnimationState;
   activeAnimationName?: string;
   boundingBoxSize: THREE.Vector3Tuple;
   boundingBoxMin: THREE.Vector3Tuple;
@@ -79,7 +92,7 @@ export interface MeshVisibilityResult {
 export interface PlayerVisual {
   object: THREE.Group;
   fallback: THREE.Group;
-  update(deltaSeconds: number): void;
+  update(deltaSeconds: number, movementSpeed?: number): void;
   getStatus(): PlayerVisualStatus;
   forceFallbackVisual(): void;
   forceCharacterVisual(): void;
@@ -95,10 +108,23 @@ interface PlayerVisualOptions {
 
 type PlayerVisualDisplayMode = 'auto' | 'force-fallback' | 'force-character';
 
+const motionAnimationStates = ['idle', 'walk', 'run'] as const;
 const fallbackCollisionRadius = 0.38;
 const emptyTuple: THREE.Vector3Tuple = [0, 0, 0];
 const playerMaterial = new THREE.MeshStandardMaterial({ color: 0xf2d16b, roughness: 0.55 });
 const facingMaterial = new THREE.MeshStandardMaterial({ color: 0x2f5f8f, roughness: 0.55 });
+
+const getMotionAnimationTimeScale = (state: PlayerMotionAnimationState): number => {
+  if (state === 'run') {
+    return playerCharacterVisualSettings.runAnimationTimeScale;
+  }
+
+  if (state === 'walk') {
+    return playerCharacterVisualSettings.walkAnimationTimeScale;
+  }
+
+  return 1;
+};
 
 export const createPlayerFallbackVisual = (): THREE.Group => {
   const player = new THREE.Group();
@@ -180,6 +206,64 @@ export const selectPlayerIdleAnimationClip = (
   }
 
   return clips.find((clip, index) => getClipName(clip, index).toLowerCase() !== 'a-pose') ?? clips[0] ?? null;
+};
+
+const selectPreferredAnimationClip = (
+  clips: readonly THREE.AnimationClip[],
+  preferredNames: readonly string[],
+): THREE.AnimationClip | null => {
+  const normalizedPreferredNames = preferredNames.map((name) => name.toLowerCase());
+
+  return clips.find((clip, index) => (
+    normalizedPreferredNames.includes(getClipName(clip, index).toLowerCase())
+  )) ?? null;
+};
+
+export const selectPlayerMotionAnimationClip = (
+  clips: readonly THREE.AnimationClip[],
+  state: PlayerMotionAnimationState,
+): THREE.AnimationClip | null => {
+  if (state === 'idle') {
+    return selectPlayerIdleAnimationClip(clips);
+  }
+
+  const preferredNames = state === 'run'
+    ? playerCharacterVisualSettings.preferredRunAnimationNames
+    : playerCharacterVisualSettings.preferredWalkAnimationNames;
+  const preferredClip = selectPreferredAnimationClip(clips, preferredNames);
+
+  if (preferredClip) {
+    return preferredClip;
+  }
+
+  const stateName = state.toLowerCase();
+  return clips.find((clip, index) => getClipName(clip, index).toLowerCase().includes(stateName)) ?? null;
+};
+
+export const getPlayerMotionAnimationState = (movementSpeed: number): PlayerMotionAnimationState => {
+  if (!Number.isFinite(movementSpeed) || movementSpeed < playerCharacterVisualSettings.idleSpeedThreshold) {
+    return 'idle';
+  }
+
+  return movementSpeed >= playerCharacterVisualSettings.runSpeedThreshold ? 'run' : 'walk';
+};
+
+export const isPlayerRootMotionTrackName = (trackName: string): boolean => (
+  trackName === 'Root.position'
+  || trackName.endsWith('/Root.position')
+  || trackName.endsWith('.Root.position')
+  || trackName.includes('bones[Root].position')
+);
+
+export const createInPlacePlayerAnimationClip = (
+  clip: THREE.AnimationClip,
+): THREE.AnimationClip => {
+  const tracks = clip.tracks
+    .filter((track) => !isPlayerRootMotionTrackName(track.name))
+    .map((track) => track.clone());
+  const inPlaceClip = new THREE.AnimationClip(clip.name, clip.duration, tracks);
+  inPlaceClip.blendMode = clip.blendMode;
+  return inPlaceClip;
 };
 
 export const resolveVisibleCharacterMeshNames = (
@@ -322,6 +406,7 @@ const createStatus = (
     totalMeshCount: 0,
     visibleMeshCount: 0,
     animationNames: [],
+    activeAnimationState: 'idle',
     activeAnimationName: undefined,
     boundingBoxSize: [...emptyTuple],
     boundingBoxMin: [...emptyTuple],
@@ -359,12 +444,14 @@ export const createPlayerVisual = (
   let availableMeshNamesLogged = false;
   let animationMixer: THREE.AnimationMixer | null = null;
   let activeAnimationAction: THREE.AnimationAction | null = null;
+  let animationActions = new Map<PlayerMotionAnimationState, THREE.AnimationAction>();
   let animationNames: readonly string[] = [];
+  let activeAnimationState: PlayerMotionAnimationState = 'idle';
   let activeAnimationName: string | undefined;
   let status = createStatus(loadMode, true);
 
   const stopCharacterAnimation = (): void => {
-    activeAnimationAction?.stop();
+    animationActions.forEach((action) => action.stop());
 
     if (animationMixer && characterObject) {
       animationMixer.uncacheRoot(characterObject);
@@ -372,29 +459,98 @@ export const createPlayerVisual = (
 
     animationMixer = null;
     activeAnimationAction = null;
+    animationActions = new Map<PlayerMotionAnimationState, THREE.AnimationAction>();
+    activeAnimationState = 'idle';
     activeAnimationName = undefined;
   };
 
-  const startCharacterAnimation = (clips: readonly THREE.AnimationClip[]): void => {
-    if (!characterObject || clips.length === 0) {
+  const getFallbackMotionState = (
+    state: PlayerMotionAnimationState,
+  ): PlayerMotionAnimationState | null => {
+    if (animationActions.has(state)) {
+      return state;
+    }
+
+    if (state === 'run' && animationActions.has('walk')) {
+      return 'walk';
+    }
+
+    if (state === 'walk' && animationActions.has('run')) {
+      return 'run';
+    }
+
+    return animationActions.has('idle') ? 'idle' : null;
+  };
+
+  const playCharacterAnimationState = (
+    state: PlayerMotionAnimationState,
+    immediate = false,
+  ): void => {
+    const fallbackState = getFallbackMotionState(state);
+
+    if (!fallbackState) {
+      activeAnimationState = state;
       activeAnimationName = undefined;
       return;
     }
 
-    const clip = selectPlayerIdleAnimationClip(clips);
-    if (!clip) {
+    const nextAction = animationActions.get(fallbackState);
+    if (!nextAction) {
+      return;
+    }
+
+    if (activeAnimationAction === nextAction) {
+      activeAnimationState = state;
+      activeAnimationName = nextAction.getClip().name || fallbackState;
+      return;
+    }
+
+    nextAction.enabled = true;
+    nextAction.reset();
+    nextAction.setEffectiveTimeScale(getMotionAnimationTimeScale(fallbackState));
+    nextAction.setEffectiveWeight(1);
+    nextAction.play();
+
+    if (activeAnimationAction && !immediate) {
+      activeAnimationAction.crossFadeTo(nextAction, playerCharacterVisualSettings.animationFadeDuration, false);
+    } else {
+      activeAnimationAction?.stop();
+    }
+
+    activeAnimationAction = nextAction;
+    activeAnimationState = state;
+    activeAnimationName = nextAction.getClip().name || fallbackState;
+    refreshStatus();
+  };
+
+  const configureCharacterAnimations = (clips: readonly THREE.AnimationClip[]): void => {
+    if (!characterObject || clips.length === 0) {
       activeAnimationName = undefined;
       return;
     }
 
     stopCharacterAnimation();
     animationMixer = new THREE.AnimationMixer(characterObject);
-    activeAnimationAction = animationMixer.clipAction(clip);
-    activeAnimationAction.reset();
-    activeAnimationAction.setLoop(THREE.LoopRepeat, Infinity);
-    activeAnimationAction.play();
-    activeAnimationName = clip.name || 'unnamed';
-    log.info(`[player] Playing character animation: ${activeAnimationName}.`);
+    motionAnimationStates.forEach((state) => {
+      const clip = selectPlayerMotionAnimationClip(clips, state);
+
+      if (!clip || !animationMixer) {
+        return;
+      }
+
+      const action = animationMixer.clipAction(createInPlacePlayerAnimationClip(clip));
+      action.setLoop(THREE.LoopRepeat, Infinity);
+      action.clampWhenFinished = false;
+      animationActions.set(state, action);
+    });
+
+    if (animationActions.size === 0) {
+      activeAnimationName = undefined;
+      return;
+    }
+
+    log.info(`[player] Character motion animations ready: ${[...animationActions.keys()].join(', ')}.`);
+    playCharacterAnimationState('idle', true);
   };
 
   const loadCharacterAnimations = (): void => {
@@ -411,7 +567,7 @@ export const createPlayerVisual = (
           log.warn(`[player] Character animation source ${entry.asset.id} has no animation clips.`);
         }
 
-        startCharacterAnimation(entry.animations);
+        configureCharacterAnimations(entry.animations);
         refreshStatus();
       })
       .catch((error: unknown) => {
@@ -439,6 +595,7 @@ export const createPlayerVisual = (
       nextStatus.animationNames = animationNames.length > 0
         ? animationNames
         : getAnimationNames(characterObject);
+      nextStatus.activeAnimationState = activeAnimationState;
       nextStatus.activeAnimationName = activeAnimationName;
       nextStatus.boundingBoxSize = bounds ? toVector3Tuple(size) : alignmentResult?.boundingBoxSize ?? [...emptyTuple];
       nextStatus.boundingBoxMin = bounds ? toVector3Tuple(bounds.min) : alignmentResult?.boundingBoxMin ?? [...emptyTuple];
@@ -534,7 +691,7 @@ export const createPlayerVisual = (
           : getAnimationNames(instance.object);
         if (animationNames.length > 0) {
           log.info(`[player] Character visual asset animations available: ${animationNames.join(', ')}.`);
-          startCharacterAnimation(instance.animations);
+          configureCharacterAnimations(instance.animations);
         }
 
         applyDisplayMode();
@@ -556,7 +713,11 @@ export const createPlayerVisual = (
   return {
     object,
     fallback,
-    update(deltaSeconds) {
+    update(deltaSeconds, movementSpeed = 0) {
+      if (animationMixer) {
+        playCharacterAnimationState(getPlayerMotionAnimationState(movementSpeed));
+      }
+
       animationMixer?.update(deltaSeconds);
     },
     getStatus() {

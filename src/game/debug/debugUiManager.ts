@@ -168,7 +168,7 @@ const createExpandedLines = (update: DebugUiUpdate, state: DebugUiState): string
     `Visual ${visual.mode}  Meshes ${visual.visibleMeshCount}/${visual.totalMeshCount}`,
     `Asset ${visual.assetId}`,
     `Animation asset ${visual.animationAssetId}`,
-    `Animation ${visual.activeAnimationName ?? 'none'}  Clips ${visual.animationNames.length}`,
+    `Animation ${visual.activeAnimationState} ${visual.activeAnimationName ?? 'none'}  Clips ${visual.animationNames.length}`,
     `Fallback ${visual.fallbackVisible ? 'yes' : 'no'}`,
     `Char pos ${formatTuple(visual.characterRootPosition)}`,
     `Char scale ${formatTuple(visual.characterRootScale)}`,

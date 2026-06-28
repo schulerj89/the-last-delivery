@@ -137,7 +137,6 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
         applyDeceleration(velocity, stepSeconds);
       }
 
-      visual.update(stepSeconds);
       object.position.addScaledVector(velocity, stepSeconds);
       object.position.y = groundedY;
 
@@ -164,6 +163,8 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
       if (velocity.lengthSq() > 0.001) {
         rotateToward(object, getYawForDirection(velocity), stepSeconds);
       }
+
+      visual.update(stepSeconds, velocity.length());
     },
     resetToSpawn,
     getState(): PlayerState {
