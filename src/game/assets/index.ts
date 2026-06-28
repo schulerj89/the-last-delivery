@@ -7,6 +7,8 @@ export {
   canLoadGltfAssets,
   loadGltfAsset,
   loadGltfAssetInstance,
+  loadModel,
+  loadModelInstance,
 } from './gltfLoader';
 export type {
   AssetDefinition,

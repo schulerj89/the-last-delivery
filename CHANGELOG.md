@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.19.0] - 2026-06-28
+
+### Changed
+
+- Updated the optional GLB loader to use `three/addons/loaders/GLTFLoader.js`.
+- Added source pack, default scale, and notes metadata to asset registry entries.
+- Added `loadModel` and `loadModelInstance` asset loading helpers while preserving primitive fallbacks.
+- Expanded smoke checks for registry URL, source pack, default scale, and world asset references.
+
 ## [0.18.0] - 2026-06-28
 
 ### Added

@@ -2,7 +2,9 @@ export interface GltfAssetDefinition {
   id: string;
   kind: 'gltf';
   url: string;
-  description: string;
+  sourcePack: string;
+  defaultScale: number;
+  notes?: string;
   maxRecommendedBytes: number;
 }
 
@@ -13,7 +15,9 @@ export const assetRegistry: readonly AssetDefinition[] = [
     id: 'crate-box-001',
     kind: 'gltf',
     url: '/assets/models/crate-box-001.glb',
-    description: 'Optional low-poly crate prop used to test GLB replacement for one village crate.',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Optional low-poly crate prop used to test GLB replacement for one village crate.',
     maxRecommendedBytes: 1_000_000,
   },
 ];

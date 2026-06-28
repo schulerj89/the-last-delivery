@@ -22,4 +22,6 @@ Expected local source folders:
 5. Register the runtime model in `src/game/assets/assetRegistry.ts`.
 6. Keep colliders, interactables, and delivery logic in world data. Do not derive gameplay collision from GLB meshes.
 
+Registry entries should include `id`, `url`, `sourcePack`, `defaultScale`, and optional `notes`. The asset loader builds primitive fallbacks first and treats GLB models as optional visuals.
+
 Prefer GLB when available. Avoid full packs, character models, animations, DRACO, KTX2, and meshopt until the runtime path is intentionally expanded.

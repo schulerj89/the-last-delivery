@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { getAssetDefinition } from './assetRegistry';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { getAssetDefinition, type AssetDefinition } from './assetRegistry';
 
 const loader = new GLTFLoader();
-const loadedScenes = new Map<string, Promise<THREE.Group>>();
+const loadedModels = new Map<string, Promise<THREE.Group>>();
 const failedAssets = new Set<string>();
+const loadingAssets = new Set<string>();
 
 const getErrorMessage = (error: unknown): string => (
   error instanceof Error ? error.message : String(error)
@@ -12,12 +13,17 @@ const getErrorMessage = (error: unknown): string => (
 
 export const canLoadGltfAssets = (): boolean => typeof window !== 'undefined';
 
-const configureAssetScene = (assetId: string, scene: THREE.Group): THREE.Group => {
+const applyDefaultScale = (asset: AssetDefinition, scene: THREE.Group): void => {
+  scene.scale.multiplyScalar(asset.defaultScale);
+};
+
+const configureAssetScene = (asset: AssetDefinition, scene: THREE.Group): THREE.Group => {
   const root = scene;
-  root.name = `asset:${assetId}`;
-  root.userData.assetId = assetId;
+  applyDefaultScale(asset, root);
+  root.name = `asset:${asset.id}`;
+  root.userData.assetId = asset.id;
   root.traverse((object) => {
-    object.userData.assetId = assetId;
+    object.userData.assetId = asset.id;
 
     if (object instanceof THREE.Mesh) {
       object.castShadow = true;
@@ -39,19 +45,22 @@ export const loadGltfAsset = (assetId: string): Promise<THREE.Group> => {
     return Promise.reject(new Error(`GLB asset loading is only available in the browser: ${assetId}`));
   }
 
-  const cachedScene = loadedScenes.get(assetId);
-  if (cachedScene) {
-    return cachedScene;
+  const cachedModel = loadedModels.get(assetId);
+  if (cachedModel) {
+    return cachedModel;
   }
 
-  console.info(`[assets] Loading ${asset.id} from ${asset.url}.`);
+  if (!loadingAssets.has(asset.id)) {
+    loadingAssets.add(asset.id);
+    console.info(`[assets] Loading model ${asset.id} from ${asset.url}.`);
+  }
 
-  const scenePromise = new Promise<THREE.Group>((resolve, reject) => {
+  const modelPromise = new Promise<THREE.Group>((resolve, reject) => {
     loader.load(
       asset.url,
       (gltf) => {
-        console.info(`[assets] Loaded ${asset.id}.`);
-        resolve(configureAssetScene(asset.id, gltf.scene));
+        console.info(`[assets] Loaded model ${asset.id}.`);
+        resolve(configureAssetScene(asset, gltf.scene));
       },
       undefined,
       (error) => {
@@ -65,14 +74,18 @@ export const loadGltfAsset = (assetId: string): Promise<THREE.Group> => {
     );
   });
 
-  loadedScenes.set(assetId, scenePromise);
-  return scenePromise;
+  loadedModels.set(assetId, modelPromise);
+  return modelPromise;
 };
 
-export const loadGltfAssetInstance = async (assetId: string): Promise<THREE.Object3D> => {
+export const loadModel = (assetId: string): Promise<THREE.Group> => loadGltfAsset(assetId);
+
+export const loadModelInstance = async (assetId: string): Promise<THREE.Object3D> => {
   const scene = await loadGltfAsset(assetId);
   const instance = scene.clone(true);
   instance.name = `asset-instance:${assetId}`;
   instance.userData.assetId = assetId;
   return instance;
 };
+
+export const loadGltfAssetInstance = loadModelInstance;

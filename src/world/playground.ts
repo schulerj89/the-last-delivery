@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { canLoadGltfAssets, loadGltfAssetInstance } from '../game/assets';
+import { canLoadGltfAssets, loadModelInstance } from '../game/assets';
 import type { WorldObjectDefinition } from './types';
 import {
   deliveryBoardObject,
@@ -162,7 +162,7 @@ const tryApplyAssetRender = (
     return;
   }
 
-  loadGltfAssetInstance(assetId)
+  loadModelInstance(assetId)
     .then((asset) => {
       fallbackObjects.forEach((fallbackObject) => {
         group.remove(fallbackObject);

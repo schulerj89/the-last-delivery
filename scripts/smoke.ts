@@ -34,8 +34,12 @@ const runAssetRegistrySmoke = (): void => {
     assert(!assetIds.has(asset.id), `Asset id should be unique: ${asset.id}`);
     assetIds.add(asset.id);
     assert(asset.kind === 'gltf', `Asset should use the GLTF loader path: ${asset.id}`);
+    assert(asset.id.trim().length > 0, `Asset id should be a non-empty string: ${asset.id}`);
+    assert(typeof asset.url === 'string' && asset.url.trim().length > 0, `Asset url should be a valid string: ${asset.id}`);
     assert(asset.url.startsWith('/assets/models/'), `Asset should load from public assets models: ${asset.id}`);
     assert(asset.url.endsWith('.glb'), `Asset should point to a GLB file: ${asset.id}`);
+    assert(asset.sourcePack.trim().length > 0, `Asset should identify a source pack: ${asset.id}`);
+    assert(Number.isFinite(asset.defaultScale) && asset.defaultScale > 0, `Asset should define a positive default scale: ${asset.id}`);
     assert(asset.maxRecommendedBytes > 0, `Asset should define a positive size budget: ${asset.id}`);
   });
 };
