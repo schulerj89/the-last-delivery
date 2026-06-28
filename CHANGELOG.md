@@ -2,6 +2,22 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.35.0] - 2026-06-28
+
+### Added
+
+- Added a central developer debug panel manager with F3 visibility, F4 hidden/compact/expanded detail cycling, F5 performance detail toggling, and F1 help when layout mode is off.
+- Added compact debug output for FPS, draw calls, active delivery, player position, and selected layout-editor object.
+- Added expanded debug output for player visual status, camera values, delivery state, layout object counts, and optional performance details.
+- Added `docs/DEBUG_UI.md` documenting developer UI controls.
+- Added smoke checks for debug state initialization, detail levels, gameplay UI independence, and hidden-panel performance snapshot safety.
+
+### Changed
+
+- Consolidated runtime player, camera, delivery, performance, layout, and selected placement-editor debug readouts into one debug panel.
+- Updated debug/dev panel CSS so developer UI stays away from center gameplay prompts, uses smaller text, scrolls when needed, and fades until hovered.
+- Updated the placement editor workflow docs with the shared debug controls.
+
 ## [0.34.0] - 2026-06-28
 
 ### Added

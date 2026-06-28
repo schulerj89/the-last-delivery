@@ -9,6 +9,9 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Press `F2` to enter layout mode.
 - The placement editor appears in the lower-right HUD.
 - Press `F1` while in layout mode to toggle the editor help overlay.
+- Press `F3` to hide or show developer UI panels.
+- Press `F4` to cycle debug detail between hidden, compact, and expanded.
+- Press `F5` to show or hide expanded performance details.
 
 ## Move Objects
 
@@ -28,6 +31,13 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - `Escape`: clear selection.
 
 Browser edits are temporary until exported and promoted.
+
+## Debug UI
+
+- Compact debug mode shows FPS, draw calls, active delivery, player position, and the selected editor object when layout mode is active.
+- Expanded debug mode adds player visual details, camera values, delivery state, layout object counts, and optional performance details.
+- The center objective, interaction prompt, interaction message, and delivery board overlay are gameplay UI and stay separate from debug visibility.
+- `F1` toggles general debug help when layout mode is off. In layout mode, `F1` toggles placement-editor help.
 
 ## Save Draft Edits
 

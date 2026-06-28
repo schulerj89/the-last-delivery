@@ -1,29 +1,24 @@
 import * as THREE from 'three';
 import './style.css';
 import { disposeAssetCache, getAssetRuntimeStats } from './game/assets';
-import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
-import {
-  createDebugOverlayVisibilityController,
-  debugOverlayVisibilityConfig,
-} from './game/debug/debugOverlayVisibility';
+import { createThirdPersonCameraController } from './game/camera';
+import { createDevDebugPanelManager } from './game/debug/debugUiManager';
 import {
   createDeliveryBoardOverlay,
   createDeliveryController,
-  createDeliveryDebugOverlay,
   createDeliveryGuidanceOverlay,
 } from './game/delivery';
 import { createInteractionController } from './game/interaction';
 import {
   clampFrameDelta,
-  createPerformanceDebugOverlay,
   createPerformanceMonitor,
   getCappedPixelRatio,
 } from './game/performance';
-import { createPlayerController, createPlayerDebugOverlay } from './game/player';
+import { createPlayerController } from './game/player';
 import { createResourceTracker } from './game/resources';
 import {
-  createVillageLayoutDebugHud,
   createVillageLayoutDebugView,
+  getLayoutObjectCountsByKind,
   layoutDebugConfig,
 } from './world/layoutDebug';
 import { createPlacementEditor } from './world/placementEditor';
@@ -68,7 +63,6 @@ scene.add(collisionDebugView.object);
 
 const layoutDebugView = createVillageLayoutDebugView(window.innerWidth, window.innerHeight);
 scene.add(layoutDebugView.object);
-const layoutDebugHud = createVillageLayoutDebugHud(app);
 const placementEditor = createPlacementEditor({
   sceneRoot: playground,
   camera: layoutDebugView.camera,
@@ -94,22 +88,19 @@ appResources.trackObject3D(player.object);
 scene.add(player.object);
 
 const delivery = createDeliveryController();
-const playerDebugOverlay = createPlayerDebugOverlay(app);
 const followCamera = createThirdPersonCameraController({
   camera,
   target: player.object,
   domElement: renderer.domElement,
 });
-const cameraDebugOverlay = createCameraDebugOverlay(app);
-const deliveryDebugOverlay = createDeliveryDebugOverlay(app);
 const deliveryGuidanceOverlay = createDeliveryGuidanceOverlay(app);
-const debugOverlayVisibility = createDebugOverlayVisibilityController(app);
+const debugUi = createDevDebugPanelManager(app);
+const layoutObjectCountsByKind = getLayoutObjectCountsByKind();
 const performanceMonitor = createPerformanceMonitor({
   config: {
     debugWarningsEnabled: import.meta.env.DEV,
   },
 });
-const performanceDebugOverlay = createPerformanceDebugOverlay(app);
 const deliveryBoardOverlay = createDeliveryBoardOverlay({
   delivery,
   parent: app,
@@ -184,9 +175,7 @@ const handleDebugKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
-  if (event.key === debugOverlayVisibilityConfig.toggleKey) {
-    event.preventDefault();
-    debugOverlayVisibility.toggle();
+  if (debugUi.handleKeyDown(event, { allowHelpToggle: !layoutDebugView.isActive() })) {
     return;
   }
 
@@ -244,15 +233,10 @@ const dispose = (): void => {
   followCamera.dispose();
   interaction.dispose();
   deliveryBoardOverlay.dispose();
-  playerDebugOverlay.dispose();
-  cameraDebugOverlay.dispose();
-  deliveryDebugOverlay.dispose();
   deliveryGuidanceOverlay.dispose();
-  debugOverlayVisibility.dispose();
+  debugUi.dispose();
   performanceMonitor.dispose();
-  performanceDebugOverlay.dispose();
   placementEditor.dispose();
-  layoutDebugHud.dispose();
   layoutDebugView.dispose();
   visualBoundsDebugView.dispose();
   appResources.dispose();
@@ -286,15 +270,19 @@ const animate = (): void => {
   updateObjectiveMarker(deliveryBoardObjectiveMarker, elapsedSeconds);
   updateObjectiveMarker(deliveryTargetObjectiveMarker, elapsedSeconds);
   followCamera.update(deltaSeconds);
-  playerDebugOverlay.update(player.getState());
-  cameraDebugOverlay.update(followCamera.getState());
-  deliveryDebugOverlay.update(deliveryState);
   deliveryGuidanceOverlay.update(deliveryState);
   deliveryBoardOverlay.update(deliveryState);
   renderer.render(scene, layoutDebugView.isActive() ? layoutDebugView.camera : camera);
   const performanceSnapshot = performanceMonitor.update(rawDeltaSeconds, renderer, getAssetRuntimeStats());
-  performanceDebugOverlay.update(performanceSnapshot);
-  layoutDebugHud.update(layoutDebugView.isActive(), performanceSnapshot);
+  debugUi.update({
+    player: player.getState(),
+    camera: followCamera.getState(),
+    delivery: deliveryState,
+    performance: performanceSnapshot,
+    layoutModeActive: layoutDebugView.isActive(),
+    layoutObjectCountsByKind,
+    selectedEditorObjectId: placementEditor.getSelectedObjectId(),
+  });
   animationFrameId = window.requestAnimationFrame(animate);
 };
 

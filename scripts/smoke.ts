@@ -28,10 +28,14 @@ import {
 import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import {
-  createDebugOverlayVisibilityState,
-  debugOverlayVisibilityConfig,
-  isGameplayUiSelectorVisibleWhenDebugCollapsed,
-} from '../src/game/debug/debugOverlayVisibility';
+  createDebugUiState,
+  cycleDebugDetailLevel,
+  debugDetailLevels,
+  debugUiConfig,
+  getEffectiveDebugDetailLevel,
+  isDebugDetailLevel,
+  isGameplayUiSelectorIndependentOfDebug,
+} from '../src/game/debug/debugUiManager';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
 import {
   createPlayerFallbackVisual,
@@ -410,23 +414,40 @@ const runAssetFittingSmoke = (): void => {
 };
 
 const runVisualPolishSmoke = (): void => {
-  const debugVisibilityState = createDebugOverlayVisibilityState();
+  const debugUiState = createDebugUiState();
 
-  assert(debugOverlayVisibilityConfig.toggleKey === 'F3', 'Debug overlay collapse should use F3.');
-  assert(debugOverlayVisibilityConfig.initialCollapsed, 'Debug overlay panels should start collapsed for normal play.');
-  assert(debugVisibilityState.collapsed, 'Debug overlay collapsed state should initialize.');
-  assert(debugOverlayVisibilityConfig.hiddenPanelSelector === '.debug-overlay', 'Debug overlay collapse should target debug panels only.');
+  assert(debugUiConfig.toggleKey === 'F3', 'Debug panel visibility should use F3.');
+  assert(debugUiConfig.detailKey === 'F4', 'Debug detail level should use F4.');
+  assert(debugUiConfig.performanceKey === 'F5', 'Performance details should use F5.');
+  assert(debugUiConfig.helpKey === 'F1', 'Debug help hint should use F1.');
+  assert(debugUiConfig.layoutKey === 'F2', 'Debug help hint should include F2 layout mode.');
+  assert(debugDetailLevels.includes('hidden'), 'Debug detail levels should include hidden.');
+  assert(debugDetailLevels.includes('compact'), 'Debug detail levels should include compact.');
+  assert(debugDetailLevels.includes('expanded'), 'Debug detail levels should include expanded.');
+  assert(isDebugDetailLevel(debugUiState.detailLevel), 'Debug detail state should initialize to a valid level.');
+  assert(getEffectiveDebugDetailLevel(debugUiState) === 'compact', 'Debug UI should initialize in compact mode.');
+  assert(cycleDebugDetailLevel(debugUiState) === 'expanded', 'Debug detail should cycle from compact to expanded.');
+  assert(cycleDebugDetailLevel(debugUiState) === 'hidden', 'Debug detail should cycle from expanded to hidden.');
+  assert(getEffectiveDebugDetailLevel(debugUiState) === 'hidden', 'Hidden debug detail should hide developer panels.');
   assert(
-    isGameplayUiSelectorVisibleWhenDebugCollapsed('.delivery-guidance'),
-    'Objective guidance should remain visible when debug panels are collapsed.',
+    isGameplayUiSelectorIndependentOfDebug('.delivery-guidance'),
+    'Objective guidance should remain independent of debug visibility.',
   );
   assert(
-    isGameplayUiSelectorVisibleWhenDebugCollapsed('.interaction-prompt'),
-    'Interaction prompt should remain visible when debug panels are collapsed.',
+    isGameplayUiSelectorIndependentOfDebug('.interaction-prompt'),
+    'Interaction prompt should remain independent of debug visibility.',
   );
   assert(
-    !isGameplayUiSelectorVisibleWhenDebugCollapsed(debugOverlayVisibilityConfig.hiddenPanelSelector),
-    'Collapsed debug panel selector should not be treated as required gameplay UI.',
+    isGameplayUiSelectorIndependentOfDebug('.interaction-message'),
+    'Interaction message should remain independent of debug visibility.',
+  );
+  assert(
+    isGameplayUiSelectorIndependentOfDebug('.delivery-board-overlay'),
+    'Delivery board overlay should remain independent of debug visibility.',
+  );
+  assert(
+    !isGameplayUiSelectorIndependentOfDebug('.dev-debug-panel'),
+    'Developer panels should not be treated as required gameplay UI.',
   );
 
   assert(isAssetMaterialOverrideKind('tree'), 'Tree assets should have material override support.');
@@ -973,6 +994,10 @@ const runPerformanceSmoke = (): void => {
   assert(getCappedPixelRatio(4) === performanceBudgetConfig.maxPixelRatio, 'High device pixel ratio should be capped.');
   assert(clampFrameDelta(999) === performanceBudgetConfig.maxDeltaSeconds, 'Large frame delta should be clamped.');
   assert(clampFrameDelta(1 / 60) > 0, 'Normal frame delta should stay positive.');
+
+  const hiddenPanelSnapshot = createPerformanceSnapshot();
+  assert(hiddenPanelSnapshot.renderCalls === 0, 'Performance snapshot should initialize when the debug panel is hidden.');
+  assert(hiddenPanelSnapshot.triangles === 0, 'Hidden debug panel state should not require renderer counters.');
 
   const rendererInfo = {
     info: {
