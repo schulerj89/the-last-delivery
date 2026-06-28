@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.30.0] - 2026-06-28
+
+### Added
+
+- Added a developer-only placement editor that works only while F2 layout mode is active.
+- Added Tab and Shift+Tab selection cycling, top-down click selection, keyboard nudge/rotate/scale/Y-offset editing, snap-size keys, and Escape selection clearing.
+- Added selected-object placement HUD details with object id, kind, position, rotation, scale multiplier, Y offset, render config, snap size, and a temporary-edit warning.
+- Added clipboard serialization for the selected transform with `C` and all changed transforms with `Shift+C`.
+- Added smoke checks for editable object initialization, safe missing-object lookup, positive snap values, and stable transform serialization.
+
+### Changed
+
+- Layout mode now activates the placement editor and resets temporary visual transforms when F2 exits so normal gameplay remains authored by source definitions.
+
 ## [0.29.0] - 2026-06-28
 
 ### Added

@@ -22,6 +22,7 @@ import {
   createVillageLayoutDebugView,
   layoutDebugConfig,
 } from './world/layoutDebug';
+import { createPlacementEditor } from './world/placementEditor';
 import { createPlayground } from './world/playground';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
@@ -64,6 +65,14 @@ scene.add(collisionDebugView.object);
 const layoutDebugView = createVillageLayoutDebugView(window.innerWidth, window.innerHeight);
 scene.add(layoutDebugView.object);
 const layoutDebugHud = createVillageLayoutDebugHud(app);
+const placementEditor = createPlacementEditor({
+  sceneRoot: playground,
+  camera: layoutDebugView.camera,
+  domElement: renderer.domElement,
+  parent: app,
+  isLayoutModeActive: layoutDebugView.isActive,
+});
+scene.add(placementEditor.object);
 
 const deliveryBoardObjectiveMarker = appResources.trackObject3D(createDeliveryBoardObjectiveMarker());
 scene.add(deliveryBoardObjectiveMarker);
@@ -136,11 +145,13 @@ const setLayoutModeActive = (active: boolean): void => {
       visualBounds: visualBoundsDebugView.isVisible(),
     };
     layoutDebugView.setActive(true);
+    placementEditor.setActive(true);
     collisionDebugView.setVisible(true);
     visualBoundsDebugView.setVisible(true);
     return;
   }
 
+  placementEditor.setActive(false);
   layoutDebugView.setActive(false);
 
   if (preLayoutDebugState) {
@@ -158,6 +169,10 @@ const handleDebugKeyDown = (event: KeyboardEvent): void => {
   if (event.key === layoutDebugConfig.toggleKey) {
     event.preventDefault();
     setLayoutModeActive(!layoutDebugView.isActive());
+    return;
+  }
+
+  if (layoutDebugView.isActive() && placementEditor.handleKeyDown(event)) {
     return;
   }
 
@@ -203,6 +218,7 @@ const dispose = (): void => {
   deliveryGuidanceOverlay.dispose();
   performanceMonitor.dispose();
   performanceDebugOverlay.dispose();
+  placementEditor.dispose();
   layoutDebugHud.dispose();
   layoutDebugView.dispose();
   visualBoundsDebugView.dispose();

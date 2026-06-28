@@ -49,6 +49,15 @@ import {
   getLayoutObjectCountsByKind,
   layoutDebugConfig,
 } from '../src/world/layoutDebug';
+import {
+  createEditablePlacementObjects,
+  createPlacementTransformDraft,
+  getEditablePlacementObjectById,
+  getPlacementEditorSnapValues,
+  placementEditorConfig,
+  serializePlacementTransform,
+  serializePlacementTransforms,
+} from '../src/world/placementEditor';
 import { createPlayground } from '../src/world/playground';
 import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
@@ -645,6 +654,41 @@ const runLayoutDebugSmoke = (): void => {
   layoutDebugView.dispose();
 };
 
+const runPlacementEditorSmoke = (): void => {
+  const editableObjects = createEditablePlacementObjects();
+  const snapValues = getPlacementEditorSnapValues();
+  const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
+  const missingObject = getEditablePlacementObjectById('missing-object', editableObjects);
+
+  assert(editableObjects.length > 0, 'Placement editor editable object list should initialize.');
+  assert(deliveryBoard !== null, 'Placement editor should resolve important editable objects.');
+  assert(missingObject === null, 'Placement editor should handle missing object ids safely.');
+  assert(snapValues.length === 3, 'Placement editor should expose three snap values.');
+  assert(snapValues.every((value) => value > 0), 'Placement editor snap values should be positive.');
+  assert(placementEditorConfig.defaultSnapIndex >= 0, 'Placement editor default snap index should be valid.');
+  assert(placementEditorConfig.defaultSnapIndex < snapValues.length, 'Placement editor default snap index should be in range.');
+
+  if (!deliveryBoard) {
+    throw new Error('Missing delivery board editable object.');
+  }
+
+  const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
+  draft.position = [draft.position[0] + 0.25, draft.position[1], draft.position[2] - 0.5];
+  draft.rotationY += Math.PI / 4;
+  draft.scaleMultiplier = 1.1;
+  draft.yOffset = 0.25;
+
+  const serialized = serializePlacementTransform(deliveryBoard.worldObject, draft);
+  assert(serialized.includes("id: 'delivery-board'"), 'Placement transform serialization should include the object id.');
+  assert(serialized.includes('position:'), 'Placement transform serialization should include position.');
+  assert(serialized.includes('rotation:'), 'Placement transform serialization should include rotation.');
+
+  const draftMap = new Map([[deliveryBoard.id, draft]]);
+  const serializedAll = serializePlacementTransforms(draftMap, editableObjects);
+  assert(serializedAll.startsWith('['), 'All-placement serialization should be a stable array snippet.');
+  assert(serializedAll.includes("id: 'delivery-board'"), 'All-placement serialization should include edited transforms.');
+};
+
 const runDeliveryStateSmoke = (): void => {
   const delivery = createDeliveryController();
   const firstDelivery = deliveryJobs[0];
@@ -987,6 +1031,7 @@ runAssetFittingSmoke();
 runWorldDefinitionSmoke();
 runVillageLayoutConfigSmoke();
 runLayoutDebugSmoke();
+runPlacementEditorSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();
 runPerformanceSmoke();
