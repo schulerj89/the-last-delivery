@@ -22,8 +22,18 @@ if (!root) {
   throw new Error('Missing town editor root.');
 }
 
-root.className = 'town-editor';
+root.className = 'town-editor town-editor--loading';
 root.innerHTML = `
+  <div class="town-editor-loading" role="status" aria-live="polite" aria-busy="true">
+    <div class="town-editor-loading__panel">
+      <p class="town-editor-loading__eyebrow">Town Editor</p>
+      <h1>Preparing builder</h1>
+      <div class="town-editor-loading__bar" aria-hidden="true">
+        <span></span>
+      </div>
+      <p class="town-editor-loading__detail">Loading editor assets...</p>
+    </div>
+  </div>
   <aside class="town-editor__palette" aria-label="Town editor asset palette">
     <div class="town-editor__header">
       <h1>Town Editor</h1>
@@ -65,8 +75,11 @@ const markerGrid = root.querySelector<HTMLDivElement>('[data-palette-section="ma
 const assetGrid = root.querySelector<HTMLDivElement>('[data-palette-section="asset"]');
 const searchInput = root.querySelector<HTMLInputElement>('.town-editor__search');
 const statusText = root.querySelector<HTMLDivElement>('.town-editor__status');
+const loadingOverlay = root.querySelector<HTMLDivElement>('.town-editor-loading');
+const loadingDetail = root.querySelector<HTMLParagraphElement>('.town-editor-loading__detail');
+const loadingBar = root.querySelector<HTMLSpanElement>('.town-editor-loading__bar span');
 
-if (!viewport || !generatedGrid || !markerGrid || !assetGrid || !searchInput || !statusText) {
+if (!viewport || !generatedGrid || !markerGrid || !assetGrid || !searchInput || !statusText || !loadingOverlay || !loadingDetail || !loadingBar) {
   throw new Error('Missing town editor UI element.');
 }
 
@@ -134,6 +147,11 @@ const placementCountsByItemId = new Map<string, number>();
 let animationFrameId: number | null = null;
 let disposed = false;
 
+const townEditorLoadingConfig = {
+  maxInitialWaitMs: 8000,
+  fadeOutMs: 420,
+} as const;
+
 const paletteItems = [
   ...getTownEditorGeneratedPaletteItems(),
   ...getTownEditorMarkerPaletteItems(),
@@ -144,6 +162,34 @@ const paletteItemsByKey = new Map(paletteItems.map((item) => [`${item.type}:${it
 const setStatus = (message: string): void => {
   statusText.textContent = message;
 };
+
+const setLoadingState = (message: string, progress: number): void => {
+  const safeProgress = THREE.MathUtils.clamp(progress, 0, 1);
+  loadingDetail.textContent = message;
+  loadingBar.style.transform = `scaleX(${safeProgress})`;
+};
+
+const finishLoadingScreen = (): void => {
+  if (disposed) {
+    return;
+  }
+
+  setLoadingState('Ready.', 1);
+  root.classList.remove('town-editor--loading');
+  root.classList.add('town-editor--ready');
+  loadingOverlay.setAttribute('aria-busy', 'false');
+  window.setTimeout(() => {
+    if (!disposed) {
+      loadingOverlay.hidden = true;
+    }
+  }, townEditorLoadingConfig.fadeOutMs);
+};
+
+const waitForLoadingTimeout = (): Promise<'timeout'> => (
+  new Promise((resolve) => {
+    window.setTimeout(() => resolve('timeout'), townEditorLoadingConfig.maxInitialWaitMs);
+  })
+);
 
 const getPaletteDragPayload = (item: TownEditorPaletteItem): string => (
   JSON.stringify({ type: item.type, id: item.id })
@@ -344,6 +390,32 @@ const renderPalette = (): void => {
   });
 };
 
+const waitForInitialThumbnails = async (): Promise<void> => {
+  const assetPreviewItems = paletteItems.filter((item) => item.type === 'asset');
+
+  if (assetPreviewItems.length === 0) {
+    setLoadingState('Preparing editor canvas...', 0.82);
+    return;
+  }
+
+  let completedCount = 0;
+  setLoadingState(`Loading asset previews 0/${assetPreviewItems.length}...`, 0.12);
+
+  await Promise.all(assetPreviewItems.map(async (item) => {
+    try {
+      await getAssetThumbnailDataUrl(item.id);
+    } catch {
+      // Palette cards keep their text fallback when an optional preview fails.
+    } finally {
+      completedCount += 1;
+      setLoadingState(
+        `Loading asset previews ${completedCount}/${assetPreviewItems.length}...`,
+        0.12 + (completedCount / assetPreviewItems.length) * 0.76,
+      );
+    }
+  }));
+};
+
 const updateDropPointFromEvent = (event: DragEvent): boolean => {
   const rect = renderer.domElement.getBoundingClientRect();
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -481,8 +553,31 @@ window.addEventListener('resize', resize);
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('keyup', handleKeyUp);
 
-renderPalette();
-resize();
-animate();
+const bootTownEditor = async (): Promise<void> => {
+  setLoadingState('Building editor canvas...', 0.04);
+  renderPalette();
+  resize();
+  animate();
+
+  const initialThumbnailLoad = waitForInitialThumbnails().then(() => 'loaded' as const);
+  const loadingResult = await Promise.race([
+    initialThumbnailLoad,
+    waitForLoadingTimeout(),
+  ]);
+
+  if (loadingResult === 'timeout') {
+    setStatus('Editor opened while some previews continue loading.');
+  }
+
+  setLoadingState('Drawing editor view...', 0.96);
+
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+
+  finishLoadingScreen();
+};
+
+void bootTownEditor();
 
 import.meta.hot?.dispose(dispose);

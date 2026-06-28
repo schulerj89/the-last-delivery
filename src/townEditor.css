@@ -9,6 +9,81 @@
   font-family: Arial, sans-serif;
 }
 
+.town-editor-loading {
+  position: absolute;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 42%, rgb(240 202 114 / 14%), transparent 34%),
+    linear-gradient(180deg, #242d35 0%, #171b20 52%, #101317 100%);
+  transition: opacity 420ms ease;
+}
+
+.town-editor-loading__panel {
+  display: grid;
+  gap: 10px;
+  width: min(360px, 86vw);
+  text-align: center;
+}
+
+.town-editor-loading__eyebrow,
+.town-editor-loading__detail,
+.town-editor-loading__panel h1 {
+  margin: 0;
+}
+
+.town-editor-loading__eyebrow {
+  color: rgb(124 242 207 / 78%);
+  font: 700 11px/1.2 Arial, sans-serif;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.town-editor-loading__panel h1 {
+  color: #f8f2dc;
+  font: 700 24px/1.15 Arial, sans-serif;
+}
+
+.town-editor-loading__bar {
+  height: 8px;
+  overflow: hidden;
+  background: rgb(0 0 0 / 34%);
+  border: 1px solid rgb(248 242 220 / 16%);
+  border-radius: 999px;
+}
+
+.town-editor-loading__bar span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #7cf2cf, #f0ca72);
+  border-radius: inherit;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 180ms ease;
+}
+
+.town-editor-loading__detail {
+  min-height: 16px;
+  color: rgb(248 242 220 / 72%);
+  font: 12px/1.35 Arial, sans-serif;
+}
+
+.town-editor--loading .town-editor__palette,
+.town-editor--loading .town-editor__stage,
+.town-editor--loading .placement-editor-hud {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.town-editor--ready .town-editor-loading {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .town-editor__palette {
   z-index: 12;
   box-sizing: border-box;
@@ -22,6 +97,7 @@
   background: rgb(18 23 27 / 96%);
   border-right: 1px solid rgb(240 202 114 / 28%);
   scrollbar-width: thin;
+  transition: opacity 180ms ease;
 }
 
 .town-editor__header {
@@ -181,6 +257,7 @@
   min-width: 0;
   height: 100%;
   overflow: hidden;
+  transition: opacity 180ms ease;
 }
 
 .town-editor__viewport {

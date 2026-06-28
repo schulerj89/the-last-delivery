@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.1] - 2026-06-28
+
+### Added
+
+- Added a standalone town editor loading screen with progress text and a progress bar while the editor canvas and initial asset previews prepare.
+- Added a bounded initial thumbnail wait so the editor does not stay hidden forever if an optional preview stalls.
+- Added smoke coverage for the town editor loading screen and boot wait behavior.
+
 ## [0.53.0] - 2026-06-28
 
 ### Added

@@ -678,6 +678,7 @@ const runTownEditorRouteSmoke = (): void => {
 
   const townEditorHtml = nodeFileSystem.readFileSync(townEditorHtmlUrl, 'utf8');
   const townEditorScript = nodeFileSystem.readFileSync(townEditorScriptUrl, 'utf8');
+  const townEditorCss = nodeFileSystem.readFileSync(townEditorCssUrl, 'utf8');
   const viteConfig = nodeFileSystem.readFileSync(viteConfigUrl, 'utf8');
   const editableObjects = createEditablePlacementObjects();
   const generatedItems = getTownEditorGeneratedPaletteItems(editableObjects);
@@ -704,11 +705,16 @@ const runTownEditorRouteSmoke = (): void => {
   );
   assert(townEditorScript.includes("hudVariant: 'builder'"), 'Town editor should use the save-focused builder HUD variant.');
   assert(townEditorScript.includes('getAssetThumbnailDataUrl'), 'Town editor should render asset thumbnails for palette cards.');
+  assert(townEditorScript.includes('town-editor-loading'), 'Town editor should render a loading screen before the builder is shown.');
+  assert(townEditorScript.includes('waitForInitialThumbnails'), 'Town editor should wait for initial asset preview thumbnails during boot.');
+  assert(townEditorScript.includes('maxInitialWaitMs'), 'Town editor loading should include a bounded initial wait.');
   assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load runtime models through the existing asset loader.');
   assert(townEditorScript.includes('group.scale.setScalar'), 'Town editor thumbnails should scale the centered wrapper, not push model pivots off-center.');
   assert(townEditorScript.includes('Ctrl+D duplicate'), 'Town editor toolbar should advertise selected-object duplication.');
   assert(townEditorScript.includes('Click empty deselect'), 'Town editor toolbar should advertise empty-space deselection.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
+  assert(townEditorCss.includes('.town-editor-loading'), 'Town editor CSS should style the loading screen.');
+  assert(townEditorCss.includes('.town-editor--loading'), 'Town editor CSS should hide editor UI while loading.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
   assert(markerItems.length >= 3, 'Town editor marker palette should initialize important world markers.');
   assert(assetItems.length > 0, 'Town editor asset palette should initialize.');
