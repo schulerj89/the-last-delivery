@@ -8,12 +8,19 @@ import {
   Vector3,
 } from 'three';
 import {
+  assetFitModes,
   assetRegistry,
   createAssetCache,
+  createAssetTargetBounds,
+  defaultWorldAssetFitMode,
+  fitAssetObjectToBounds,
+  getAssetFitScale,
   getSelectedCharacterAssets,
   getSelectedFantasyAssets,
   getSelectedNatureAssets,
+  isAssetFitMode,
   isKnownAssetId,
+  resolveAssetFitMode,
   selectedCharacterAssetIds,
   selectedFantasyAssetIds,
   selectedNatureAssetIds,
@@ -47,6 +54,7 @@ import {
   setObjectiveMarkerTarget,
   updateObjectiveMarker,
 } from '../src/world/playgroundObjectiveMarker';
+import { createPlaygroundVisualBoundsDebugView } from '../src/world/playgroundVisualBoundsDebug';
 import { createMailboxProp } from '../src/world/props/createMailbox';
 import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
 import { villageWorldObjects } from '../src/world/villageDefinition';
@@ -251,6 +259,84 @@ const runAssetCacheSmoke = async (): Promise<void> => {
   assert(disabledCache.getRuntimeStats().totalSceneInstances === 0, 'Failed asset loads should not create scene instances.');
 };
 
+const disposeFitSmokeMesh = (mesh: Mesh): void => {
+  mesh.geometry.dispose();
+
+  if (Array.isArray(mesh.material)) {
+    mesh.material.forEach((material) => material.dispose());
+    return;
+  }
+
+  mesh.material.dispose();
+};
+
+const runAssetFittingSmoke = (): void => {
+  assert(assetFitModes.includes('none'), 'Asset fitting should support none mode.');
+  assert(assetFitModes.includes('contain'), 'Asset fitting should support contain mode.');
+  assert(assetFitModes.includes('cover'), 'Asset fitting should support cover mode.');
+  assert(assetFitModes.includes('exact'), 'Asset fitting should support exact mode.');
+  assert(isAssetFitMode('contain'), 'Valid asset fit modes should be accepted.');
+  assert(!isAssetFitMode('stretch'), 'Invalid asset fit modes should be rejected.');
+  assert(resolveAssetFitMode('stretch') === defaultWorldAssetFitMode, 'Invalid asset fit modes should safely fall back.');
+
+  const noneScale = getAssetFitScale(new Vector3(1, 2, 4), new Vector3(2, 2, 2), 'none');
+  assert(noneScale.x === 1 && noneScale.y === 1 && noneScale.z === 1, 'None fit mode should keep source scale.');
+
+  const containMesh = new Mesh(new BoxGeometry(1, 2, 4), new MeshBasicMaterial());
+  const containResult = fitAssetObjectToBounds(containMesh, {
+    targetPosition: [0, 0, 0],
+    targetDimensions: [2, 2, 2],
+    fitMode: 'contain',
+  });
+  const containSize = containResult.visualBox.getSize(new Vector3());
+  assert(containResult.fitMode === 'contain', 'Contain fit mode should be reported.');
+  assert(containSize.x <= 2.001 && containSize.y <= 2.001 && containSize.z <= 2.001, 'Contain fit should stay inside target dimensions.');
+  disposeFitSmokeMesh(containMesh);
+
+  const coverMesh = new Mesh(new BoxGeometry(1, 2, 4), new MeshBasicMaterial());
+  const coverResult = fitAssetObjectToBounds(coverMesh, {
+    targetPosition: [0, 0, 0],
+    targetDimensions: [2, 2, 2],
+    fitMode: 'cover',
+  });
+  const coverSize = coverResult.visualBox.getSize(new Vector3());
+  assert(coverResult.fitMode === 'cover', 'Cover fit mode should be reported.');
+  assert(coverSize.x >= 1.999 || coverSize.y >= 1.999 || coverSize.z >= 1.999, 'Cover fit should fill at least one target dimension.');
+  disposeFitSmokeMesh(coverMesh);
+
+  const exactMesh = new Mesh(new BoxGeometry(1, 2, 4), new MeshBasicMaterial());
+  const exactResult = fitAssetObjectToBounds(exactMesh, {
+    targetPosition: [0, 0, 0],
+    targetDimensions: [2, 2, 2],
+    fitMode: 'exact',
+  });
+  const exactSize = exactResult.visualBox.getSize(new Vector3());
+  assert(exactResult.fitMode === 'exact', 'Exact fit mode should be reported.');
+  assert(Math.abs(exactSize.x - 2) < 0.001, 'Exact fit should match target X size.');
+  assert(Math.abs(exactSize.y - 2) < 0.001, 'Exact fit should match target Y size.');
+  assert(Math.abs(exactSize.z - 2) < 0.001, 'Exact fit should match target Z size.');
+  disposeFitSmokeMesh(exactMesh);
+
+  const zeroWidthMesh = new Mesh(new BoxGeometry(0, 1, 1), new MeshBasicMaterial());
+  const zeroWidthResult = fitAssetObjectToBounds(zeroWidthMesh, {
+    targetPosition: [0, 0, 0],
+    targetDimensions: [1, 1, 1],
+    fitMode: 'exact',
+  });
+  assert(Number.isFinite(zeroWidthResult.appliedScale.x), 'Fit should not divide by zero for zero-width sources.');
+  assert(Number.isFinite(zeroWidthResult.appliedScale.y), 'Fit should keep finite Y scale for zero-width sources.');
+  assert(Number.isFinite(zeroWidthResult.appliedScale.z), 'Fit should keep finite Z scale for zero-width sources.');
+  disposeFitSmokeMesh(zeroWidthMesh);
+
+  const targetBounds = createAssetTargetBounds([1, 2, 3], [2, 4, 6], 0.5);
+  assert(targetBounds !== null, 'Positive dimensions should create asset target bounds.');
+  const targetSize = targetBounds.getSize(new Vector3());
+  const targetCenter = targetBounds.getCenter(new Vector3());
+  assert(targetSize.x === 2 && targetSize.y === 4 && targetSize.z === 6, 'Target bounds should preserve positive dimensions.');
+  assert(targetCenter.y === 2.5, 'Target bounds should apply Y offset to the center.');
+  assert(createAssetTargetBounds([0, 0, 0], [0, 1, 1]) === null, 'Non-positive target dimensions should fail safely.');
+};
+
 const runWorldDefinitionSmoke = (): void => {
   const ids = new Set<string>();
 
@@ -264,10 +350,30 @@ const runWorldDefinitionSmoke = (): void => {
         isFiniteVector3Tuple(object.dimensions) && object.dimensions.every((component) => component > 0),
         `World object should have positive dimensions: ${object.id}`,
       );
+
+      const targetBounds = createAssetTargetBounds(object.position, object.dimensions);
+      assert(targetBounds !== null, `World object dimensions should create positive target bounds: ${object.id}`);
     }
 
     if (object.render?.mode === 'asset') {
       assert(isKnownAssetId(object.render.assetId), `World object assetId should reference a known asset: ${object.id}`);
+      assert(
+        object.render.fitMode === undefined || isAssetFitMode(object.render.fitMode),
+        `World object asset fit mode should be valid: ${object.id}`,
+      );
+      assert(
+        object.render.scaleMultiplier === undefined
+          || (Number.isFinite(object.render.scaleMultiplier) && object.render.scaleMultiplier > 0),
+        `World object asset scale multiplier should be positive when set: ${object.id}`,
+      );
+      assert(
+        object.render.yOffset === undefined || Number.isFinite(object.render.yOffset),
+        `World object asset Y offset should be finite when set: ${object.id}`,
+      );
+      assert(
+        object.render.rotation === undefined || isFiniteVector3Tuple(object.render.rotation),
+        `World object asset rotation should be valid when set: ${object.id}`,
+      );
     }
 
     if (object.interactable) {
@@ -702,6 +808,14 @@ const runModuleSmoke = (): void => {
   assert(playground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');
   assert(playground.getObjectByName('village:label-side-path') !== undefined, 'Side path label sign should initialize.');
 
+  const visualBoundsDebugView = createPlaygroundVisualBoundsDebugView();
+  const visualTargetBounds = createAssetTargetBounds([0, 1, 0], [1, 2, 1]);
+  assert(visualTargetBounds !== null, 'Visual bounds debug smoke target should initialize.');
+  visualBoundsDebugView.setObjectBounds('smoke-asset', visualTargetBounds);
+  assert(visualBoundsDebugView.object.getObjectByName('debug:visual-asset-bounds:smoke-asset') !== undefined, 'Visual asset bounds helper should initialize.');
+  assert(visualBoundsDebugView.toggle(), 'Visual asset bounds debug view should toggle visible.');
+  visualBoundsDebugView.dispose();
+
   const resolved = resolvePlayerCollision(
     new Vector3(99, 0, 99),
     playgroundCollisionWorld,
@@ -728,6 +842,7 @@ const runModuleSmoke = (): void => {
 
 runAssetRegistrySmoke();
 await runAssetCacheSmoke();
+runAssetFittingSmoke();
 runWorldDefinitionSmoke();
 runVillageLayoutConfigSmoke();
 runDeliveryStateSmoke();

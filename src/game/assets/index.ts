@@ -1,4 +1,13 @@
 export {
+  assetFitModes,
+  createAssetTargetBounds,
+  defaultWorldAssetFitMode,
+  fitAssetObjectToBounds,
+  getAssetFitScale,
+  isAssetFitMode,
+  resolveAssetFitMode,
+} from './assetFitting';
+export {
   assetRegistry,
   getAssetDefinition,
   getSelectedCharacterAssets,
@@ -25,6 +34,11 @@ export {
   loadModel,
   loadModelInstance,
 } from './gltfLoader';
+export type {
+  AssetFitMode,
+  AssetFitOptions,
+  AssetFitResult,
+} from './assetFitting';
 export type {
   AssetDefinition,
   GltfAssetDefinition,

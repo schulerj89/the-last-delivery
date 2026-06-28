@@ -27,6 +27,7 @@ import {
   setObjectiveMarkerTarget,
   updateObjectiveMarker,
 } from './world/playgroundObjectiveMarker';
+import { createPlaygroundVisualBoundsDebugView } from './world/playgroundVisualBoundsDebug';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -46,8 +47,10 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 app.append(renderer.domElement);
 
-const playground = appResources.trackObject3D(createPlayground());
+const visualBoundsDebugView = createPlaygroundVisualBoundsDebugView();
+const playground = appResources.trackObject3D(createPlayground({ visualBoundsDebugView }));
 scene.add(playground);
+scene.add(visualBoundsDebugView.object);
 
 const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisionWorld);
 appResources.trackObject3D(collisionDebugView.object);
@@ -111,9 +114,22 @@ const handleResize = (): void => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
-const handleCollisionDebugKeyDown = (event: KeyboardEvent): void => {
-  if (!event.repeat && event.key.toLowerCase() === 'c') {
+const handleDebugKeyDown = (event: KeyboardEvent): void => {
+  if (event.repeat) {
+    return;
+  }
+
+  const key = event.key.toLowerCase();
+
+  if (key === 'c') {
     collisionDebugView.toggle();
+    return;
+  }
+
+  if (key === 'b') {
+    const visible = !visualBoundsDebugView.isVisible();
+    collisionDebugView.setVisible(visible);
+    visualBoundsDebugView.setVisible(visible);
   }
 };
 
@@ -130,7 +146,7 @@ const dispose = (): void => {
   }
 
   window.removeEventListener('resize', handleResize);
-  window.removeEventListener('keydown', handleCollisionDebugKeyDown);
+  window.removeEventListener('keydown', handleDebugKeyDown);
   player.dispose();
   followCamera.dispose();
   interaction.dispose();
@@ -141,6 +157,7 @@ const dispose = (): void => {
   deliveryGuidanceOverlay.dispose();
   performanceMonitor.dispose();
   performanceDebugOverlay.dispose();
+  visualBoundsDebugView.dispose();
   appResources.dispose();
   disposeAssetCache();
   renderer.dispose();
@@ -148,7 +165,7 @@ const dispose = (): void => {
 };
 
 window.addEventListener('resize', handleResize);
-window.addEventListener('keydown', handleCollisionDebugKeyDown);
+window.addEventListener('keydown', handleDebugKeyDown);
 
 const clock = new THREE.Clock();
 

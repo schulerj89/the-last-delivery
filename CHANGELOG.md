@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.27.0] - 2026-06-28
+
+### Added
+
+- Added a reusable GLB asset fitting utility with `none`, `contain`, `cover`, and explicit `exact` fit modes.
+- Added optional per-world-object asset render settings for fit mode, scale multiplier, Y offset, and render rotation.
+- Added visual asset bounds debug helpers so fitted GLB bounds can be compared with existing collider debug boxes.
+- Added smoke checks for fit modes, invalid fit-mode fallback, zero-dimension safety, target bounds, world render settings, and primitive fallback initialization.
+
+### Changed
+
+- Updated village GLB rendering to fit per-instance clones through the shared fitting utility without mutating cached source assets.
+- Added a `B` debug key path that shows both intended collider boxes and visual asset bounds.
+
 ## [0.26.0] - 2026-06-28
 
 ### Added

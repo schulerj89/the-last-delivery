@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { canLoadGltfAssets, createModelInstance } from '../game/assets';
+import { canLoadGltfAssets, createModelInstance, fitAssetObjectToBounds } from '../game/assets';
 import { createMailboxProp } from './props/createMailbox';
 import type { WorldObjectDefinition } from './types';
 import {
@@ -8,6 +8,7 @@ import {
   getWorldObjectsByKind,
   playerSpawnPosition,
 } from './villageDefinition';
+import type { PlaygroundVisualBoundsDebugView } from './playgroundVisualBoundsDebug';
 
 const villageWidth = 18;
 const villageDepth = 14;
@@ -54,6 +55,10 @@ const materials = {
 interface HouseMaterialSet {
   wall: THREE.Material;
   roof: THREE.Material;
+}
+
+export interface PlaygroundOptions {
+  visualBoundsDebugView?: PlaygroundVisualBoundsDebugView;
 }
 
 const getHouseMaterials = (id: string): HouseMaterialSet => {
@@ -123,44 +128,11 @@ const disposeGeometryOnly = (object: THREE.Object3D): void => {
   });
 };
 
-const fitAssetInstanceToObject = (
-  asset: THREE.Object3D,
-  object: WorldObjectDefinition,
-): THREE.Object3D => {
-  const dimensions = new THREE.Vector3(...getDimensions(object));
-  const targetCenter = new THREE.Vector3(...object.position);
-
-  if (object.rotation) {
-    asset.rotation.set(...object.rotation);
-  }
-
-  const sourceBox = new THREE.Box3().setFromObject(asset);
-  const sourceSize = new THREE.Vector3();
-  sourceBox.getSize(sourceSize);
-
-  if (sourceSize.x > 0 && sourceSize.y > 0 && sourceSize.z > 0) {
-    const scale = Math.min(
-      dimensions.x / sourceSize.x,
-      dimensions.y / sourceSize.y,
-      dimensions.z / sourceSize.z,
-    );
-    asset.scale.multiplyScalar(scale);
-  }
-
-  const fittedBox = new THREE.Box3().setFromObject(asset);
-  const fittedCenter = new THREE.Vector3();
-  fittedBox.getCenter(fittedCenter);
-  asset.position.add(targetCenter.sub(fittedCenter));
-  asset.name = `village:${object.id}:asset`;
-  asset.userData.label = asset.name;
-
-  return asset;
-};
-
 const tryApplyAssetRender = (
   group: THREE.Group,
   object: WorldObjectDefinition,
   fallbackObjects: readonly THREE.Object3D[],
+  options: PlaygroundOptions = {},
 ): void => {
   const assetId = getAssetId(object);
 
@@ -179,7 +151,25 @@ const tryApplyAssetRender = (
         group.remove(fallbackObject);
         disposeGeometryOnly(fallbackObject);
       });
-      group.add(fitAssetInstanceToObject(assetInstance.object, object));
+
+      const assetObject = assetInstance.object;
+      const renderSettings = object.render?.mode === 'asset' ? object.render : undefined;
+      const fitResult = fitAssetObjectToBounds(assetObject, {
+        targetPosition: object.position,
+        targetDimensions: object.dimensions,
+        rotation: renderSettings?.rotation ?? object.rotation,
+        scaleMultiplier: renderSettings?.scaleMultiplier,
+        yOffset: renderSettings?.yOffset,
+        fitMode: renderSettings?.fitMode,
+      });
+
+      assetObject.name = `village:${object.id}:asset`;
+      assetObject.userData.label = assetObject.name;
+      assetObject.userData.assetFitMode = fitResult.fitMode;
+      assetObject.userData.visualBounds = fitResult.visualBox;
+
+      options.visualBoundsDebugView?.setObjectBounds(object.id, fitResult.visualBox);
+      group.add(assetObject);
     })
     .catch(() => undefined);
 };
@@ -510,7 +500,7 @@ const addHouse = (
   return fallbackObjects;
 };
 
-const addHouses = (group: THREE.Group): void => {
+const addHouses = (group: THREE.Group, options: PlaygroundOptions): void => {
   getWorldObjectsByKind('cottage').forEach((cottage) => {
     const fallbackObjects = addHouse(
       group,
@@ -519,7 +509,7 @@ const addHouses = (group: THREE.Group): void => {
       getDimensions(cottage),
       getHouseMaterials(cottage.id),
     );
-    tryApplyAssetRender(group, cottage, fallbackObjects);
+    tryApplyAssetRender(group, cottage, fallbackObjects, options);
   });
 };
 
@@ -557,7 +547,7 @@ const addVillageLabels = (group: THREE.Group): void => {
   addLabelSign(group, 'village:label-side-path', 'Side Path', [0.9, 0, -1.05], '#6f958e', -Math.PI * 0.35);
 };
 
-const addPostOffice = (group: THREE.Group): void => {
+const addPostOffice = (group: THREE.Group, options: PlaygroundOptions): void => {
   const postOffice = getWorldObjectsByKind('post-office')[0];
   const [x, , z] = postOffice.position;
   const [width, height, depth] = getDimensions(postOffice);
@@ -592,10 +582,10 @@ const addPostOffice = (group: THREE.Group): void => {
     addBox(group, 'village:post-office:sign', [1.15, 0.28, 0.08], [x, height + 0.05, z + depth / 2 + 0.08], materials.boardFrame),
     addBox(group, 'village:post-office:mail-slot', [0.42, 0.1, 0.08], [x - 0.55, 0.78, z + depth / 2 + 0.09], materials.board),
   );
-  tryApplyAssetRender(group, postOffice, fallbackObjects);
+  tryApplyAssetRender(group, postOffice, fallbackObjects, options);
 };
 
-const addCrates = (group: THREE.Group): void => {
+const addCrates = (group: THREE.Group, options: PlaygroundOptions): void => {
   getWorldObjectsByKind('crate').forEach((crate) => {
     const [width, height, depth] = getDimensions(crate);
     const [x, y, z] = crate.position;
@@ -612,7 +602,7 @@ const addCrates = (group: THREE.Group): void => {
       ),
     );
 
-    tryApplyAssetRender(group, crate, fallbackObjects);
+    tryApplyAssetRender(group, crate, fallbackObjects, options);
   });
 };
 
@@ -663,20 +653,20 @@ const addBushFallback = (
   return [shrub];
 };
 
-const addVillageProps = (group: THREE.Group): void => {
+const addVillageProps = (group: THREE.Group, options: PlaygroundOptions): void => {
   getWorldObjectsByKind('barrel').forEach((barrel) => {
     const [diameter, height] = getDimensions(barrel);
     const fallbackObjects = [
       addCylinder(group, `village:${barrel.id}`, diameter / 2, height, barrel.position, materials.barrel),
     ];
-    tryApplyAssetRender(group, barrel, fallbackObjects);
+    tryApplyAssetRender(group, barrel, fallbackObjects, options);
   });
 
   getWorldObjectsByKind('rock').forEach((rock) => {
     const fallbackObjects = [
       addRock(group, `village:${rock.id}`, rock.position, getDimensions(rock)),
     ];
-    tryApplyAssetRender(group, rock, fallbackObjects);
+    tryApplyAssetRender(group, rock, fallbackObjects, options);
   });
 };
 
@@ -738,27 +728,27 @@ const addSackFallback = (
   return [mesh];
 };
 
-const addFantasyDressing = (group: THREE.Group): void => {
+const addFantasyDressing = (group: THREE.Group, options: PlaygroundOptions): void => {
   getWorldObjectsByKind('signpost').forEach((signpost) => {
-    tryApplyAssetRender(group, signpost, addSignpostFallback(group, signpost));
+    tryApplyAssetRender(group, signpost, addSignpostFallback(group, signpost), options);
   });
 
   getWorldObjectsByKind('cart').forEach((cart) => {
-    tryApplyAssetRender(group, cart, addCartFallback(group, cart));
+    tryApplyAssetRender(group, cart, addCartFallback(group, cart), options);
   });
 
   getWorldObjectsByKind('sack').forEach((sack) => {
-    tryApplyAssetRender(group, sack, addSackFallback(group, sack));
+    tryApplyAssetRender(group, sack, addSackFallback(group, sack), options);
   });
 };
 
-const addNatureProps = (group: THREE.Group): void => {
+const addNatureProps = (group: THREE.Group, options: PlaygroundOptions): void => {
   getWorldObjectsByKind('tree').forEach((tree) => {
-    tryApplyAssetRender(group, tree, addTreeFallback(group, tree));
+    tryApplyAssetRender(group, tree, addTreeFallback(group, tree), options);
   });
 
   getWorldObjectsByKind('bush').forEach((bush) => {
-    tryApplyAssetRender(group, bush, addBushFallback(group, bush));
+    tryApplyAssetRender(group, bush, addBushFallback(group, bush), options);
   });
 };
 
@@ -850,20 +840,20 @@ const addSpawnMarker = (group: THREE.Group): void => {
   addBox(group, 'playground:player-spawn-forward-arrow', [0.18, 0.04, 0.52], [x + 0.34, 0.045, z - 0.34], materials.spawnPad);
 };
 
-export const createPlayground = (): THREE.Group => {
+export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group => {
   const playground = nameObject(new THREE.Group(), 'village:square-blockout');
 
   addGround(playground);
   addPaths(playground);
   addFence(playground);
   addSpawnMarker(playground);
-  addPostOffice(playground);
-  addHouses(playground);
+  addPostOffice(playground, options);
+  addHouses(playground, options);
   addWell(playground);
-  addCrates(playground);
-  addVillageProps(playground);
-  addFantasyDressing(playground);
-  addNatureProps(playground);
+  addCrates(playground, options);
+  addVillageProps(playground, options);
+  addFantasyDressing(playground, options);
+  addNatureProps(playground, options);
   addMailboxes(playground);
   addDeliveryBoard(playground);
   addVillageLabels(playground);

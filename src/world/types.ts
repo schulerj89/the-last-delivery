@@ -1,4 +1,5 @@
 import type * as THREE from 'three';
+import type { AssetFitMode } from '../game/assets';
 
 export type WorldObjectKind =
   | 'barrel'
@@ -38,7 +39,14 @@ export interface WorldMailboxDefinition {
 
 export type WorldRenderDefinition =
   | { mode: 'primitive' }
-  | { mode: 'asset'; assetId: string };
+  | {
+    mode: 'asset';
+    assetId: string;
+    scaleMultiplier?: number;
+    yOffset?: number;
+    rotation?: THREE.Vector3Tuple;
+    fitMode?: AssetFitMode;
+  };
 
 export interface WorldObjectDefinition {
   id: string;
