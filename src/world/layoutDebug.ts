@@ -8,9 +8,24 @@ import { getVillagePathGuides } from './villagePaths';
 
 export const layoutDebugConfig = {
   toggleKey: 'F2',
+  cameraModeKey: 'v',
   cameraHeight: 42,
   cameraNear: 0.1,
   cameraFar: 120,
+  overviewMinZoom: 0.75,
+  overviewMaxZoom: 4,
+  overviewZoomSensitivity: 0.0015,
+  closeCameraFov: 58,
+  closeCameraInitialYaw: THREE.MathUtils.degToRad(42),
+  closeCameraInitialPitch: THREE.MathUtils.degToRad(34),
+  closeCameraMinPitch: THREE.MathUtils.degToRad(10),
+  closeCameraMaxPitch: THREE.MathUtils.degToRad(72),
+  closeCameraInitialDistance: 18,
+  closeCameraMinDistance: 3,
+  closeCameraMaxDistance: 42,
+  closeCameraOrbitSensitivity: 0.006,
+  closeCameraZoomSensitivity: 0.018,
+  closeCameraPanSensitivity: 0.0016,
   viewPadding: 3,
   helperY: 0.08,
   importantObjectIds: [
@@ -26,16 +41,52 @@ export const layoutDebugConfig = {
   ],
 } as const;
 
+export const layoutDebugCameraModes = ['overview', 'close'] as const;
+export type LayoutDebugCameraMode = (typeof layoutDebugCameraModes)[number];
 export type ImportantLayoutObjectId = (typeof layoutDebugConfig.importantObjectIds)[number];
+
+export const isLayoutDebugCameraMode = (value: unknown): value is LayoutDebugCameraMode => (
+  typeof value === 'string' && layoutDebugCameraModes.includes(value as LayoutDebugCameraMode)
+);
+
+export const getNextLayoutDebugCameraMode = (
+  mode: LayoutDebugCameraMode,
+): LayoutDebugCameraMode => (mode === 'overview' ? 'close' : 'overview');
+
+export const clampLayoutOverviewZoom = (zoom: number): number => (
+  THREE.MathUtils.clamp(
+    Number.isFinite(zoom) ? zoom : 1,
+    layoutDebugConfig.overviewMinZoom,
+    layoutDebugConfig.overviewMaxZoom,
+  )
+);
+
+export const clampLayoutCloseCameraDistance = (distance: number): number => (
+  THREE.MathUtils.clamp(
+    Number.isFinite(distance) ? distance : layoutDebugConfig.closeCameraInitialDistance,
+    layoutDebugConfig.closeCameraMinDistance,
+    layoutDebugConfig.closeCameraMaxDistance,
+  )
+);
 
 export interface VillageLayoutDebugView {
   object: THREE.Group;
   camera: THREE.OrthographicCamera;
+  closeCamera: THREE.PerspectiveCamera;
   isActive(): boolean;
   setActive(active: boolean): void;
   toggle(): boolean;
+  getCamera(): THREE.Camera;
+  getCameraMode(): LayoutDebugCameraMode;
+  setCameraMode(mode: LayoutDebugCameraMode): void;
+  toggleCameraMode(): LayoutDebugCameraMode;
+  handleKeyDown(event: KeyboardEvent): boolean;
   resize(width: number, height: number): void;
   dispose(): void;
+}
+
+export interface VillageLayoutDebugViewOptions {
+  domElement?: HTMLElement;
 }
 
 export interface VillageLayoutDebugHud {
@@ -345,16 +396,18 @@ const createObjectLabels = (): THREE.Object3D[] => [
   )),
 ];
 
-const configureCamera = (
+const configureOverviewCamera = (
   camera: THREE.OrthographicCamera,
   width: number,
   height: number,
+  zoom = 1,
 ): void => {
   const { bounds } = villageLayoutConfig;
   const aspect = Math.max(width / Math.max(1, height), 0.1);
   const targetWidth = bounds.maxX - bounds.minX + layoutDebugConfig.viewPadding * 2;
   const targetHeight = bounds.maxZ - bounds.minZ + layoutDebugConfig.viewPadding * 2;
-  const viewWidth = Math.max(targetWidth, targetHeight * aspect);
+  const safeZoom = clampLayoutOverviewZoom(zoom);
+  const viewWidth = Math.max(targetWidth, targetHeight * aspect) / safeZoom;
   const viewHeight = viewWidth / aspect;
   const centerX = bounds.minX + (bounds.maxX - bounds.minX) / 2;
   const centerZ = bounds.minZ + (bounds.maxZ - bounds.minZ) / 2;
@@ -366,6 +419,15 @@ const configureCamera = (
   camera.position.set(centerX, layoutDebugConfig.cameraHeight, centerZ);
   camera.up.set(0, 0, -1);
   camera.lookAt(centerX, 0, centerZ);
+  camera.updateProjectionMatrix();
+};
+
+const configureCloseCamera = (
+  camera: THREE.PerspectiveCamera,
+  width: number,
+  height: number,
+): void => {
+  camera.aspect = Math.max(width / Math.max(1, height), 0.1);
   camera.updateProjectionMatrix();
 };
 
@@ -388,9 +450,10 @@ const disposeObjectResources = (object: THREE.Object3D): void => {
 export const createVillageLayoutDebugView = (
   width = 1280,
   height = 720,
+  options: VillageLayoutDebugViewOptions = {},
 ): VillageLayoutDebugView => {
   const group = new THREE.Group();
-  const camera = new THREE.OrthographicCamera(
+  const overviewCamera = new THREE.OrthographicCamera(
     -10,
     10,
     10,
@@ -398,8 +461,25 @@ export const createVillageLayoutDebugView = (
     layoutDebugConfig.cameraNear,
     layoutDebugConfig.cameraFar,
   );
+  const closeCamera = new THREE.PerspectiveCamera(
+    layoutDebugConfig.closeCameraFov,
+    Math.max(width / Math.max(1, height), 0.1),
+    layoutDebugConfig.cameraNear,
+    layoutDebugConfig.cameraFar,
+  );
+  const closeTarget = new THREE.Vector3(...villageLayoutConfig.keyPositions.centralGreenWell);
+  const closePanRight = new THREE.Vector3();
+  const closePanForward = new THREE.Vector3();
+  let cameraMode: LayoutDebugCameraMode = 'overview';
+  let overviewZoom: number = 1;
+  let closeYaw: number = layoutDebugConfig.closeCameraInitialYaw;
+  let closePitch: number = layoutDebugConfig.closeCameraInitialPitch;
+  let closeDistance: number = layoutDebugConfig.closeCameraInitialDistance;
+  let currentWidth: number = width;
+  let currentHeight: number = height;
   let active = false;
   let disposed = false;
+  let pointerDrag: { pointerId: number; mode: 'orbit' | 'pan' } | null = null;
 
   group.name = 'layout-debug:view';
   group.visible = false;
@@ -410,11 +490,140 @@ export const createVillageLayoutDebugView = (
   createColliderOutlines().forEach((helper) => group.add(helper));
   createObjectiveAnchorHelpers().forEach((helper) => group.add(helper));
   createObjectLabels().forEach((helper) => group.add(helper));
-  configureCamera(camera, width, height);
+  configureOverviewCamera(overviewCamera, width, height, overviewZoom);
+  configureCloseCamera(closeCamera, width, height);
+
+  const updateCloseCamera = (): void => {
+    closePitch = THREE.MathUtils.clamp(
+      closePitch,
+      layoutDebugConfig.closeCameraMinPitch,
+      layoutDebugConfig.closeCameraMaxPitch,
+    );
+    closeDistance = clampLayoutCloseCameraDistance(closeDistance);
+
+    const horizontalDistance = Math.cos(closePitch) * closeDistance;
+    closeCamera.position.set(
+      closeTarget.x + Math.sin(closeYaw) * horizontalDistance,
+      closeTarget.y + Math.sin(closePitch) * closeDistance,
+      closeTarget.z + Math.cos(closeYaw) * horizontalDistance,
+    );
+    closeCamera.lookAt(closeTarget);
+    closeCamera.updateMatrixWorld();
+  };
+
+  const updateOverviewCamera = (): void => {
+    overviewZoom = clampLayoutOverviewZoom(overviewZoom);
+    configureOverviewCamera(overviewCamera, currentWidth, currentHeight, overviewZoom);
+  };
+
+  const stopPointerDrag = (event?: PointerEvent): void => {
+    if (!pointerDrag) {
+      return;
+    }
+
+    if (event && typeof options.domElement?.releasePointerCapture === 'function') {
+      try {
+        options.domElement.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture can already be released by the browser.
+      }
+    }
+
+    pointerDrag = null;
+  };
+
+  const handlePointerDown = (event: PointerEvent): void => {
+    if (!active || cameraMode !== 'close' || (event.button !== 1 && event.button !== 2)) {
+      return;
+    }
+
+    pointerDrag = {
+      pointerId: event.pointerId,
+      mode: event.button === 2 ? 'orbit' : 'pan',
+    };
+
+    if (typeof options.domElement?.setPointerCapture === 'function') {
+      options.domElement.setPointerCapture(event.pointerId);
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handlePointerMove = (event: PointerEvent): void => {
+    if (!active || cameraMode !== 'close' || !pointerDrag || pointerDrag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    if (pointerDrag.mode === 'orbit') {
+      closeYaw -= event.movementX * layoutDebugConfig.closeCameraOrbitSensitivity;
+      closePitch -= event.movementY * layoutDebugConfig.closeCameraOrbitSensitivity;
+    } else {
+      const panScale = closeDistance * layoutDebugConfig.closeCameraPanSensitivity;
+      closePanRight.set(Math.cos(closeYaw), 0, -Math.sin(closeYaw));
+      closePanForward.set(Math.sin(closeYaw), 0, Math.cos(closeYaw));
+      closeTarget
+        .addScaledVector(closePanRight, -event.movementX * panScale)
+        .addScaledVector(closePanForward, event.movementY * panScale);
+    }
+
+    updateCloseCamera();
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handlePointerUp = (event: PointerEvent): void => {
+    if (!pointerDrag || pointerDrag.pointerId !== event.pointerId) {
+      return;
+    }
+
+    stopPointerDrag(event);
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleWheel = (event: WheelEvent): void => {
+    if (!active) {
+      return;
+    }
+
+    if (cameraMode === 'close') {
+      closeDistance = clampLayoutCloseCameraDistance(
+        closeDistance + event.deltaY * layoutDebugConfig.closeCameraZoomSensitivity,
+      );
+      updateCloseCamera();
+    } else {
+      overviewZoom = clampLayoutOverviewZoom(
+        overviewZoom - event.deltaY * layoutDebugConfig.overviewZoomSensitivity,
+      );
+      updateOverviewCamera();
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  };
+
+  const handleContextMenu = (event: MouseEvent): void => {
+    if (!active || cameraMode !== 'close') {
+      return;
+    }
+
+    event.preventDefault();
+  };
+
+  options.domElement?.addEventListener('pointerdown', handlePointerDown);
+  options.domElement?.addEventListener('pointermove', handlePointerMove);
+  options.domElement?.addEventListener('pointerup', handlePointerUp);
+  options.domElement?.addEventListener('pointercancel', handlePointerUp);
+  options.domElement?.addEventListener('wheel', handleWheel, { passive: false });
+  options.domElement?.addEventListener('contextmenu', handleContextMenu);
+  updateCloseCamera();
 
   return {
     object: group,
-    camera,
+    camera: overviewCamera,
+    closeCamera,
     isActive() {
       return active;
     },
@@ -427,8 +636,46 @@ export const createVillageLayoutDebugView = (
       group.visible = active;
       return active;
     },
+    getCamera() {
+      return cameraMode === 'close' ? closeCamera : overviewCamera;
+    },
+    getCameraMode() {
+      return cameraMode;
+    },
+    setCameraMode(mode) {
+      cameraMode = mode;
+      stopPointerDrag();
+      if (cameraMode === 'close') {
+        updateCloseCamera();
+      } else {
+        updateOverviewCamera();
+      }
+    },
+    toggleCameraMode() {
+      cameraMode = getNextLayoutDebugCameraMode(cameraMode);
+      stopPointerDrag();
+      if (cameraMode === 'close') {
+        updateCloseCamera();
+      } else {
+        updateOverviewCamera();
+      }
+      return cameraMode;
+    },
+    handleKeyDown(event) {
+      if (!active || event.key.toLowerCase() !== layoutDebugConfig.cameraModeKey) {
+        return false;
+      }
+
+      this.toggleCameraMode();
+      event.preventDefault();
+      return true;
+    },
     resize(nextWidth, nextHeight) {
-      configureCamera(camera, nextWidth, nextHeight);
+      currentWidth = nextWidth;
+      currentHeight = nextHeight;
+      updateOverviewCamera();
+      configureCloseCamera(closeCamera, nextWidth, nextHeight);
+      updateCloseCamera();
     },
     dispose() {
       if (disposed) {
@@ -436,6 +683,13 @@ export const createVillageLayoutDebugView = (
       }
 
       disposed = true;
+      stopPointerDrag();
+      options.domElement?.removeEventListener('pointerdown', handlePointerDown);
+      options.domElement?.removeEventListener('pointermove', handlePointerMove);
+      options.domElement?.removeEventListener('pointerup', handlePointerUp);
+      options.domElement?.removeEventListener('pointercancel', handlePointerUp);
+      options.domElement?.removeEventListener('wheel', handleWheel);
+      options.domElement?.removeEventListener('contextmenu', handleContextMenu);
       group.parent?.remove(group);
       disposeObjectResources(group);
     },

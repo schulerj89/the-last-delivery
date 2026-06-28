@@ -90,10 +90,15 @@ import {
   isValidEnvironmentConfig,
 } from '../src/world/environment';
 import {
+  clampLayoutCloseCameraDistance,
+  clampLayoutOverviewZoom,
   createVillageLayoutDebugView,
+  getNextLayoutDebugCameraMode,
   getImportantLayoutObjects,
   getLayoutObjectCountsByKind,
+  isLayoutDebugCameraMode,
   layoutDebugConfig,
+  layoutDebugCameraModes,
 } from '../src/world/layoutDebug';
 import {
   assetMaterialOverrideConfig,
@@ -1029,8 +1034,22 @@ const runVillageLayoutConfigSmoke = (): void => {
 
 const runLayoutDebugSmoke = (): void => {
   assert(layoutDebugConfig.toggleKey === 'F2', 'Layout debug mode should use F2 as the toggle key.');
+  assert(layoutDebugConfig.cameraModeKey === 'v', 'Layout debug camera mode should use V as the toggle key.');
   assert(layoutDebugConfig.cameraHeight > 0, 'Layout debug camera height should be positive.');
   assert(layoutDebugConfig.viewPadding >= 0, 'Layout debug view padding should not be negative.');
+  assert(layoutDebugConfig.overviewMinZoom > 0, 'Layout debug overview minimum zoom should be positive.');
+  assert(layoutDebugConfig.overviewMaxZoom >= layoutDebugConfig.overviewMinZoom, 'Layout debug overview zoom range should be valid.');
+  assert(layoutDebugConfig.closeCameraMinDistance > 0, 'Layout debug close camera minimum distance should be positive.');
+  assert(layoutDebugConfig.closeCameraMaxDistance > layoutDebugConfig.closeCameraMinDistance, 'Layout debug close camera distance range should be valid.');
+  assert(layoutDebugCameraModes.includes('overview'), 'Layout debug camera modes should include overview.');
+  assert(layoutDebugCameraModes.includes('close'), 'Layout debug camera modes should include close.');
+  assert(isLayoutDebugCameraMode('overview'), 'Overview should be a valid layout camera mode.');
+  assert(isLayoutDebugCameraMode('close'), 'Close should be a valid layout camera mode.');
+  assert(!isLayoutDebugCameraMode('sideways'), 'Unknown layout camera modes should be rejected.');
+  assert(getNextLayoutDebugCameraMode('overview') === 'close', 'Layout camera mode should cycle from overview to close.');
+  assert(getNextLayoutDebugCameraMode('close') === 'overview', 'Layout camera mode should cycle from close to overview.');
+  assert(clampLayoutOverviewZoom(0) === layoutDebugConfig.overviewMinZoom, 'Layout overview zoom should clamp to minimum.');
+  assert(clampLayoutCloseCameraDistance(0) === layoutDebugConfig.closeCameraMinDistance, 'Layout close camera distance should clamp to minimum.');
 
   const importantObjects = getImportantLayoutObjects();
   const importantIds = new Set(importantObjects.map((object) => object.id));
@@ -1051,6 +1070,9 @@ const runLayoutDebugSmoke = (): void => {
   const layoutDebugView = createVillageLayoutDebugView(1280, 720);
   assert(layoutDebugView.object.name === 'layout-debug:view', 'Layout debug view should initialize.');
   assert(layoutDebugView.camera.isOrthographicCamera, 'Layout debug mode should use an orthographic top-down camera.');
+  assert(layoutDebugView.closeCamera.isPerspectiveCamera, 'Layout debug mode should initialize a close perspective camera.');
+  assert(layoutDebugView.getCameraMode() === 'overview', 'Layout debug view should start in overview camera mode.');
+  assert(layoutDebugView.getCamera() === layoutDebugView.camera, 'Overview mode should use the top-down camera.');
   assert(!layoutDebugView.isActive(), 'Layout debug view should start inactive.');
   assert(layoutDebugView.object.getObjectByName('layout:bounds') !== undefined, 'Layout debug view should include village bounds.');
   assert(layoutDebugView.object.getObjectByName('layout:zone:central-green-well') !== undefined, 'Layout debug view should include zone outlines.');
@@ -1061,6 +1083,10 @@ const runLayoutDebugSmoke = (): void => {
   assert(layoutDebugView.object.getObjectByName('layout:label:spawn') !== undefined, 'Layout debug view should include important object labels.');
   assert(layoutDebugView.toggle(), 'Layout debug view should toggle active.');
   assert(layoutDebugView.object.visible, 'Layout debug view object should be visible while active.');
+  assert(layoutDebugView.toggleCameraMode() === 'close', 'Layout debug view should toggle to close camera mode.');
+  assert(layoutDebugView.getCamera() === layoutDebugView.closeCamera, 'Close mode should use the close perspective camera.');
+  layoutDebugView.setCameraMode('overview');
+  assert(layoutDebugView.getCamera() === layoutDebugView.camera, 'Setting overview should restore the top-down camera.');
   layoutDebugView.setActive(false);
   assert(!layoutDebugView.object.visible, 'Layout debug view object should hide when inactive.');
   layoutDebugView.dispose();

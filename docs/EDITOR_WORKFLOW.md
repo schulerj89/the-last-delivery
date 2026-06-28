@@ -7,6 +7,8 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Run `npm run dev`.
 - Open the game in the browser.
 - Press `F2` to enter layout mode.
+- Press `V` while layout mode is active to switch between top-down overview and close perspective view.
+- Use the mouse wheel in layout mode to zoom the active editor view.
 - The placement editor appears in the lower-right HUD.
 - Press `F1` while in layout mode to toggle the editor help overlay.
 - Press `F3` to hide or show developer UI panels.
@@ -16,6 +18,16 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - The default playground view is a clean editor canvas: grass ground and boundary fence only.
 - The Object panel lists editable world objects and their current collision, interactable, objective, and destination data.
 - The Asset panel lists registered runtime GLB assets that are safe to preview.
+
+## Editor Camera
+
+- Overview view is a top-down orthographic layout camera for broad town composition.
+- Close view is a perspective inspection camera for checking scale, path readability, and placement relative to the world.
+- `V`: switch overview / close view.
+- Mouse wheel: zoom the active editor view.
+- Right mouse drag in close view: orbit around the current target.
+- Middle mouse drag in close view: pan across the X/Z ground plane.
+- Left mouse click and drag still selects and moves editable objects.
 
 ## Move Objects
 

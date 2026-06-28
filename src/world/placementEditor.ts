@@ -61,9 +61,11 @@ export interface PlacementEditor {
   dispose(): void;
 }
 
+type PlacementEditorCameraProvider = THREE.Camera | (() => THREE.Camera);
+
 interface PlacementEditorOptions {
   sceneRoot: THREE.Object3D;
-  camera: THREE.Camera;
+  camera: PlacementEditorCameraProvider;
   domElement: HTMLElement;
   parent: HTMLElement;
   isLayoutModeActive: () => boolean;
@@ -541,6 +543,10 @@ export const createPlacementEditor = ({
     ? 'Tab selects editable objects. Drafts can be saved locally or copied as JSON.'
     : 'Tab selects editable objects. Copy JSON output into source workflow.';
 
+  const getEditorCamera = (): THREE.Camera => (
+    typeof camera === 'function' ? camera() : camera
+  );
+
   overlay.className = 'placement-editor-hud';
   overlay.hidden = true;
   summary.className = 'placement-editor-hud__summary';
@@ -595,6 +601,8 @@ export const createPlacementEditor = ({
   helpOverlay.textContent = [
     'Placement Editor Help',
     'F2 layout mode  F1 help',
+    'V overview / close view  Wheel zoom',
+    'Close view: right-drag orbit  middle-drag pan',
     'Tab / Shift+Tab select  Click selects  Drag moves on ground',
     'WASD / arrows hold to move  Shift faster  Alt finer',
     'Q / E rotate  Z / X scale  [ / ] Y offset',
@@ -1530,7 +1538,7 @@ export const createPlacementEditor = ({
     const rect = domElement.getBoundingClientRect();
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(pointer, camera);
+    raycaster.setFromCamera(pointer, getEditorCamera());
 
     return raycaster.ray.intersectPlane(groundPlane, hitPoint) !== null;
   };

@@ -38,6 +38,7 @@ export interface DebugUiUpdate {
   delivery: DeliveryState;
   performance: PerformanceSnapshot;
   layoutModeActive: boolean;
+  layoutCameraMode: string;
   layoutObjectCountsByKind: Readonly<Record<string, number>>;
   selectedEditorObjectId: string | null;
   environmentPresetName: string;
@@ -139,7 +140,9 @@ const createCompactLines = (update: DebugUiUpdate): string[] => [
   `Delivery ${formatActiveDelivery(update.delivery)}`,
   `Player ${formatVector(update.player.position)}`,
   `Collision boxes ${update.collisionDebugVisible ? 'on' : 'off'}`,
-  ...(update.layoutModeActive ? [`Selected ${update.selectedEditorObjectId ?? 'none'}`] : []),
+  ...(update.layoutModeActive ? [
+    `Layout ${update.layoutCameraMode}  Selected ${update.selectedEditorObjectId ?? 'none'}`,
+  ] : []),
 ];
 
 const createExpandedLines = (update: DebugUiUpdate, state: DebugUiState): string[] => {
@@ -192,7 +195,7 @@ const createExpandedLines = (update: DebugUiUpdate, state: DebugUiState): string
     `Preset ${update.environmentPresetName}`,
     '',
     'Layout',
-    `Mode ${update.layoutModeActive ? 'active' : 'inactive'}`,
+    `Mode ${update.layoutModeActive ? `active (${update.layoutCameraMode})` : 'inactive'}`,
     `Collision boxes ${update.collisionDebugVisible ? 'visible' : 'hidden'}`,
     `Objects ${formatCounts(update.layoutObjectCountsByKind)}`,
     `Selected ${update.layoutModeActive ? update.selectedEditorObjectId ?? 'none' : 'layout off'}`,

@@ -70,11 +70,13 @@ const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisio
 appResources.trackObject3D(collisionDebugView.object);
 scene.add(collisionDebugView.object);
 
-const layoutDebugView = createVillageLayoutDebugView(window.innerWidth, window.innerHeight);
+const layoutDebugView = createVillageLayoutDebugView(window.innerWidth, window.innerHeight, {
+  domElement: renderer.domElement,
+});
 scene.add(layoutDebugView.object);
 const placementEditor = createPlacementEditor({
   sceneRoot: playground,
-  camera: layoutDebugView.camera,
+  camera: layoutDebugView.getCamera,
   domElement: renderer.domElement,
   parent: app,
   isLayoutModeActive: layoutDebugView.isActive,
@@ -196,6 +198,10 @@ const handleDebugKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
+  if (layoutDebugView.isActive() && layoutDebugView.handleKeyDown(event)) {
+    return;
+  }
+
   if (layoutDebugView.isActive() && placementEditor.handleKeyDown(event)) {
     return;
   }
@@ -292,7 +298,7 @@ const animate = (): void => {
   followCamera?.update(deltaSeconds);
   deliveryGuidanceOverlay.update(deliveryState);
   deliveryBoardOverlay.update(deliveryState);
-  renderer.render(scene, layoutDebugView.isActive() ? layoutDebugView.camera : camera);
+  renderer.render(scene, layoutDebugView.isActive() ? layoutDebugView.getCamera() : camera);
   const performanceSnapshot = performanceMonitor.update(rawDeltaSeconds, renderer, getAssetRuntimeStats());
   debugUi.update({
     player: player.getState(),
@@ -304,6 +310,7 @@ const animate = (): void => {
     delivery: deliveryState,
     performance: performanceSnapshot,
     layoutModeActive: layoutDebugView.isActive(),
+    layoutCameraMode: layoutDebugView.getCameraMode(),
     layoutObjectCountsByKind,
     selectedEditorObjectId: placementEditor.getSelectedObjectId(),
     environmentPresetName: environment.presetName,

@@ -2,6 +2,16 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.45.0] - 2026-06-28
+
+### Added
+
+- Added layout editor camera modes so `V` switches between top-down overview and close perspective inspection while F2 layout mode is active.
+- Added editor view zoom controls, including mouse-wheel zoom in overview mode and mouse-wheel distance control in close mode.
+- Added close editor camera controls for right-drag orbit and middle-drag panning across the X/Z ground plane.
+- Updated placement editor picking to raycast through the active editor camera.
+- Added smoke checks for layout camera mode config, camera switching, and zoom clamping.
+
 ## [0.44.0] - 2026-06-28
 
 ### Changed
