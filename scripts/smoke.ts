@@ -1,11 +1,14 @@
 import {
   Bone,
   BoxGeometry,
+  Color,
   Float32BufferAttribute,
+  Fog,
   Group,
   Mesh,
   MeshBasicMaterial,
   Object3D,
+  Scene,
   Skeleton,
   SkinnedMesh,
   Texture,
@@ -60,6 +63,15 @@ import {
   performanceBudgetConfig,
 } from '../src/game/performance';
 import { createResourceTracker } from '../src/game/resources';
+import {
+  createWorldEnvironment,
+  defaultEnvironmentPresetName,
+  environmentPresetNames,
+  environmentPresets,
+  getEnvironmentPreset,
+  isEnvironmentPresetName,
+  isValidEnvironmentConfig,
+} from '../src/world/environment';
 import {
   createVillageLayoutDebugView,
   getImportantLayoutObjects,
@@ -1089,6 +1101,50 @@ const runPerformanceSmoke = (): void => {
   assert(monitor.getSnapshot().frameTimeMs === 0, 'Performance monitor should reset on dispose.');
 };
 
+const runEnvironmentSmoke = (): void => {
+  assert(defaultEnvironmentPresetName === 'goldenHour', 'Environment should default to golden hour.');
+  assert(environmentPresetNames.includes('morning'), 'Environment should include a morning preset.');
+  assert(environmentPresetNames.includes('goldenHour'), 'Environment should include a goldenHour preset.');
+  assert(environmentPresetNames.includes('overcast'), 'Environment should include an overcast preset.');
+  assert(isEnvironmentPresetName('morning'), 'Environment preset names should validate known values.');
+  assert(!isEnvironmentPresetName('midnight'), 'Environment preset names should reject unknown values.');
+
+  environmentPresetNames.forEach((presetName) => {
+    const config = environmentPresets[presetName];
+
+    assert(getEnvironmentPreset(presetName) === config, `Environment preset lookup should return config: ${presetName}.`);
+    assert(isValidEnvironmentConfig(config), `Environment config should be valid: ${presetName}.`);
+    assert(config.fogFar > config.fogNear, `Fog far should be beyond fog near: ${presetName}.`);
+    assert(config.sunIntensity > 0, `Sun intensity should be positive: ${presetName}.`);
+    assert(config.hemisphereIntensity > 0, `Hemisphere intensity should be positive: ${presetName}.`);
+    assert(config.sunDirection.length === 3, `Sun direction should be a Vector3 tuple: ${presetName}.`);
+    assert(config.sunDirection.some((component) => Math.abs(component) > 0), `Sun direction should not be zero: ${presetName}.`);
+  });
+
+  const scene = new Scene();
+  const previousBackground = new Color(0x123456);
+  const previousFog = new Fog(0x123456, 1, 2);
+  scene.background = previousBackground;
+  scene.fog = previousFog;
+
+  const environment = createWorldEnvironment(scene);
+  assert(environment.presetName === defaultEnvironmentPresetName, 'World environment should use the default preset.');
+  assert(scene.children.includes(environment.object), 'World environment should add its root to the scene.');
+  assert(environment.object.getObjectByName('environment:gradient-skydome') !== undefined, 'World environment should include a gradient skydome.');
+  assert(environment.object.getObjectByName('environment:sun') !== undefined, 'World environment should include a sun light.');
+  assert(environment.object.getObjectByName('environment:hemisphere') !== undefined, 'World environment should include hemisphere lighting.');
+  assert(environment.object.getObjectByName('environment:ambient') !== undefined, 'World environment should include ambient fill lighting.');
+  assert(scene.fog instanceof Fog, 'World environment should apply scene fog.');
+  assert(scene.fog.near === environment.config.fogNear, 'World environment fog near should match config.');
+  assert(scene.fog.far === environment.config.fogFar, 'World environment fog far should match config.');
+  assert(scene.background instanceof Color, 'World environment should apply a fallback background color.');
+
+  environment.dispose();
+  assert(!scene.children.includes(environment.object), 'World environment should remove its root on dispose.');
+  assert(scene.background === previousBackground, 'World environment should restore previous scene background on dispose.');
+  assert(scene.fog === previousFog, 'World environment should restore previous scene fog on dispose.');
+};
+
 const runResourceTrackerSmoke = (): void => {
   const tracker = createResourceTracker();
   const geometry = tracker.trackGeometry(new BoxGeometry(1, 1, 1));
@@ -1331,6 +1387,7 @@ runPlacementEditorSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();
 runPerformanceSmoke();
+runEnvironmentSmoke();
 runResourceTrackerSmoke();
 runModuleSmoke();
 

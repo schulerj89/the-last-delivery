@@ -21,6 +21,7 @@ import {
   getLayoutObjectCountsByKind,
   layoutDebugConfig,
 } from './world/layoutDebug';
+import { createWorldEnvironment } from './world/environment';
 import { createPlacementEditor } from './world/placementEditor';
 import { createPlayground } from './world/playground';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
@@ -41,8 +42,8 @@ if (!app) {
 }
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x16191f);
 const appResources = createResourceTracker();
+const environment = createWorldEnvironment(scene);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
 
@@ -112,16 +113,6 @@ const interaction = createInteractionController({
   }),
   parent: app,
 });
-
-const ambientLight = new THREE.HemisphereLight(0xe8f1ff, 0x253329, 1.8);
-appResources.trackObject3D(ambientLight);
-scene.add(ambientLight);
-
-const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
-keyLight.position.set(3, 5, 4);
-keyLight.castShadow = true;
-appResources.trackObject3D(keyLight);
-scene.add(keyLight);
 
 let animationFrameId: number | null = null;
 let isDisposed = false;
@@ -236,6 +227,7 @@ const dispose = (): void => {
   deliveryGuidanceOverlay.dispose();
   debugUi.dispose();
   performanceMonitor.dispose();
+  environment.dispose();
   placementEditor.dispose();
   layoutDebugView.dispose();
   visualBoundsDebugView.dispose();
@@ -282,6 +274,7 @@ const animate = (): void => {
     layoutModeActive: layoutDebugView.isActive(),
     layoutObjectCountsByKind,
     selectedEditorObjectId: placementEditor.getSelectedObjectId(),
+    environmentPresetName: environment.presetName,
   });
   animationFrameId = window.requestAnimationFrame(animate);
 };

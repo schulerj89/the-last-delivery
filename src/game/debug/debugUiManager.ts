@@ -39,6 +39,7 @@ export interface DebugUiUpdate {
   layoutModeActive: boolean;
   layoutObjectCountsByKind: Readonly<Record<string, number>>;
   selectedEditorObjectId: string | null;
+  environmentPresetName: string;
 }
 
 export interface DebugUiKeyOptions {
@@ -181,6 +182,9 @@ const createExpandedLines = (update: DebugUiUpdate, state: DebugUiState): string
     `Active ${formatActiveDelivery(update.delivery)}`,
     `Target ${formatActiveTarget(update.delivery)}`,
     `Completed ${update.delivery.completedCount}`,
+    '',
+    'Environment',
+    `Preset ${update.environmentPresetName}`,
     '',
     'Layout',
     `Mode ${update.layoutModeActive ? 'active' : 'inactive'}`,

@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.36.0] - 2026-06-28
+
+### Added
+
+- Added a world environment module with a lightweight gradient skydome, scene fog, warm directional sun, soft hemisphere light, and ambient fill light.
+- Added tunable environment presets for `morning`, `goldenHour`, and `overcast`, with `goldenHour` as the default.
+- Added expanded debug UI reporting for the active environment preset.
+- Added smoke checks for environment preset validity, fog ranges, scene application, and renderer-free cleanup.
+
+### Changed
+
+- Replaced the dark test-scene background and hard-coded lights in `main.ts` with the reusable environment module.
+
 ## [0.35.1] - 2026-06-28
 
 ### Fixed
