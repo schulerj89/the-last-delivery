@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.55.0] - 2026-06-28
+
+### Added
+
+- Added tile-focused mass selection in the town editor: empty left-drag now draws a selection box over active pavement tiles.
+- Added Ctrl-click selection toggling, Ctrl-drag tile box selection from occupied areas, and group move, drag, rotate, scale, Y-offset, duplicate, and delete behavior for selected objects.
+- Added visible editor help, toolbar hints, selection rectangle styling, and smoke coverage for pavement mass selection.
+
 ## [0.54.1] - 2026-06-28
 
 ### Fixed

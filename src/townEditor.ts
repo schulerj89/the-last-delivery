@@ -61,6 +61,9 @@ root.innerHTML = `
       <span>Wheel zoom</span>
       <span>Right-drag orbit</span>
       <span>Middle-drag pan</span>
+      <span>Empty-drag select tiles</span>
+      <span>Ctrl-click add/remove</span>
+      <span>Ctrl-drag select tiles</span>
       <span>Ctrl+D duplicate</span>
       <span>Click empty deselect</span>
       <span>Delete selected</span>

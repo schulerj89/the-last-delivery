@@ -131,15 +131,19 @@ import {
   createLayoutOverrideDocumentFromPlacementDrafts,
   createDuplicatePlacementObjectId,
   createDuplicatePlacementPosition,
+  createPlacementSelectionBounds,
   createPlacementObjectOverrideFromTemplate,
   createPrimitivePlacementPreviewObject,
   createDraggedPlacementPosition,
   createEditablePlacementObjects,
   createPlacementTransformDraft,
   getEditablePlacementObjectById,
+  getMassSelectablePlacementObjectIdsInBounds,
   getPlacementEditorSnapValues,
   getPlacementEditorMoveSpeed,
+  isMassSelectablePlacementObject,
   isPlacementEditorHudVariant,
+  isPlacementDraftInsideSelectionBounds,
   isPrimitivePlacementPreviewKind,
   markPlacementDraftDeleted,
   placementEditorConfig,
@@ -841,6 +845,9 @@ const runTownEditorRouteSmoke = (): void => {
   assert(townEditorScript.includes('F1 help'), 'Town editor toolbar should advertise the help overlay shortcut.');
   assert(townEditorScript.includes('Ctrl+D duplicate'), 'Town editor toolbar should advertise selected-object duplication.');
   assert(townEditorScript.includes('Click empty deselect'), 'Town editor toolbar should advertise empty-space deselection.');
+  assert(townEditorScript.includes('Empty-drag select tiles'), 'Town editor toolbar should advertise tile box selection.');
+  assert(townEditorScript.includes('Ctrl-click add/remove'), 'Town editor toolbar should advertise selection toggling.');
+  assert(townEditorScript.includes('Ctrl-drag select tiles'), 'Town editor toolbar should advertise box selection from occupied tile areas.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
   assert(townEditorCss.includes('.town-editor-loading'), 'Town editor CSS should style the loading screen.');
   assert(townEditorCss.includes('.town-editor--loading'), 'Town editor CSS should hide editor UI while loading.');
@@ -850,6 +857,7 @@ const runTownEditorRouteSmoke = (): void => {
   assert(placementEditorScript.includes('Saved layout'), 'Save Layout should have an explicit saved confirmation label.');
   assert(appCss.includes('.placement-editor-hud__save-feedback'), 'Shared editor CSS should style the save confirmation indicator.');
   assert(appCss.includes('placement-save-feedback'), 'Shared editor CSS should animate save confirmation feedback.');
+  assert(appCss.includes('.placement-editor-drag-select'), 'Shared editor CSS should style the tile drag-select rectangle.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
   assert(markerItems.length >= 3, 'Town editor marker palette should initialize important world markers.');
   assert(assetItems.length > 0, 'Town editor asset palette should initialize.');
@@ -1614,11 +1622,16 @@ const runPlacementEditorSmoke = (): void => {
   assert(placementEditorConfig.snapSpeedReference > 0, 'Placement editor snap speed reference should be positive.');
   assert(placementEditorConfig.fastMoveMultiplier > 1, 'Placement editor fast modifier should increase movement speed.');
   assert(placementEditorConfig.fineMoveMultiplier > 0 && placementEditorConfig.fineMoveMultiplier < 1, 'Placement editor fine modifier should reduce movement speed.');
+  assert(placementEditorConfig.dragSelectThresholdPx > 0, 'Placement editor drag-select threshold should be positive.');
+  assert(placementEditorConfig.massSelectKind === 'pavement', 'Placement editor mass selection should target pavement tiles first.');
   assert(placementEditorConfig.undoHistoryLimit >= 10, 'Placement editor undo history should keep a useful number of operations.');
   assert(placementEditorHudVariants.includes('builder'), 'Placement editor should expose a standalone builder HUD variant.');
   assert(isPlacementEditorHudVariant('builder'), 'Placement editor builder HUD variant should validate.');
   assert(!isPlacementEditorHudVariant('dropdown-heavy'), 'Placement editor HUD variant validation should reject unknown values.');
   assert(placementEditorSource.includes('Help / Controls'), 'Placement editor should expose a visible help/control button.');
+  assert(placementEditorSource.includes('Empty left-drag box-selects active pavement tiles'), 'Placement editor help should explain tile box selection.');
+  assert(placementEditorSource.includes('Ctrl-click toggles objects in the current selection'), 'Placement editor help should explain selection toggling.');
+  assert(placementEditorSource.includes('Ctrl-drag starts tile box selection from anywhere'), 'Placement editor help should explain Ctrl-drag box selection.');
   assert(primitivePlacementPreviewKinds.includes('pavement'), 'Placement editor primitive previews should support generated pavement.');
   assert(primitivePlacementPreviewKinds.includes('spawn-point'), 'Placement editor primitive previews should support draggable spawn markers.');
   assert(primitivePlacementPreviewKinds.includes('delivery-board'), 'Placement editor primitive previews should support draggable delivery board markers.');
@@ -1662,6 +1675,26 @@ const runPlacementEditorSmoke = (): void => {
   const pavementDraft = createPlacementTransformDraft(pavementTile.worldObject);
   pavementDraft.active = true;
   pavementDraft.scaleMultiplier = 2.5;
+  const selectionPavementDraft = clonePlacementDraft(pavementDraft);
+  selectionPavementDraft.active = true;
+  selectionPavementDraft.position = [2, selectionPavementDraft.position[1], 2];
+  const selectionBounds = createPlacementSelectionBounds(new Vector3(1, 0, 1), new Vector3(3, 0, 3));
+  const selectedPavementIds = getMassSelectablePlacementObjectIdsInBounds(
+    [pavementTile, deliveryBoard],
+    (object) => (object.id === pavementTile.id ? selectionPavementDraft : createPlacementTransformDraft(object.worldObject)),
+    selectionBounds,
+  );
+
+  assert(isMassSelectablePlacementObject(pavementTile), 'Placement editor mass selection should include pavement objects.');
+  assert(!isMassSelectablePlacementObject(deliveryBoard), 'Placement editor mass selection should not include non-pavement objects by default.');
+  assert(isPlacementDraftInsideSelectionBounds(selectionPavementDraft, selectionBounds), 'Placement editor selection bounds should include tile drafts inside the box.');
+  assert(selectedPavementIds.includes(pavementTile.id), 'Placement editor drag-select should select pavement tiles inside the box.');
+  assert(!selectedPavementIds.includes(deliveryBoard.id), 'Placement editor drag-select should ignore non-pavement objects inside the box.');
+  selectionPavementDraft.active = false;
+  assert(
+    getMassSelectablePlacementObjectIdsInBounds([pavementTile], () => selectionPavementDraft, selectionBounds).length === 0,
+    'Placement editor drag-select should ignore inactive pavement tiles.',
+  );
   const existingDuplicateIds = [
     pavementTile.id,
     `editor-${pavementTile.id}-copy-1`,

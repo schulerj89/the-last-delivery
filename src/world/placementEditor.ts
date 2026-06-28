@@ -52,6 +52,8 @@ export const placementEditorConfig = {
   fastMoveMultiplier: 3,
   fineMoveMultiplier: 0.25,
   dragSnapEnabled: true,
+  dragSelectThresholdPx: 8,
+  massSelectKind: 'pavement',
   undoHistoryLimit: 30,
 } as const;
 
@@ -135,6 +137,13 @@ interface MoveModifiers {
 interface DragOffset {
   x: number;
   z: number;
+}
+
+export interface PlacementSelectionBounds {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
 }
 
 type PlacementDraftSnapshot = Array<[string, PlacementTransformDraft]>;
@@ -321,6 +330,42 @@ export const createDraggedPlacementPosition = (
     snapEnabled ? snapPlacementCoordinate(z, snapSize) : z,
   ];
 };
+
+export const createPlacementSelectionBounds = (
+  start: Pick<THREE.Vector3, 'x' | 'z'>,
+  end: Pick<THREE.Vector3, 'x' | 'z'>,
+): PlacementSelectionBounds => ({
+  minX: Math.min(start.x, end.x),
+  maxX: Math.max(start.x, end.x),
+  minZ: Math.min(start.z, end.z),
+  maxZ: Math.max(start.z, end.z),
+});
+
+export const isMassSelectablePlacementObject = (object: EditablePlacementObject): boolean => (
+  object.kind === placementEditorConfig.massSelectKind
+);
+
+export const isPlacementDraftInsideSelectionBounds = (
+  draft: PlacementTransformDraft,
+  bounds: PlacementSelectionBounds,
+): boolean => (
+  draft.active
+  && draft.position[0] >= bounds.minX
+  && draft.position[0] <= bounds.maxX
+  && draft.position[2] >= bounds.minZ
+  && draft.position[2] <= bounds.maxZ
+);
+
+export const getMassSelectablePlacementObjectIdsInBounds = (
+  editableObjects: readonly EditablePlacementObject[],
+  draftProvider: (object: EditablePlacementObject) => PlacementTransformDraft,
+  bounds: PlacementSelectionBounds,
+): string[] => (
+  editableObjects
+    .filter(isMassSelectablePlacementObject)
+    .filter((object) => isPlacementDraftInsideSelectionBounds(draftProvider(object), bounds))
+    .map((object) => object.id)
+);
 
 export const createDuplicatePlacementObjectId = (
   sourceObjectId: string,
@@ -869,14 +914,26 @@ export const createPlacementEditor = ({
   const toggleHelpButton = document.createElement('button');
   const importTextArea = document.createElement('textarea');
   const helpOverlay = document.createElement('div');
+  const dragSelectOverlay = document.createElement('div');
   const saveFeedback = document.createElement('div');
   const heldKeys = new Set<string>();
+  const selectedObjectIds = new Set<string>();
   const undoStack: PlacementDraftSnapshot[] = [];
   const redoStack: PlacementDraftSnapshot[] = [];
   let dragState: {
     pointerId: number;
-    objectId: string;
-    offset: DragOffset;
+    objectIds: string[];
+    startPoint: THREE.Vector3;
+    initialPositionsByObjectId: Map<string, THREE.Vector3Tuple>;
+  } | null = null;
+  let boxSelectState: {
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    currentClientX: number;
+    currentClientY: number;
+    startPoint: THREE.Vector3;
+    toggleObjectId: string | null;
   } | null = null;
   let selectedIndex = -1;
   let active = false;
@@ -981,7 +1038,11 @@ export const createPlacementEditor = ({
     'Save Active JSON: save working town layout locally.',
     'Copy JSON / Save JSON File: export layout for layout:apply.',
     'Duplicate Selected or Ctrl+D: create another editable copy next to the selected object.',
-    'Delete Selected: remove the selected object from active editor JSON.',
+    'Empty left-drag: draw a box around active pavement tiles to select many at once.',
+    'Ctrl-click: add/remove an object from the current selection.',
+    'Ctrl-drag: start a pavement selection box even when the pointer begins on an object.',
+    'Move, rotate, scale, Y offset, duplicate, and delete affect every selected object.',
+    'Delete Selected: remove selected object(s) from active editor JSON.',
   ].join('\n');
   const createObjectSelectOption = (object: EditablePlacementObject, index: number): HTMLOptionElement => {
     const option = document.createElement('option');
@@ -1017,6 +1078,8 @@ export const createPlacementEditor = ({
   }));
   helpOverlay.className = 'placement-editor-help';
   helpOverlay.hidden = true;
+  dragSelectOverlay.className = 'placement-editor-drag-select';
+  dragSelectOverlay.hidden = true;
   saveFeedback.className = 'placement-editor-hud__save-feedback';
   saveFeedback.hidden = true;
   saveFeedback.setAttribute('role', 'status');
@@ -1027,17 +1090,20 @@ export const createPlacementEditor = ({
     'V overview / close view  Wheel zoom',
     'Close view: right-drag orbit  middle-drag pan',
     'Tab / Shift+Tab select  Click selects  Drag moves on ground',
+    'Empty left-drag box-selects active pavement tiles',
+    'Ctrl-click toggles objects in the current selection',
+    'Ctrl-drag starts tile box selection from anywhere',
     'WASD / arrows hold to move  Shift faster  Alt finer',
     'Q / E rotate  Z / X scale  [ / ] Y offset',
     '1 / 2 / 3 snap size',
     'Ctrl+D duplicate selected object',
-    'Delete removes selected object from active editor JSON',
+    'Delete removes selected object(s) from active editor JSON',
     'Ctrl+Z undo  Ctrl+Shift+Z or Ctrl+Y redo',
     'Ctrl+S save active JSON  Ctrl+O reload active JSON  Ctrl+Shift+Delete clear',
     'C copy selected TS  Shift+C copy active JSON',
     'Object panel toggles active state. Asset panel previews registered runtime models.',
     'Gameplay panel assigns spawn, board, post office, mailbox, or decorative roles.',
-    'Delete removes selected object from the active editor layout; source files are unchanged.',
+    'Delete removes selected object(s) from the active editor layout; source files are unchanged.',
   ].join('\n');
   objectPanel.append(objectSelect, objectProperties);
   assetPanel.append(assetSelect, assetProperties);
@@ -1090,6 +1156,7 @@ export const createPlacementEditor = ({
   }
   parent.append(overlay);
   parent.append(helpOverlay);
+  parent.append(dragSelectOverlay);
 
   const getSaveFeedbackTime = (): string => new Date().toLocaleTimeString([], {
     hour: 'numeric',
@@ -1124,13 +1191,7 @@ export const createPlacementEditor = ({
     selectedIndex >= 0 ? editableObjects[selectedIndex] ?? null : null
   );
 
-  const getSelectedDraft = (): PlacementTransformDraft | null => {
-    const selectedObject = getSelectedObject();
-
-    if (!selectedObject) {
-      return null;
-    }
-
+  const ensureDraftForObject = (selectedObject: EditablePlacementObject): PlacementTransformDraft => {
     let draft = draftsByObjectId.get(selectedObject.id);
 
     if (!draft) {
@@ -1140,6 +1201,26 @@ export const createPlacementEditor = ({
 
     return draft;
   };
+
+  const getSelectedDraft = (): PlacementTransformDraft | null => {
+    const selectedObject = getSelectedObject();
+
+    return selectedObject ? ensureDraftForObject(selectedObject) : null;
+  };
+
+  const getSelectedObjects = (): EditablePlacementObject[] => (
+    [...selectedObjectIds]
+      .map((objectId) => editableObjectsById.get(objectId))
+      .filter((object): object is EditablePlacementObject => object !== undefined)
+  );
+
+  const getSelectedObjectCount = (): number => selectedObjectIds.size;
+
+  const getSelectedLabel = (): string => (
+    getSelectedObjectCount() === 1
+      ? getSelectedObjects()[0]?.id ?? 'selection'
+      : `${getSelectedObjectCount()} objects`
+  );
 
   const registerEditableObject = (editableObject: EditablePlacementObject): boolean => {
     if (editableObjectsById.has(editableObject.id)) {
@@ -1469,21 +1550,73 @@ export const createPlacementEditor = ({
 
   const updateMarker = (): void => {
     const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    const selectedObjects = getSelectedObjects();
 
-    if (!active || !selectedObject || !draft) {
+    if (!active || selectedObjects.length === 0) {
       marker.visible = false;
       return;
     }
 
-    const dimensions = selectedObject.worldObject.dimensions ?? [1, 1, 1];
+    if (selectedObjects.length === 1 && selectedObject) {
+      const draft = getSelectedDraft();
+
+      if (!draft) {
+        marker.visible = false;
+        return;
+      }
+
+      const dimensions = selectedObject.worldObject.dimensions ?? [1, 1, 1];
+      marker.visible = true;
+      marker.position.set(draft.position[0], 0.18 + draft.yOffset, draft.position[2]);
+      marker.rotation.y = draft.rotationY;
+      marker.scale.set(
+        Math.max(dimensions[0] * draft.scaleMultiplier, 0.4),
+        1,
+        Math.max(dimensions[2] * draft.scaleMultiplier, 0.4),
+      );
+      return;
+    }
+
+    const selectionBounds = selectedObjects.reduce<PlacementSelectionBounds | null>((bounds, object) => {
+      const draft = ensureDraftForObject(object);
+      const dimensions = object.worldObject.dimensions ?? [1, 1, 1];
+      const halfWidth = Math.max(dimensions[0] * draft.scaleMultiplier, 0.4) / 2;
+      const halfDepth = Math.max(dimensions[2] * draft.scaleMultiplier, 0.4) / 2;
+      const objectBounds = {
+        minX: draft.position[0] - halfWidth,
+        maxX: draft.position[0] + halfWidth,
+        minZ: draft.position[2] - halfDepth,
+        maxZ: draft.position[2] + halfDepth,
+      };
+
+      if (!bounds) {
+        return objectBounds;
+      }
+
+      return {
+        minX: Math.min(bounds.minX, objectBounds.minX),
+        maxX: Math.max(bounds.maxX, objectBounds.maxX),
+        minZ: Math.min(bounds.minZ, objectBounds.minZ),
+        maxZ: Math.max(bounds.maxZ, objectBounds.maxZ),
+      };
+    }, null);
+
+    if (!selectionBounds) {
+      marker.visible = false;
+      return;
+    }
+
     marker.visible = true;
-    marker.position.set(draft.position[0], 0.18 + draft.yOffset, draft.position[2]);
-    marker.rotation.y = draft.rotationY;
+    marker.position.set(
+      (selectionBounds.minX + selectionBounds.maxX) / 2,
+      0.2,
+      (selectionBounds.minZ + selectionBounds.maxZ) / 2,
+    );
+    marker.rotation.y = 0;
     marker.scale.set(
-      Math.max(dimensions[0] * draft.scaleMultiplier, 0.4),
+      Math.max(selectionBounds.maxX - selectionBounds.minX, 0.4),
       1,
-      Math.max(dimensions[2] * draft.scaleMultiplier, 0.4),
+      Math.max(selectionBounds.maxZ - selectionBounds.minZ, 0.4),
     );
   };
 
@@ -1763,6 +1896,8 @@ export const createPlacementEditor = ({
 
     pushUndoSnapshot();
     draftsByObjectId.clear();
+    selectedObjectIds.clear();
+    setPrimarySelection(null);
     resetSceneObjects();
     status = 'Cleared local layout draft and temporary edits.';
     updateMarker();
@@ -1869,10 +2004,9 @@ export const createPlacementEditor = ({
       return;
     }
 
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    const selectedObjects = getSelectedObjects();
 
-    if (!selectedObject || !draft) {
+    if (selectedObjects.length === 0) {
       continuousMoveHistoryPushed = false;
       return;
     }
@@ -1905,13 +2039,17 @@ export const createPlacementEditor = ({
     });
     const distance = speed * Math.max(0, deltaSeconds);
 
-    draft.position = [
-      draft.position[0] + heldMoveVector.x * distance,
-      draft.position[1],
-      draft.position[2] + heldMoveVector.y * distance,
-    ];
-    status = `Moving ${selectedObject.id}.`;
-    applyDraftToScene(selectedObject);
+    selectedObjects.forEach((object) => {
+      const draft = ensureDraftForObject(object);
+      draft.position = [
+        draft.position[0] + heldMoveVector.x * distance,
+        draft.position[1],
+        draft.position[2] + heldMoveVector.y * distance,
+      ];
+      applyDraftToScene(object);
+    });
+    status = `Moving ${getSelectedLabel()}.`;
+    updateMarker();
     updateHud();
   };
 
@@ -1920,6 +2058,20 @@ export const createPlacementEditor = ({
     draft: PlacementTransformDraft | null,
   ): void => {
     objectSelect.value = selectedIndex >= 0 ? String(selectedIndex) : '';
+
+    if (getSelectedObjectCount() > 1) {
+      const selectedObjects = getSelectedObjects();
+      const pavementCount = selectedObjects.filter((object) => object.kind === 'pavement').length;
+
+      objectProperties.textContent = [
+        'Object Properties',
+        `Multi-selection: ${selectedObjects.length} objects`,
+        `pavement tiles: ${pavementCount}`,
+        selectedObject ? `primary: ${selectedObject.id}` : 'primary: none',
+        'WASD/arrows, drag, rotate, scale, Y offset, duplicate, and delete affect the full selection.',
+      ].join('\n');
+      return;
+    }
 
     if (!selectedObject || !draft) {
       objectProperties.textContent = [
@@ -2036,13 +2188,17 @@ export const createPlacementEditor = ({
       ];
 
       if (selectedObject && draft) {
+        const selectionCount = getSelectedObjectCount();
         lines.push(
-          `Selected ${selectedObject.id} (${selectedObject.kind})`,
+          selectionCount > 1
+            ? `Selected ${selectionCount} objects (primary ${selectedObject.id})`
+            : `Selected ${selectedObject.id} (${selectedObject.kind})`,
           `Active ${draft.active ? 'yes' : 'no'}`,
           `Position ${formatTuple(draft.position)}`,
           `RotationY ${formatNumber(THREE.MathUtils.radToDeg(draft.rotationY))}deg`,
           `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
           `Render ${draft.assetId ?? getObjectAssetId(selectedObject.worldObject) ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
+          selectionCount > 1 ? 'Group edit: move / scale / rotate / duplicate / delete applies to all selected.' : '',
           'Help / Controls or F1 shows editor instructions.',
           'Ctrl+D or Duplicate Selected creates another copy.',
           'Delete key or Delete Selected removes this object from active JSON.',
@@ -2051,6 +2207,7 @@ export const createPlacementEditor = ({
         lines.push(
           'Selected: none',
           'Drag an asset tile into the world or click a placed object.',
+          'Empty left-drag draws a box to select pavement tiles.',
           'Help / Controls or F1 shows editor instructions.',
         );
       }
@@ -2067,6 +2224,7 @@ export const createPlacementEditor = ({
         'Ctrl+S save active JSON  Ctrl+O reload  Ctrl+Shift+Delete clear',
         `Snap ${snap}`,
         'Selected: none',
+        'Empty left-drag draws a box to select pavement tiles.',
         status,
       ].join('\n');
       return;
@@ -2076,13 +2234,16 @@ export const createPlacementEditor = ({
     summary.textContent = [
       'Placement Editor',
       'Active JSON drives live editor previews; source changes still require layout:apply.',
-      `Selected ${selectedObject.id} (${selectedObject.kind})`,
+      getSelectedObjectCount() > 1
+        ? `Selected ${getSelectedObjectCount()} objects (primary ${selectedObject.id})`
+        : `Selected ${selectedObject.id} (${selectedObject.kind})`,
       `Active ${draft.active ? 'yes' : 'no'}`,
       `Position ${formatTuple(draft.position)}`,
       `RotationY ${formatNumber(THREE.MathUtils.radToDeg(draft.rotationY))}deg`,
       `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
       `Render ${draft.assetId ?? renderSettings?.assetId ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
       `Snap ${snap}  Edited ${isChangedDraft(selectedObject.worldObject, draft) ? 'yes' : 'no'}`,
+      getSelectedObjectCount() > 1 ? 'Group edit: move / scale / rotate / duplicate / delete applies to all selected.' : '',
       'Ctrl+D duplicate  Ctrl+S save active  Ctrl+O reload active  Shift+C copy JSON',
       'Help / Controls or F1 toggles instructions.',
       status,
@@ -2096,10 +2257,51 @@ export const createPlacementEditor = ({
     updateHud();
   };
 
+  const setPrimarySelection = (objectId: string | null): void => {
+    if (!objectId) {
+      selectedIndex = -1;
+      objectSelect.value = '';
+      return;
+    }
+
+    selectedIndex = editableObjects.findIndex((object) => object.id === objectId);
+    objectSelect.value = selectedIndex >= 0 ? String(selectedIndex) : '';
+  };
+
+  const selectObjectIds = (
+    objectIds: readonly string[],
+    nextStatus?: string,
+  ): void => {
+    selectedObjectIds.clear();
+
+    objectIds.forEach((objectId) => {
+      if (editableObjectsById.has(objectId)) {
+        selectedObjectIds.add(objectId);
+      }
+    });
+
+    const firstObjectId = selectedObjectIds.values().next().value as string | undefined;
+    setPrimarySelection(firstObjectId ?? null);
+    getSelectedObjects().forEach((object) => {
+      ensureDraftForObject(object);
+      applyDraftToScene(object);
+    });
+
+    status = nextStatus ?? (
+      selectedObjectIds.size === 1
+        ? `Selected ${firstObjectId}.`
+        : `Selected ${selectedObjectIds.size} objects.`
+    );
+    updateMarker();
+    updateHud();
+  };
+
   const clearSelection = (nextStatus = 'Selection cleared.'): void => {
-    selectedIndex = -1;
-    objectSelect.value = '';
+    selectedObjectIds.clear();
+    setPrimarySelection(null);
     dragState = null;
+    boxSelectState = null;
+    dragSelectOverlay.hidden = true;
     status = nextStatus;
     updateMarker();
     updateHud();
@@ -2118,10 +2320,9 @@ export const createPlacementEditor = ({
     const selectedObject = getSelectedObject();
 
     if (selectedObject) {
-      draftsByObjectId.set(
-        selectedObject.id,
-        draftsByObjectId.get(selectedObject.id) ?? createPlacementTransformDraft(selectedObject.worldObject),
-      );
+      selectedObjectIds.clear();
+      selectedObjectIds.add(selectedObject.id);
+      ensureDraftForObject(selectedObject);
       status = `Selected ${selectedObject.id}.`;
       applyDraftToScene(selectedObject);
     }
@@ -2167,6 +2368,8 @@ export const createPlacementEditor = ({
     if (nextIndex >= 0 && options.select !== false) {
       selectedIndex = nextIndex;
       objectSelect.value = String(nextIndex);
+      selectedObjectIds.clear();
+      selectedObjectIds.add(objectId);
     }
 
     pushUndoSnapshot();
@@ -2244,6 +2447,8 @@ export const createPlacementEditor = ({
     if (nextIndex >= 0 && options.select !== false) {
       selectedIndex = nextIndex;
       objectSelect.value = String(nextIndex);
+      selectedObjectIds.clear();
+      selectedObjectIds.add(objectId);
     }
 
     status = `Created ${objectId}${draft.assetId ? ` with ${draft.assetId}` : ''}.`;
@@ -2253,20 +2458,16 @@ export const createPlacementEditor = ({
     return true;
   };
 
-  const duplicateSelectedObject = (): boolean => {
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
-
-    if (!selectedObject || !draft) {
-      status = 'No selected object to duplicate.';
-      updateHud();
-      return false;
-    }
-
+  const duplicatePlacementObject = (
+    selectedObject: EditablePlacementObject,
+    draft: PlacementTransformDraft,
+    existingObjectIds: Set<string>,
+  ): EditablePlacementObject | null => {
     const objectId = createDuplicatePlacementObjectId(
       selectedObject.id,
-      editableObjects.map((object) => object.id),
+      existingObjectIds,
     );
+    existingObjectIds.add(objectId);
     const duplicatePosition = createDuplicatePlacementPosition(
       selectedObject.worldObject,
       draft,
@@ -2309,9 +2510,7 @@ export const createPlacementEditor = ({
     );
 
     if (!worldObject) {
-      status = `Could not duplicate ${selectedObject.id}.`;
-      updateHud();
-      return false;
+      return null;
     }
 
     const editableObject: EditablePlacementObject = {
@@ -2322,7 +2521,6 @@ export const createPlacementEditor = ({
       isCreated: true,
     };
 
-    pushUndoSnapshot();
     registerEditableObject(editableObject);
 
     const duplicateDraft = createPlacementTransformDraft(worldObject);
@@ -2337,26 +2535,53 @@ export const createPlacementEditor = ({
     duplicateDraft.destinationName = draft.destinationName;
     duplicateDraft.mailboxVariant = draft.mailboxVariant;
     draftsByObjectId.set(objectId, duplicateDraft);
+    return editableObject;
+  };
 
-    const nextIndex = editableObjects.findIndex((object) => object.id === objectId);
+  const duplicateSelectedObject = (): boolean => {
+    const selectedObjects = getSelectedObjects();
 
-    if (nextIndex >= 0) {
-      selectedIndex = nextIndex;
-      objectSelect.value = String(nextIndex);
+    if (selectedObjects.length === 0) {
+      status = 'No selected object to duplicate.';
+      updateHud();
+      return false;
     }
 
-    status = `Duplicated ${selectedObject.id} as ${objectId}.`;
-    applyDraftToScene(editableObject);
-    updateMarker();
-    updateHud();
+    pushUndoSnapshot();
+    const existingObjectIds = new Set(editableObjects.map((object) => object.id));
+    const duplicatedObjects: EditablePlacementObject[] = [];
+
+    selectedObjects.forEach((selectedObject) => {
+      const duplicate = duplicatePlacementObject(
+        selectedObject,
+        ensureDraftForObject(selectedObject),
+        existingObjectIds,
+      );
+
+      if (duplicate) {
+        duplicatedObjects.push(duplicate);
+      }
+    });
+
+    if (duplicatedObjects.length === 0) {
+      status = `Could not duplicate ${getSelectedLabel()}.`;
+      updateHud();
+      return false;
+    }
+
+    selectObjectIds(
+      duplicatedObjects.map((object) => object.id),
+      duplicatedObjects.length === 1
+        ? `Duplicated ${selectedObjects[0]?.id ?? 'object'} as ${duplicatedObjects[0].id}.`
+        : `Duplicated ${duplicatedObjects.length} selected objects.`,
+    );
     return true;
   };
 
   const nudgeSelected = (dx: number, dz: number, recordHistory = true): void => {
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    const selectedObjects = getSelectedObjects();
 
-    if (!selectedObject || !draft) {
+    if (selectedObjects.length === 0) {
       status = 'No selected object.';
       updateHud();
       return;
@@ -2366,60 +2591,73 @@ export const createPlacementEditor = ({
       pushUndoSnapshot();
     }
 
-    draft.position = [draft.position[0] + dx, draft.position[1], draft.position[2] + dz];
-    status = `Moved ${selectedObject.id}.`;
-    applyDraftToScene(selectedObject);
+    selectedObjects.forEach((object) => {
+      const draft = ensureDraftForObject(object);
+      draft.position = [draft.position[0] + dx, draft.position[1], draft.position[2] + dz];
+      applyDraftToScene(object);
+    });
+    status = `Moved ${getSelectedLabel()}.`;
+    updateMarker();
     updateHud();
   };
 
   const rotateSelected = (delta: number): void => {
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    const selectedObjects = getSelectedObjects();
 
-    if (!selectedObject || !draft) {
+    if (selectedObjects.length === 0) {
       status = 'No selected object.';
       updateHud();
       return;
     }
 
     pushUndoSnapshot();
-    draft.rotationY += delta;
-    status = `Rotated ${selectedObject.id}.`;
-    applyDraftToScene(selectedObject);
+    selectedObjects.forEach((object) => {
+      const draft = ensureDraftForObject(object);
+      draft.rotationY += delta;
+      applyDraftToScene(object);
+    });
+    status = `Rotated ${getSelectedLabel()}.`;
+    updateMarker();
     updateHud();
   };
 
   const scaleSelected = (delta: number): void => {
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    const selectedObjects = getSelectedObjects();
 
-    if (!selectedObject || !draft) {
+    if (selectedObjects.length === 0) {
       status = 'No selected object.';
       updateHud();
       return;
     }
 
     pushUndoSnapshot();
-    draft.scaleMultiplier = Math.max(0.05, draft.scaleMultiplier + delta);
-    status = `Scaled ${selectedObject.id}.`;
-    applyDraftToScene(selectedObject);
+    selectedObjects.forEach((object) => {
+      const draft = ensureDraftForObject(object);
+      draft.scaleMultiplier = Math.max(0.05, draft.scaleMultiplier + delta);
+      applyDraftToScene(object);
+    });
+    status = `Scaled ${getSelectedLabel()}.`;
+    updateMarker();
     updateHud();
   };
 
   const offsetSelected = (delta: number): void => {
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    const selectedObjects = getSelectedObjects();
 
-    if (!selectedObject || !draft) {
+    if (selectedObjects.length === 0) {
       status = 'No selected object.';
       updateHud();
       return;
     }
 
     pushUndoSnapshot();
-    draft.yOffset += delta;
-    status = `Adjusted Y offset for ${selectedObject.id}.`;
-    applyDraftToScene(selectedObject);
+    selectedObjects.forEach((object) => {
+      const draft = ensureDraftForObject(object);
+      draft.yOffset += delta;
+      applyDraftToScene(object);
+    });
+    status = `Adjusted Y offset for ${getSelectedLabel()}.`;
+    updateMarker();
     updateHud();
   };
 
@@ -2465,39 +2703,188 @@ export const createPlacementEditor = ({
     return raycaster.ray.intersectPlane(groundPlane, hitPoint) !== null;
   };
 
+  const updateDragSelectOverlay = (): void => {
+    if (!boxSelectState) {
+      dragSelectOverlay.hidden = true;
+      return;
+    }
+
+    const parentRect = parent.getBoundingClientRect();
+    const left = Math.min(boxSelectState.startClientX, boxSelectState.currentClientX) - parentRect.left;
+    const top = Math.min(boxSelectState.startClientY, boxSelectState.currentClientY) - parentRect.top;
+    const width = Math.abs(boxSelectState.currentClientX - boxSelectState.startClientX);
+    const height = Math.abs(boxSelectState.currentClientY - boxSelectState.startClientY);
+
+    dragSelectOverlay.hidden = false;
+    dragSelectOverlay.style.left = `${left}px`;
+    dragSelectOverlay.style.top = `${top}px`;
+    dragSelectOverlay.style.width = `${width}px`;
+    dragSelectOverlay.style.height = `${height}px`;
+  };
+
+  const startBoxSelect = (
+    event: PointerEvent,
+    toggleObjectId: string | null = null,
+  ): void => {
+    boxSelectState = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      currentClientX: event.clientX,
+      currentClientY: event.clientY,
+      startPoint: hitPoint.clone(),
+      toggleObjectId,
+    };
+    updateDragSelectOverlay();
+    status = 'Drag a box over pavement tiles to select them.';
+    updateHud();
+
+    if (typeof domElement.setPointerCapture === 'function') {
+      domElement.setPointerCapture(event.pointerId);
+    }
+  };
+
+  const isBoxSelectClick = (): boolean => {
+    if (!boxSelectState) {
+      return false;
+    }
+
+    const dx = boxSelectState.currentClientX - boxSelectState.startClientX;
+    const dy = boxSelectState.currentClientY - boxSelectState.startClientY;
+    return Math.hypot(dx, dy) < placementEditorConfig.dragSelectThresholdPx;
+  };
+
+  const updateBoxSelectFromPointer = (event: PointerEvent): void => {
+    if (!boxSelectState || event.pointerId !== boxSelectState.pointerId) {
+      return;
+    }
+
+    boxSelectState.currentClientX = event.clientX;
+    boxSelectState.currentClientY = event.clientY;
+    updateDragSelectOverlay();
+    event.preventDefault();
+  };
+
+  const finishBoxSelect = (event: PointerEvent): void => {
+    if (!boxSelectState || event.pointerId !== boxSelectState.pointerId) {
+      return;
+    }
+
+    boxSelectState.currentClientX = event.clientX;
+    boxSelectState.currentClientY = event.clientY;
+    updateDragSelectOverlay();
+
+    const wasClick = isBoxSelectClick();
+    const state = boxSelectState;
+    boxSelectState = null;
+    dragSelectOverlay.hidden = true;
+
+    if (typeof domElement.releasePointerCapture === 'function') {
+      try {
+        domElement.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture can already be released by the browser.
+      }
+    }
+
+    if (wasClick) {
+      if (state.toggleObjectId) {
+        const nextSelection = new Set(selectedObjectIds);
+
+        if (nextSelection.has(state.toggleObjectId)) {
+          nextSelection.delete(state.toggleObjectId);
+        } else {
+          nextSelection.add(state.toggleObjectId);
+        }
+
+        selectObjectIds([...nextSelection], `Selected ${nextSelection.size} object(s).`);
+      } else {
+        clearSelection();
+      }
+
+      event.preventDefault();
+      return;
+    }
+
+    if (!updateHitPointFromPointer(event)) {
+      clearSelection();
+      event.preventDefault();
+      return;
+    }
+
+    const bounds = createPlacementSelectionBounds(state.startPoint, hitPoint);
+    const selectedIds = getMassSelectablePlacementObjectIdsInBounds(
+      editableObjects,
+      ensureDraftForObject,
+      bounds,
+    );
+
+    if (selectedIds.length === 0) {
+      clearSelection('No pavement tiles inside selection box.');
+      event.preventDefault();
+      return;
+    }
+
+    selectObjectIds(selectedIds, `Selected ${selectedIds.length} pavement tile(s).`);
+    event.preventDefault();
+  };
+
   const updateDragFromPointer = (event: PointerEvent): void => {
+    if (boxSelectState) {
+      updateBoxSelectFromPointer(event);
+      return;
+    }
+
     if (!dragState || event.pointerId !== dragState.pointerId || !updateHitPointFromPointer(event)) {
       return;
     }
 
-    const editableObject = editableObjectsById.get(dragState.objectId);
-    const draft = draftsByObjectId.get(dragState.objectId);
-    const nextPosition = createDraggedPlacementPosition(
-      draft ?? null,
-      hitPoint,
-      getCurrentSnap(),
-      dragState.offset,
-    );
+    const selectedObjects = dragState.objectIds
+      .map((objectId) => editableObjectsById.get(objectId))
+      .filter((object): object is EditablePlacementObject => object !== undefined);
 
-    if (!editableObject || !draft || !nextPosition) {
+    if (selectedObjects.length === 0) {
       status = 'Drag ignored: missing selected object.';
       updateHud();
       return;
     }
 
-    draft.position = nextPosition;
-    status = `Dragging ${editableObject.id}.`;
-    applyDraftToScene(editableObject);
+    const dx = hitPoint.x - dragState.startPoint.x;
+    const dz = hitPoint.z - dragState.startPoint.z;
+    const snap = getCurrentSnap();
+
+    selectedObjects.forEach((editableObject) => {
+      const initialPosition = dragState?.initialPositionsByObjectId.get(editableObject.id);
+
+      if (!initialPosition) {
+        return;
+      }
+
+      const draft = ensureDraftForObject(editableObject);
+      draft.position = [
+        placementEditorConfig.dragSnapEnabled ? snapPlacementCoordinate(initialPosition[0] + dx, snap) : initialPosition[0] + dx,
+        initialPosition[1],
+        placementEditorConfig.dragSnapEnabled ? snapPlacementCoordinate(initialPosition[2] + dz, snap) : initialPosition[2] + dz,
+      ];
+      applyDraftToScene(editableObject);
+    });
+    status = `Dragging ${dragState.objectIds.length === 1 ? dragState.objectIds[0] : `${dragState.objectIds.length} objects`}.`;
+    updateMarker();
     updateHud();
     event.preventDefault();
   };
 
   const stopDragging = (event: PointerEvent): void => {
+    if (boxSelectState) {
+      finishBoxSelect(event);
+      return;
+    }
+
     if (!dragState || event.pointerId !== dragState.pointerId) {
       return;
     }
 
-    const objectId = dragState.objectId;
+    const objectCount = dragState.objectIds.length;
     dragState = null;
     continuousMoveHistoryPushed = false;
 
@@ -2509,7 +2896,7 @@ export const createPlacementEditor = ({
       }
     }
 
-    status = `Dropped ${objectId}.`;
+    status = `Dropped ${objectCount === 1 ? getSelectedLabel() : `${objectCount} objects`}.`;
     updateHud();
     event.preventDefault();
   };
@@ -2522,26 +2909,51 @@ export const createPlacementEditor = ({
     const nearestIndex = getNearestObjectIndex(hitPoint);
 
     if (nearestIndex < 0) {
+      startBoxSelect(event);
+      event.preventDefault();
+      return;
+    }
+
+    const nearestObject = editableObjects[nearestIndex];
+
+    if (!nearestObject) {
       clearSelection();
       event.preventDefault();
       return;
     }
 
-    selectIndex(nearestIndex);
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    if (event.ctrlKey || event.metaKey) {
+      startBoxSelect(event, nearestObject.id);
+      event.preventDefault();
+      return;
+    }
 
-    if (selectedObject && draft) {
+    if (!selectedObjectIds.has(nearestObject.id)) {
+      selectIndex(nearestIndex);
+    } else {
+      setPrimarySelection(nearestObject.id);
+      updateMarker();
+      updateHud();
+    }
+
+    const selectedObject = getSelectedObject();
+    const selectedObjects = getSelectedObjects();
+
+    if (selectedObject && selectedObjects.length > 0) {
       pushUndoSnapshot();
+      const initialPositionsByObjectId = new Map<string, THREE.Vector3Tuple>();
+
+      selectedObjects.forEach((object) => {
+        initialPositionsByObjectId.set(object.id, [...ensureDraftForObject(object).position]);
+      });
+
       dragState = {
         pointerId: event.pointerId,
-        objectId: selectedObject.id,
-        offset: {
-          x: draft.position[0] - hitPoint.x,
-          z: draft.position[2] - hitPoint.z,
-        },
+        objectIds: selectedObjects.map((object) => object.id),
+        startPoint: hitPoint.clone(),
+        initialPositionsByObjectId,
       };
-      status = `Dragging ${selectedObject.id}.`;
+      status = `Dragging ${selectedObjects.length === 1 ? selectedObject.id : `${selectedObjects.length} objects`}.`;
       updateHud();
 
       if (typeof domElement.setPointerCapture === 'function') {
@@ -2671,19 +3083,20 @@ export const createPlacementEditor = ({
   };
 
   const deleteSelectedObject = (): void => {
-    const selectedObject = getSelectedObject();
-    const draft = getSelectedDraft();
+    const selectedObjects = getSelectedObjects();
 
-    if (!selectedObject || !draft) {
+    if (selectedObjects.length === 0) {
       status = 'No selected object to delete.';
       updateHud();
       return;
     }
 
     pushUndoSnapshot();
-    markPlacementDraftDeleted(draft);
-    applyDraftToScene(selectedObject);
-    clearSelection(`Deleted ${selectedObject.id} from the active editor layout. Save JSON to keep this change.`);
+    selectedObjects.forEach((object) => {
+      markPlacementDraftDeleted(ensureDraftForObject(object));
+      applyDraftToScene(object);
+    });
+    clearSelection(`Deleted ${selectedObjects.length} selected object(s) from the active editor layout. Save JSON to keep this change.`);
   };
 
   const handleOpenJsonFileClick = (): void => {
@@ -2750,9 +3163,11 @@ export const createPlacementEditor = ({
       }
 
       active = nextActive;
-      marker.visible = active && selectedIndex >= 0;
+      marker.visible = active && selectedObjectIds.size > 0;
       heldKeys.clear();
       dragState = null;
+      boxSelectState = null;
+      dragSelectOverlay.hidden = true;
       continuousMoveHistoryPushed = false;
       helpOverlay.hidden = !(active && helpVisible);
 
@@ -2963,6 +3378,7 @@ export const createPlacementEditor = ({
       domElement.removeEventListener('pointercancel', stopDragging);
       overlay.remove();
       helpOverlay.remove();
+      dragSelectOverlay.remove();
       marker.parent?.remove(marker);
       disposeObjectResources(marker);
     },
