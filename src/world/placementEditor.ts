@@ -868,8 +868,8 @@ export const createPlacementEditor = ({
   instructionsText.textContent = [
     'Button Instructions',
     'Drag palette tiles into the world to create new editable objects.',
-    'Preview Asset: put selected GLB on selected object.',
-    'Use Primitive: clear selected GLB preview.',
+    'Preview Asset: put selected model on selected object.',
+    'Use Primitive: clear selected model preview.',
     'Toggle Active: show/hide selected object in editor JSON.',
     'Set Spawn / Post Office / Delivery Board / Mailbox Target: assign gameplay role/action to selected asset.',
     'Generated pavement: select a pavement object, Toggle Active, then drag/scale it.',
@@ -924,7 +924,7 @@ export const createPlacementEditor = ({
     'Ctrl+Z undo  Ctrl+Shift+Z or Ctrl+Y redo',
     'Ctrl+S save active JSON  Ctrl+O reload active JSON  Ctrl+Shift+Delete clear',
     'C copy selected TS  Shift+C copy active JSON',
-    'Object panel toggles active state. Asset panel previews registered GLBs.',
+    'Object panel toggles active state. Asset panel previews registered runtime models.',
     'Gameplay panel assigns spawn, board, post office, mailbox, or decorative roles.',
     'Delete removes selected object from the active editor layout; source files are unchanged.',
   ].join('\n');

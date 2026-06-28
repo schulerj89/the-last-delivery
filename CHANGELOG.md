@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.52.0] - 2026-06-28
+
+### Added
+
+- Added FBX model loading support alongside the existing GLB path so lightweight source FBX props can be previewed and placed through the editor.
+- Added the complete Low Poly Nature Pack Lite FBX model set under `public/assets/models/nature/source-fbx/` for grass, flowers, pine, logs, rocks, bushes, mushrooms, tents, and small nature props.
+- Registered the full lightweight nature runtime set and mapped those assets to reusable town-editor placement templates.
+- Added smoke coverage for FBX registry entries and town-editor grass/tree/flower palette availability.
+
+### Changed
+
+- Updated asset scan reporting and asset docs to count the approved nature FBX runtime set while keeping larger fantasy and character packs curated.
+
 ## [0.51.0] - 2026-06-28
 
 ### Added

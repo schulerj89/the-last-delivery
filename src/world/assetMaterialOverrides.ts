@@ -237,7 +237,7 @@ export const applyAssetMaterialOverrides = (
   return () => {
     clonedMaterials.forEach((material) => {
       // These are per-instance material clones. Textures remain shared with the
-      // cached GLB source and are intentionally not disposed here.
+      // cached model source and are intentionally not disposed here.
       material.dispose();
     });
     clonedMaterials.clear();

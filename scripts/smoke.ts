@@ -261,11 +261,14 @@ const runAssetRegistrySmoke = (): void => {
   assetRegistry.forEach((asset) => {
     assert(!assetIds.has(asset.id), `Asset id should be unique: ${asset.id}`);
     assetIds.add(asset.id);
-    assert(asset.kind === 'gltf', `Asset should use the GLTF loader path: ${asset.id}`);
+    assert(asset.kind === 'gltf' || asset.kind === 'fbx', `Asset should use a supported model loader path: ${asset.id}`);
     assert(asset.id.trim().length > 0, `Asset id should be a non-empty string: ${asset.id}`);
     assert(typeof asset.url === 'string' && asset.url.trim().length > 0, `Asset url should be a valid string: ${asset.id}`);
     assert(asset.url.startsWith('/assets/models/'), `Asset should load from public assets models: ${asset.id}`);
-    assert(asset.url.endsWith('.glb'), `Asset should point to a GLB file: ${asset.id}`);
+    assert(
+      (asset.kind === 'gltf' && asset.url.endsWith('.glb')) || (asset.kind === 'fbx' && asset.url.endsWith('.fbx')),
+      `Asset should point to a matching runtime model file: ${asset.id}`,
+    );
     assert(asset.sourcePack.trim().length > 0, `Asset should identify a source pack: ${asset.id}`);
     assert(Number.isFinite(asset.defaultScale) && asset.defaultScale > 0, `Asset should define a positive default scale: ${asset.id}`);
     assert(asset.maxRecommendedBytes > 0, `Asset should define a positive size budget: ${asset.id}`);
@@ -287,7 +290,11 @@ const runAssetRegistrySmoke = (): void => {
     return totalBytes + stats.size;
   }, 0);
 
-  assert(selectedNatureAssets.length === 3, 'Exactly three selected nature assets should be registered for this pass.');
+  assert(selectedNatureAssets.length >= 30, 'The lightweight nature runtime set should expose the full nature prop catalog.');
+  assert(selectedNatureAssetIdSet.has('nature-grass01'), 'Selected nature assets should include grass clumps.');
+  assert(selectedNatureAssetIdSet.has('nature-grass-array'), 'Selected nature assets should include larger grass patches.');
+  assert(selectedNatureAssetIdSet.has('nature-pine01'), 'Selected nature assets should include pine trees.');
+  assert(selectedNatureAssetIdSet.has('nature-flower-yellow'), 'Selected nature assets should include flower props.');
   assert(selectedNatureBytes > 0, 'Selected nature runtime asset size should be measurable.');
   console.info(`Selected nature runtime assets: ${selectedNatureAssets.length} files, ${formatBytes(selectedNatureBytes)}.`);
 
@@ -678,6 +685,9 @@ const runTownEditorRouteSmoke = (): void => {
   const spawnMarkerItem = markerItems.find((item) => item.id === 'player-spawn');
   const boardMarkerItem = markerItems.find((item) => item.id === 'delivery-board');
   const crateItem = assetItems.find((item) => item.id === 'fantasy-box-001');
+  const grassItem = assetItems.find((item) => item.id === 'nature-grass01');
+  const pineItem = assetItems.find((item) => item.id === 'nature-pine01');
+  const flowerItem = assetItems.find((item) => item.id === 'nature-flower-yellow');
 
   assert(townEditorHtml.includes('/src/townEditor.ts'), 'Town editor route should load the isolated editor entry.');
   assert(townEditorScript.includes('createPlacementEditor'), 'Town editor should reuse the placement editor workflow.');
@@ -692,7 +702,7 @@ const runTownEditorRouteSmoke = (): void => {
   );
   assert(townEditorScript.includes("hudVariant: 'builder'"), 'Town editor should use the save-focused builder HUD variant.');
   assert(townEditorScript.includes('getAssetThumbnailDataUrl'), 'Town editor should render asset thumbnails for palette cards.');
-  assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load GLB assets through the existing asset loader.');
+  assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load runtime models through the existing asset loader.');
   assert(townEditorScript.includes('group.scale.setScalar'), 'Town editor thumbnails should scale the centered wrapper, not push model pivots off-center.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
@@ -702,6 +712,9 @@ const runTownEditorRouteSmoke = (): void => {
   assert(spawnMarkerItem !== undefined && spawnMarkerItem.placeable, 'Town editor should expose a draggable player spawn marker.');
   assert(boardMarkerItem !== undefined && boardMarkerItem.placeable, 'Town editor should expose a draggable delivery board marker.');
   assert(crateItem !== undefined && crateItem.placeable, 'Town editor should expose draggable fantasy crate assets.');
+  assert(grassItem !== undefined && grassItem.placeable, 'Town editor should expose draggable grass assets.');
+  assert(pineItem !== undefined && pineItem.placeable, 'Town editor should expose draggable pine tree assets.');
+  assert(flowerItem !== undefined && flowerItem.placeable, 'Town editor should expose draggable flower assets.');
   assert(crateItem.candidateObjectIds.includes('crate-large'), 'Fantasy crate asset should map to an editable crate template.');
   assert(crateItem.detail === 'drag to place', 'Placeable asset cards should describe reusable drag placement.');
   assert(

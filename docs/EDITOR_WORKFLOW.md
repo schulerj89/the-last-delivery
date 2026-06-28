@@ -6,8 +6,8 @@ The layout editor is a developer-only tool for tuning the village in the browser
 
 - Run `npm run dev`.
 - Open `/town-editor.html`.
-- Use the left asset shelf to browse generated ground pieces and selected runtime GLB assets.
-- Runtime asset cards show a small rendered preview when the GLB can be loaded.
+- Use the left asset shelf to browse generated ground pieces and selected runtime model assets.
+- Runtime asset cards show a small rendered preview when the model can be loaded.
 - World Marker cards provide draggable gameplay/location anchors such as player spawn, post office, delivery board, and mailbox targets.
 - Drag an asset square onto the grass to create a new editable world object from a safe template.
 - Use the search box to filter the asset shelf.
@@ -18,7 +18,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Press `Delete` or click `Delete Selected` to remove the selected object from the active editor layout.
 - The standalone builder starts on the clean playground canvas with grass and fence only, so authored village objects do not clutter the initial view.
 - Asset squares are reusable. Each drop creates a generated `editor-*` object id that can be moved, scaled, deleted, saved, and promoted.
-- Deleting from the editor does not delete GLB files or registry entries. It marks the selected object inactive in the exported layout JSON.
+- Deleting from the editor does not delete model files or registry entries. It marks the selected object inactive in the exported layout JSON.
 
 ## Enter Layout Mode
 
@@ -35,7 +35,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Press `F10` to toggle gameplay collision boxes.
 - The default playground view is a clean editor canvas: grass ground and boundary fence only.
 - The Object panel lists editable world objects and their current collision, interactable, objective, and destination data.
-- The Asset panel lists registered runtime GLB assets that are safe to preview.
+- The Asset panel lists registered runtime model assets that are safe to preview.
 - The Gameplay panel assigns the selected object a role/action such as spawn, post office, delivery board, mailbox target, or decorative.
 - The Button Instructions panel explains the editor buttons inside the HUD.
 - Generated pavement pieces are available in the Object panel as inactive editable ground objects.
@@ -103,9 +103,9 @@ Browser file saving is explicit. The editor does not silently write source files
 - Select an object from the Object panel.
 - Click `Toggle Active` to hide or show that object in the live editor.
 - Select a registered asset from the Asset panel.
-- Click `Preview Asset` to load that GLB onto the selected object using the current transform and dimensions.
+- Click `Preview Asset` to load that model onto the selected object using the current transform and dimensions.
 - Click `Use Primitive` to clear the asset preview and export a primitive render override.
-- Select `pavement-tile-square`, `pavement-tile-long`, or `pavement-tile-plaza` and click `Toggle Active` to place generated pavement without importing a GLB.
+- Select `pavement-tile-square`, `pavement-tile-long`, or `pavement-tile-plaza` and click `Toggle Active` to place generated pavement without importing a model.
 - Pavement tiles can be dragged, rotated, and scaled like other editable objects; they stay aligned to the ground while scaling.
 - Collision remains authored from the world object data; visual asset previews do not create mesh collision.
 

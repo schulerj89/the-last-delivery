@@ -1,6 +1,6 @@
 # Model Test Assets
 
-Place small optional GLB props in this folder.
+Place small optional runtime model props in this folder.
 
 Current registry entry:
 
@@ -8,6 +8,7 @@ Current registry entry:
 - `nature/nature-tree01.glb` - decorative forest-edge tree prop.
 - `nature/nature-rock.glb` - decorative path and boundary rock prop.
 - `nature/nature-simple-bush.glb` - decorative bush/plant prop.
+- `nature/source-fbx/*.fbx` - complete Low Poly Nature Pack Lite FBX prop set for the town editor palette.
 - `fantasy/house_001.glb` - selected fantasy house prop.
 - `fantasy/house_002.glb` - selected fantasy cottage prop.
 - `fantasy/house_003.glb` - selected fantasy cottage prop.
@@ -18,6 +19,6 @@ Current registry entry:
 - `fantasy/bag_001.glb` - selected fantasy bag/sack prop.
 - `characters/courier-creative-character.glb` - selected player courier character visual.
 
-The game always creates primitive placeholders first. If a GLB is missing, too large, or fails to load, the primitive placeholder remains and gameplay continues with the existing collider and interactions.
+The game always creates primitive placeholders first. If a GLB/FBX is missing, too large, or fails to load, the primitive placeholder remains and gameplay continues with the existing collider and interactions.
 
 Keep test props small and focused. Do not place full asset packs, animation sets, or compressed models that require DRACO, KTX2, or meshopt here yet.

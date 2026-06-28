@@ -142,7 +142,7 @@ const totalsByPack = foundExpectedPacks.map((packName) => {
 const runtimeModelBytes = runtimeFiles.reduce((sum, file) => sum + file.bytes, 0);
 const selectedNatureRuntimeFiles = runtimeFiles.filter((file) => (
   file.relativePath.startsWith('nature/')
-  && (file.extension === '.glb' || file.extension === '.gltf')
+  && (file.extension === '.glb' || file.extension === '.gltf' || file.extension === '.fbx')
 ));
 const selectedNatureRuntimeBytes = selectedNatureRuntimeFiles.reduce((sum, file) => sum + file.bytes, 0);
 const selectedFantasyRuntimeFiles = runtimeFiles.filter((file) => (

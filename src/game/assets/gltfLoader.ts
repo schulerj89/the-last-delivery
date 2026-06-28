@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as cloneSkeletonAwareObject } from 'three/addons/utils/SkeletonUtils.js';
 import { disposeMaterial } from '../resources';
@@ -44,7 +45,8 @@ export interface AssetCache {
   getInstanceCount(assetId: string): number;
 }
 
-const loader = new GLTFLoader();
+const gltfLoader = new GLTFLoader();
+const fbxLoader = new FBXLoader();
 
 const getErrorMessage = (error: unknown): string => (
   error instanceof Error ? error.message : String(error)
@@ -96,7 +98,7 @@ const configureAssetScene = (
 
 const loadGltfSource = (asset: AssetDefinition): Promise<THREE.Group> => (
   new Promise<THREE.Group>((resolve, reject) => {
-    loader.load(
+    gltfLoader.load(
       asset.url,
       (gltf) => {
         resolve(configureAssetScene(asset, gltf.scene, gltf.animations));
@@ -105,6 +107,32 @@ const loadGltfSource = (asset: AssetDefinition): Promise<THREE.Group> => (
       reject,
     );
   })
+);
+
+const loadFbxSource = (asset: AssetDefinition): Promise<THREE.Group> => (
+  new Promise<THREE.Group>((resolve, reject) => {
+    fbxLoader.load(
+      asset.url,
+      (object) => {
+        const group = object instanceof THREE.Group ? object : new THREE.Group();
+        const animations = Array.isArray((object as unknown as { animations?: unknown }).animations)
+          ? (object as unknown as { animations: THREE.AnimationClip[] }).animations
+          : [];
+
+        if (group !== object) {
+          group.add(object);
+        }
+
+        resolve(configureAssetScene(asset, group, animations));
+      },
+      undefined,
+      reject,
+    );
+  })
+);
+
+const loadModelSource = (asset: AssetDefinition): Promise<THREE.Group> => (
+  asset.kind === 'fbx' ? loadFbxSource(asset) : loadGltfSource(asset)
 );
 
 const disposeObjectResources = (object: THREE.Object3D): void => {
@@ -171,7 +199,7 @@ export const cloneGltfSourceForInstance = (source: THREE.Object3D): THREE.Object
 
 export const createAssetCache = ({
   canLoad = defaultCanLoad,
-  loadSource = loadGltfSource,
+  loadSource = loadModelSource,
   log = console,
 }: AssetCacheOptions = {}): AssetCache => {
   const cachedEntryPromises = new Map<string, Promise<CachedGltfAsset>>();
@@ -185,15 +213,15 @@ export const createAssetCache = ({
     const asset = getAssetDefinition(assetId);
 
     if (!asset) {
-      return Promise.reject(new Error(`Unknown GLB asset id: ${assetId}`));
+      return Promise.reject(new Error(`Unknown model asset id: ${assetId}`));
     }
 
     if (cacheDisposed) {
-      return Promise.reject(new Error(`GLB asset cache has been disposed: ${assetId}`));
+      return Promise.reject(new Error(`Model asset cache has been disposed: ${assetId}`));
     }
 
     if (!canLoad()) {
-      return Promise.reject(new Error(`GLB asset loading is only available in the browser: ${assetId}`));
+      return Promise.reject(new Error(`Model asset loading is only available in the browser: ${assetId}`));
     }
 
     const cachedEntryPromise = cachedEntryPromises.get(assetId);
@@ -210,7 +238,7 @@ export const createAssetCache = ({
       .then((source) => {
         if (cacheDisposed) {
           disposeObjectResources(source);
-          throw new Error(`GLB asset cache was disposed before ${asset.id} finished loading.`);
+          throw new Error(`Model asset cache was disposed before ${asset.id} finished loading.`);
         }
 
         const animations = getSceneAnimationClips(source);
@@ -269,9 +297,9 @@ export const createAssetCache = ({
       },
     };
 
-    // A world instance is just a clone of the cached source asset. Disposing it
+    // A world instance is just a clone of the cached source model. Disposing it
     // removes that clone and releases its usage count; it must not dispose the
-    // shared GLB geometry, materials, or textures still owned by the cache.
+    // shared geometry, materials, or textures still owned by the cache.
     object.userData.disposeAssetInstance = handle.dispose;
     return handle;
   };
@@ -286,7 +314,7 @@ export const createAssetCache = ({
       return false;
     }
 
-    // A cached source asset owns the parsed GLB resources. It is only safe to
+    // A cached source asset owns the parsed model resources. It is only safe to
     // dispose after every world instance has been disposed, because clones
     // share the source geometry, materials, and textures.
     disposeObjectResources(entry.source);
