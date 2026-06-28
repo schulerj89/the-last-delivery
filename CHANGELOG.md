@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.16] - 2026-06-28
+
+### Fixed
+
+- Centered runtime mailbox interaction prompts on the mailbox object instead of inherited template-side anchors.
+- Increased mailbox prompt reach so standing in front of a mailbox reliably shows the interaction prompt.
+- Added smoke coverage for runtime mailbox prompt centering.
+
 ## [0.53.15] - 2026-06-28
 
 ### Fixed

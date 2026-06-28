@@ -8,7 +8,7 @@ import { getWorldObjectGameplay } from './worldObjectGameplay';
 
 export const playgroundInteractionReach = {
   deliveryBoardMinimumRadius: 2.2,
-  mailboxMinimumRadius: 1.8,
+  mailboxMinimumRadius: 2.35,
 } as const;
 
 interface PlaygroundInteractableOptions {
@@ -19,6 +19,10 @@ interface PlaygroundInteractableOptions {
 const createInteractablePosition = (object: WorldObjectDefinition): THREE.Vector3 => {
   if (!object.interactable) {
     throw new Error(`Missing interactable data for world object: ${object.id}`);
+  }
+
+  if (getWorldObjectGameplay(object).role === 'mailbox') {
+    return new THREE.Vector3(object.position[0], object.interactable.position[1], object.position[2]);
   }
 
   return new THREE.Vector3(...object.interactable.position);

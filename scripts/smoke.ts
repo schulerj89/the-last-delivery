@@ -1773,6 +1773,9 @@ const runInteractionSmoke = (): void => {
   const wrongMailbox = wrongDeliveryTarget
     ? interactables.find((interactable) => interactable.id === wrongDeliveryTarget.targetInteractableId)
     : undefined;
+  const firstDeliveryTargetObject = firstDelivery
+    ? villageWorldObjects.find((object) => object.id === firstDelivery.targetWorldObjectId)
+    : undefined;
   const activeBoardObject = getWorldObjectsByInteractionAction('open-delivery-board')[0];
   const board = activeBoardObject
     ? interactables.find((interactable) => interactable.id === activeBoardObject.id)
@@ -1796,6 +1799,13 @@ const runInteractionSmoke = (): void => {
   assert(board === undefined || getInteractablePromptText(board.prompt).includes('in progress'), 'Board should report an active delivery.');
 
   assert(mailbox.radius >= playgroundInteractionReach.mailboxMinimumRadius, 'Mailbox prompt radius should be forgiving in gameplay.');
+  assert(firstDeliveryTargetObject !== undefined, 'Mailbox interactable smoke should resolve the active delivery target object.');
+  assert(
+    firstDeliveryTargetObject !== undefined
+    && mailbox.position.x === firstDeliveryTargetObject.position[0]
+    && mailbox.position.z === firstDeliveryTargetObject.position[2],
+    'Mailbox runtime interaction should be centered on the mailbox object for easier approach from the front.',
+  );
   assert(getInteractablePromptText(mailbox.prompt) === 'Complete delivery', 'Mailbox should prompt for completion after acceptance.');
   if (wrongMailbox) {
     assert(getInteractablePromptText(wrongMailbox.prompt) === 'Wrong mailbox', 'Wrong mailbox should prompt clearly.');
