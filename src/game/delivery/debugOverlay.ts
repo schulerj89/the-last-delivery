@@ -9,11 +9,15 @@ const formatStatus = (state: DeliveryState): string => state.status.replace('-',
 
 const formatObjective = (state: DeliveryState): string => {
   if (state.status === 'delivery-accepted') {
-    return 'Deliver to mailbox';
+    return `Deliver to ${state.activeTargetWorldObjectId ?? 'target'}`;
   }
 
   return 'Go to delivery board';
 };
+
+const formatActiveDelivery = (state: DeliveryState): string => state.activeDelivery?.title ?? 'None';
+
+const formatActiveTarget = (state: DeliveryState): string => state.activeTargetWorldObjectId ?? 'None';
 
 export const createDeliveryDebugOverlay = (parent: HTMLElement): DeliveryDebugOverlay => {
   const overlay = document.createElement('div');
@@ -26,6 +30,8 @@ export const createDeliveryDebugOverlay = (parent: HTMLElement): DeliveryDebugOv
       overlay.textContent = [
         'Delivery',
         `Status ${formatStatus(state)}`,
+        `Active ${formatActiveDelivery(state)}`,
+        `Target ${formatActiveTarget(state)}`,
         `Objective ${formatObjective(state)}`,
         `Completed ${state.completedCount}`,
       ].join('\n');

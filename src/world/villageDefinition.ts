@@ -2,7 +2,6 @@ import type * as THREE from 'three';
 import type { WorldObjectDefinition, WorldObjectKind } from './types';
 
 export const playerSpawnPosition: THREE.Vector3Tuple = [2.25, 0, -1.8];
-export const deliveryTargetObjectId = 'mailbox';
 
 export const villageWorldObjects: readonly WorldObjectDefinition[] = [
   {
@@ -87,6 +86,13 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     collider: {
       position: [5.25, 0.62, 1.65],
       size: [0.9, 1.2, 0.7],
+    },
+    interactable: {
+      position: [4.35, 0, 1.65],
+      radius: 1.15,
+    },
+    objectiveAnchor: {
+      position: [5.25, 2.08, 1.65],
     },
   },
   {
@@ -199,4 +205,3 @@ export const collidableWorldObjects = villageWorldObjects.filter((worldObject) =
 export const interactableWorldObjects = villageWorldObjects.filter((worldObject) => worldObject.interactable);
 
 export const deliveryBoardObject = getWorldObject('delivery-board');
-export const activeDeliveryTargetObject = getWorldObject(deliveryTargetObjectId);

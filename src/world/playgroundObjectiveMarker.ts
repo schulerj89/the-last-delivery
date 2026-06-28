@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { WorldObjectDefinition } from './types';
-import { activeDeliveryTargetObject, deliveryBoardObject } from './villageDefinition';
+import { deliveryBoardObject, getWorldObject } from './villageDefinition';
 
 const createObjectiveMarker = (
   name: string,
@@ -42,12 +42,36 @@ const getObjectiveAnchorPosition = (object: WorldObjectDefinition): THREE.Vector
   return object.objectiveAnchor.position;
 };
 
+export const resolveObjectiveAnchorForWorldObject = (worldObjectId: string): THREE.Vector3Tuple => (
+  getObjectiveAnchorPosition(getWorldObject(worldObjectId))
+);
+
+export const setObjectiveMarkerTarget = (
+  marker: THREE.Object3D,
+  worldObjectId: string | null,
+): boolean => {
+  if (!worldObjectId) {
+    marker.userData.targetWorldObjectId = null;
+    return false;
+  }
+
+  if (marker.userData.targetWorldObjectId === worldObjectId) {
+    return true;
+  }
+
+  const position = resolveObjectiveAnchorForWorldObject(worldObjectId);
+  marker.position.set(...position);
+  marker.userData.baseY = position[1];
+  marker.userData.targetWorldObjectId = worldObjectId;
+  return true;
+};
+
 export const createDeliveryBoardObjectiveMarker = (): THREE.Group => (
   createObjectiveMarker('objective:delivery-board', getObjectiveAnchorPosition(deliveryBoardObject), 0x7cf2cf)
 );
 
-export const createMailboxObjectiveMarker = (): THREE.Group => (
-  createObjectiveMarker('objective:mailbox', getObjectiveAnchorPosition(activeDeliveryTargetObject), 0xffe45c)
+export const createDeliveryTargetObjectiveMarker = (): THREE.Group => (
+  createObjectiveMarker('objective:delivery-target', [0, 2, 0], 0xffe45c)
 );
 
 export const updateObjectiveMarker = (marker: THREE.Object3D, elapsedSeconds: number): void => {

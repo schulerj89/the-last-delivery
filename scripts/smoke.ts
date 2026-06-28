@@ -1,17 +1,19 @@
 import { Vector3 } from 'three';
 import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
-import { createDeliveryController } from '../src/game/delivery';
+import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
 import { playerMovementSettings } from '../src/game/player';
 import { createPlayground } from '../src/world/playground';
 import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
 import {
   createDeliveryBoardObjectiveMarker,
-  createMailboxObjectiveMarker,
+  createDeliveryTargetObjectiveMarker,
+  resolveObjectiveAnchorForWorldObject,
+  setObjectiveMarkerTarget,
   updateObjectiveMarker,
 } from '../src/world/playgroundObjectiveMarker';
-import { deliveryTargetObjectId, villageWorldObjects } from '../src/world/villageDefinition';
+import { villageWorldObjects } from '../src/world/villageDefinition';
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
@@ -54,17 +56,25 @@ const runWorldDefinitionSmoke = (): void => {
 
   const mailboxObjects = villageWorldObjects.filter((object) => object.kind === 'mailbox');
   const cottageObjects = villageWorldObjects.filter((object) => object.kind === 'cottage');
-  const deliveryTarget = villageWorldObjects.find((object) => object.id === deliveryTargetObjectId);
   const deliveryBoard = villageWorldObjects.find((object) => object.id === 'delivery-board');
   const postOffice = villageWorldObjects.find((object) => object.id === 'post-office');
   const well = villageWorldObjects.find((object) => object.id === 'town-well');
 
-  assert(deliveryTarget !== undefined, 'Delivery target world object should exist.');
-  assert(deliveryTarget.kind === 'mailbox', 'Delivery target should be a mailbox.');
-  assert(deliveryTarget.interactable !== undefined, 'Delivery target should be interactable.');
-  assert(deliveryTarget.objectiveAnchor !== undefined, 'Delivery target should have an objective anchor.');
+  deliveryJobs.forEach((job) => {
+    const target = villageWorldObjects.find((object) => object.id === job.targetWorldObjectId);
+
+    assert(target !== undefined, `Delivery job target world object should exist: ${job.id}`);
+    assert(target.kind === 'mailbox', `Delivery job target should be a mailbox: ${job.id}`);
+    assert(target.id === job.targetInteractableId, `Delivery job target ids should match current mailbox interactables: ${job.id}`);
+    assert(target.interactable !== undefined, `Delivery job target should be interactable: ${job.id}`);
+    assert(target.objectiveAnchor !== undefined, `Delivery job target should have an objective anchor: ${job.id}`);
+    assert(Number.isFinite(job.reward) && job.reward > 0, `Delivery job reward should be positive: ${job.id}`);
+  });
+
+  assert(deliveryJobs.length >= 3, 'Village should define at least three delivery jobs.');
   assert(mailboxObjects.length === 2, 'Village should define exactly two mailbox placeholders.');
-  assert(mailboxObjects.filter((object) => object.interactable).length === 1, 'Only one mailbox should be interactable for now.');
+  assert(mailboxObjects.every((object) => object.interactable), 'Every village mailbox should be interactable.');
+  assert(mailboxObjects.every((object) => object.objectiveAnchor), 'Every village mailbox should have an objective anchor.');
   assert(cottageObjects.length === 3, 'Village should define exactly three cottage placeholders.');
   assert(deliveryBoard !== undefined, 'Delivery board world object should exist.');
   assert(postOffice !== undefined, 'Post office world object should exist.');
@@ -79,32 +89,59 @@ const runWorldDefinitionSmoke = (): void => {
 
 const runDeliveryStateSmoke = (): void => {
   const delivery = createDeliveryController();
+  const firstDelivery = deliveryJobs[0];
+  const wrongTarget = deliveryJobs.find((job) => job.targetInteractableId !== firstDelivery.targetInteractableId);
+
+  assert(wrongTarget !== undefined, 'Delivery jobs should include at least two mailbox targets.');
 
   assert(delivery.getState().status === 'idle', 'Delivery should start idle.');
+  assert(delivery.getState().activeDeliveryId === null, 'Delivery should start without an active delivery.');
   assert(delivery.getState().completedCount === 0, 'Completed count should start at 0.');
 
-  assert(delivery.acceptDelivery() === 'Delivery accepted.', 'Accepting delivery should return confirmation.');
-  assert(delivery.getState().status === 'delivery-accepted', 'Accepted delivery should update state.');
+  assert(delivery.acceptDelivery().includes(firstDelivery.title), 'Accepting delivery should return the active delivery title.');
+  assert(delivery.getState().status === 'delivery-accepted', 'Accepted delivery should update status.');
+  assert(delivery.getState().activeDeliveryId === firstDelivery.id, 'Accepting delivery should set the active delivery id.');
+  assert(delivery.getState().activeTargetId === firstDelivery.targetInteractableId, 'Accepting delivery should set the active target id.');
 
-  assert(delivery.completeDelivery() === 'Delivery completed.', 'Completing delivery should return confirmation.');
+  assert(
+    delivery.completeDelivery(wrongTarget.targetInteractableId).startsWith('Wrong mailbox.'),
+    'Wrong target should not complete the delivery.',
+  );
+  assert(delivery.getState().completedCount === 0, 'Wrong target should not increment completed count.');
+  assert(delivery.getState().activeDeliveryId === firstDelivery.id, 'Wrong target should keep the active delivery.');
+
+  assert(
+    delivery.completeDelivery(firstDelivery.targetInteractableId).includes(firstDelivery.title),
+    'Completing the correct target should return confirmation.',
+  );
   assert(delivery.getState().status === 'delivery-completed', 'Completed delivery should update state.');
   assert(delivery.getState().completedCount === 1, 'Completing delivery should increment count.');
+  assert(delivery.getState().completedDeliveryIds.includes(firstDelivery.id), 'Completing delivery should track completed ids.');
+
+  const secondDelivery = deliveryJobs[1];
+  assert(delivery.acceptDelivery().includes(secondDelivery.title), 'Board should accept the next available delivery.');
+  assert(delivery.getState().activeDeliveryId === secondDelivery.id, 'Next available delivery should become active.');
 };
 
 const runInteractionSmoke = (): void => {
   const delivery = createDeliveryController();
   const interactables = createPlaygroundInteractables(delivery);
   const mailbox = interactables.find((interactable) => interactable.id === 'mailbox');
+  const eastMailbox = interactables.find((interactable) => interactable.id === 'mailbox-east');
   const board = interactables.find((interactable) => interactable.id === 'delivery-board');
 
   assert(mailbox !== undefined, 'Mailbox interactable should initialize.');
+  assert(eastMailbox !== undefined, 'East mailbox interactable should initialize.');
   assert(board !== undefined, 'Delivery board interactable should initialize.');
 
   assert(typeof board.prompt === 'function' && board.prompt() === 'Accept delivery', 'Board should prompt for delivery acceptance.');
-  assert(board.interact() === 'Delivery accepted.', 'Board interaction should accept delivery.');
+  assert(board.interact().includes(deliveryJobs[0].title), 'Board interaction should accept the first delivery.');
 
   assert(typeof mailbox.prompt === 'function' && mailbox.prompt() === 'Complete delivery', 'Mailbox should prompt for completion after acceptance.');
-  assert(mailbox.interact() === 'Delivery completed.', 'Mailbox interaction should complete delivery.');
+  assert(typeof eastMailbox.prompt === 'function' && eastMailbox.prompt() === 'Wrong mailbox', 'Wrong mailbox should prompt clearly.');
+  assert(eastMailbox.interact().startsWith('Wrong mailbox.'), 'Wrong mailbox interaction should not complete delivery.');
+  assert(delivery.getState().completedCount === 0, 'Wrong mailbox interaction should not increment delivery count.');
+  assert(mailbox.interact().includes(deliveryJobs[0].title), 'Correct mailbox interaction should complete delivery.');
   assert(delivery.getState().completedCount === 1, 'Mailbox completion should increment delivery count.');
 };
 
@@ -136,9 +173,12 @@ const runModuleSmoke = (): void => {
   assert(resolved.position.x <= playgroundCollisionWorld.bounds.maxX, 'Collision should clamp X inside bounds.');
   assert(resolved.position.z <= playgroundCollisionWorld.bounds.maxZ, 'Collision should clamp Z inside bounds.');
 
-  const marker = createMailboxObjectiveMarker();
-  assert(marker.name === 'objective:mailbox', 'Mailbox objective marker should initialize.');
-  assert(marker.visible === false, 'Mailbox objective marker should start hidden.');
+  const marker = createDeliveryTargetObjectiveMarker();
+  assert(marker.name === 'objective:delivery-target', 'Delivery target objective marker should initialize.');
+  assert(marker.visible === false, 'Delivery target objective marker should start hidden.');
+  assert(resolveObjectiveAnchorForWorldObject(deliveryJobs[0].targetWorldObjectId).length === 3, 'Objective marker should resolve active target anchors.');
+  assert(setObjectiveMarkerTarget(marker, deliveryJobs[0].targetWorldObjectId), 'Objective marker should accept an active target.');
+  assert(marker.userData.targetWorldObjectId === deliveryJobs[0].targetWorldObjectId, 'Objective marker should track target object id.');
 
   const boardMarker = createDeliveryBoardObjectiveMarker();
   assert(boardMarker.name === 'objective:delivery-board', 'Delivery board objective marker should initialize.');

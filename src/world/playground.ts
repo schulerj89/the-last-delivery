@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import type { WorldObjectDefinition } from './types';
 import {
-  activeDeliveryTargetObject,
   deliveryBoardObject,
+  getWorldObject,
   getWorldObjectsByKind,
   playerSpawnPosition,
 } from './villageDefinition';
@@ -258,7 +258,8 @@ const addPathSegment = (
 };
 
 const addPaths = (group: THREE.Group): void => {
-  const mailboxPathPoint = activeDeliveryTargetObject.interactable?.position ?? activeDeliveryTargetObject.position;
+  const mailbox = getWorldObject('mailbox');
+  const mailboxPathPoint = mailbox.interactable?.position ?? mailbox.position;
   const boardPathPoint = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
   const well = getWorldObjectsByKind('well')[0];
 

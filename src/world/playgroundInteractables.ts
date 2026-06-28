@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { DeliveryController } from '../game/delivery';
 import type { Interactable } from '../game/interaction';
 import type { WorldObjectDefinition } from './types';
-import { activeDeliveryTargetObject, deliveryBoardObject } from './villageDefinition';
+import { deliveryBoardObject, getWorldObjectsByKind } from './villageDefinition';
 
 const createInteractablePosition = (object: WorldObjectDefinition): THREE.Vector3 => {
   if (!object.interactable) {
@@ -21,30 +21,40 @@ const getInteractableRadius = (object: WorldObjectDefinition): number => {
 };
 
 export const createPlaygroundInteractables = (delivery: DeliveryController): readonly Interactable[] => [
-  {
-    id: activeDeliveryTargetObject.id,
-    position: createInteractablePosition(activeDeliveryTargetObject),
-    radius: getInteractableRadius(activeDeliveryTargetObject),
-    prompt: () => (
-      delivery.getState().status === 'delivery-accepted'
-        ? 'Complete delivery'
-        : 'Start at delivery board'
-    ),
-    interact: () => (
-      delivery.getState().status === 'delivery-accepted'
-        ? delivery.completeDelivery()
-        : 'Check the delivery board first.'
-    ),
-  },
+  ...getWorldObjectsByKind('mailbox')
+    .filter((mailbox) => mailbox.interactable)
+    .map((mailbox): Interactable => ({
+      id: mailbox.id,
+      position: createInteractablePosition(mailbox),
+      radius: getInteractableRadius(mailbox),
+      prompt: () => {
+        const state = delivery.getState();
+
+        if (state.status !== 'delivery-accepted') {
+          return 'Start at delivery board';
+        }
+
+        return state.activeTargetId === mailbox.id
+          ? 'Complete delivery'
+          : 'Wrong mailbox';
+      },
+      interact: () => (
+        delivery.getState().status === 'delivery-accepted'
+          ? delivery.completeDelivery(mailbox.id)
+          : 'Check the delivery board first.'
+      ),
+    })),
   {
     id: deliveryBoardObject.id,
     position: createInteractablePosition(deliveryBoardObject),
     radius: getInteractableRadius(deliveryBoardObject),
-    prompt: () => (
-      delivery.getState().status === 'delivery-accepted'
-        ? 'Delivery in progress'
-        : 'Accept delivery'
-    ),
+    prompt: () => {
+      const state = delivery.getState();
+
+      return state.status === 'delivery-accepted'
+        ? `${state.activeDelivery?.title ?? 'Delivery'} in progress`
+        : 'Accept delivery';
+    },
     interact: () => delivery.acceptDelivery(),
   },
 ];

@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.14.0] - 2026-06-28
+
+### Added
+
+- Added simple delivery job definitions with ids, titles, notes, mailbox targets, and rewards.
+- Added next-available delivery acceptance, active delivery tracking, active target tracking, and completed delivery ids.
+- Added multi-mailbox delivery completion checks, wrong-mailbox feedback, and active-target objective marker retargeting.
+- Expanded smoke validation for delivery job targets, wrong-target completion, and objective marker target resolution.
+
 ## [0.13.0] - 2026-06-28
 
 ### Added
