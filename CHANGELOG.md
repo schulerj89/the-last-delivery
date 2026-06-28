@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.29.0] - 2026-06-28
+
+### Added
+
+- Added an F2 top-down village layout debug mode with a separate orthographic camera.
+- Added layout debug visuals for village bounds, configured zones, path lanes, interactable radii, collider outlines, objective anchors, and important object labels.
+- Added a compact layout HUD with active/inactive state, object counts by kind, draw calls, and triangle counts.
+- Added shared village path guide data so rendered paths and layout debug path lanes use the same route definitions.
+- Added smoke checks for layout debug config, zone validity, important object resolution, path guide validity, and debug helper initialization.
+
+### Changed
+
+- Updated debug key handling so layout mode temporarily shows collider and visual-bounds helpers, then restores prior debug visibility when F2 exits.
+
 ## [0.28.0] - 2026-06-28
 
 ### Added

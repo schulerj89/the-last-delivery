@@ -43,6 +43,12 @@ import {
   performanceBudgetConfig,
 } from '../src/game/performance';
 import { createResourceTracker } from '../src/game/resources';
+import {
+  createVillageLayoutDebugView,
+  getImportantLayoutObjects,
+  getLayoutObjectCountsByKind,
+  layoutDebugConfig,
+} from '../src/world/layoutDebug';
 import { createPlayground } from '../src/world/playground';
 import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
@@ -58,6 +64,7 @@ import { createPlaygroundVisualBoundsDebugView } from '../src/world/playgroundVi
 import { createMailboxProp } from '../src/world/props/createMailbox';
 import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
 import { playerSpawnPosition, villageWorldObjects } from '../src/world/villageDefinition';
+import { getVillagePathGuides } from '../src/world/villagePaths';
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
@@ -585,6 +592,10 @@ const runVillageLayoutConfigSmoke = (): void => {
 
   const zoneIds = new Set(zones.map((zone) => zone.id));
   assert(zones.length === 8, 'Village layout should define all intended major zones.');
+  zones.forEach((zone) => {
+    assert(zone.center.length === 2 && zone.center.every((component) => Number.isFinite(component)), `Layout zone should have a valid center: ${zone.id}`);
+    assert(zone.radius > 0, `Layout zone should have a positive radius: ${zone.id}`);
+  });
   assert(zoneIds.has('spawn-start-path'), 'Village layout should include the spawn/start path zone.');
   assert(zoneIds.has('post-office-delivery-board'), 'Village layout should include the post office and delivery board zone.');
   assert(zoneIds.has('central-plaza-well'), 'Village layout should include the central plaza and well zone.');
@@ -593,6 +604,45 @@ const runVillageLayoutConfigSmoke = (): void => {
   assert(zoneIds.has('north-house-target'), 'Village layout should include the north house target zone.');
   assert(zoneIds.has('forest-edge-boundary'), 'Village layout should include the forest edge boundary zone.');
   assert(zoneIds.has('market-cart-dressing'), 'Village layout should include the market cart dressing zone.');
+};
+
+const runLayoutDebugSmoke = (): void => {
+  assert(layoutDebugConfig.toggleKey === 'F2', 'Layout debug mode should use F2 as the toggle key.');
+  assert(layoutDebugConfig.cameraHeight > 0, 'Layout debug camera height should be positive.');
+  assert(layoutDebugConfig.viewPadding >= 0, 'Layout debug view padding should not be negative.');
+
+  const importantObjects = getImportantLayoutObjects();
+  const importantIds = new Set(importantObjects.map((object) => object.id));
+  assert(importantObjects.length === layoutDebugConfig.importantObjectIds.length, 'Every important layout object id should resolve.');
+  assert(importantIds.size === layoutDebugConfig.importantObjectIds.length, 'Important layout object ids should be unique.');
+
+  const objectCounts = getLayoutObjectCountsByKind();
+  assert(objectCounts.mailbox === 3, 'Layout object counts should include three mailboxes.');
+  assert(objectCounts.cottage === 3, 'Layout object counts should include three cottages.');
+
+  getVillagePathGuides().forEach((path) => {
+    assert(path.id.trim().length > 0, 'Layout path guide should have an id.');
+    assert(path.width > 0, `Layout path guide should have positive width: ${path.id}`);
+    assert(isInsideVillageBounds(path.start), `Layout path guide start should be inside village bounds: ${path.id}`);
+    assert(isInsideVillageBounds(path.end), `Layout path guide end should be inside village bounds: ${path.id}`);
+  });
+
+  const layoutDebugView = createVillageLayoutDebugView(1280, 720);
+  assert(layoutDebugView.object.name === 'layout-debug:view', 'Layout debug view should initialize.');
+  assert(layoutDebugView.camera.isOrthographicCamera, 'Layout debug mode should use an orthographic top-down camera.');
+  assert(!layoutDebugView.isActive(), 'Layout debug view should start inactive.');
+  assert(layoutDebugView.object.getObjectByName('layout:bounds') !== undefined, 'Layout debug view should include village bounds.');
+  assert(layoutDebugView.object.getObjectByName('layout:zone:central-plaza-well') !== undefined, 'Layout debug view should include zone outlines.');
+  assert(layoutDebugView.object.getObjectByName('layout:path:village:main-path-spawn-to-plaza') !== undefined, 'Layout debug view should include path lane guides.');
+  assert(layoutDebugView.object.getObjectByName('layout:interactable:delivery-board') !== undefined, 'Layout debug view should include interactable radius helpers.');
+  assert(layoutDebugView.object.getObjectByName('layout:collider:delivery-board') !== undefined, 'Layout debug view should include collider outlines.');
+  assert(layoutDebugView.object.getObjectByName('layout:objective-anchor:delivery-board') !== undefined, 'Layout debug view should include objective anchor helpers.');
+  assert(layoutDebugView.object.getObjectByName('layout:label:spawn') !== undefined, 'Layout debug view should include important object labels.');
+  assert(layoutDebugView.toggle(), 'Layout debug view should toggle active.');
+  assert(layoutDebugView.object.visible, 'Layout debug view object should be visible while active.');
+  layoutDebugView.setActive(false);
+  assert(!layoutDebugView.object.visible, 'Layout debug view object should hide when inactive.');
+  layoutDebugView.dispose();
 };
 
 const runDeliveryStateSmoke = (): void => {
@@ -936,6 +986,7 @@ await runAssetCacheSmoke();
 runAssetFittingSmoke();
 runWorldDefinitionSmoke();
 runVillageLayoutConfigSmoke();
+runLayoutDebugSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();
 runPerformanceSmoke();

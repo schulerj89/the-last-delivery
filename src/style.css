@@ -45,6 +45,22 @@ canvas {
   min-width: 220px;
 }
 
+.layout-debug-hud {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 24px));
+  padding: 8px 10px;
+  color: #f8f2dc;
+  background: rgb(16 19 24 / 78%);
+  border: 1px solid rgb(240 202 114 / 42%);
+  border-radius: 4px;
+  font: 12px/1.45 Consolas, 'Courier New', monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
 .interaction-prompt,
 .interaction-message {
   position: absolute;

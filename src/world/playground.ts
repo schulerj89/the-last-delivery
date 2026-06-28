@@ -4,11 +4,11 @@ import { createMailboxProp } from './props/createMailbox';
 import type { WorldObjectDefinition } from './types';
 import {
   deliveryBoardObject,
-  getWorldObject,
   getWorldObjectsByKind,
   playerSpawnPosition,
 } from './villageDefinition';
 import { villageLayoutConfig } from './villageLayoutConfig';
+import { getVillagePathGuides } from './villagePaths';
 import type { PlaygroundVisualBoundsDebugView } from './playgroundVisualBoundsDebug';
 
 const villageBounds = villageLayoutConfig.bounds;
@@ -420,55 +420,16 @@ const addPathSegment = (
 };
 
 const addPaths = (group: THREE.Group): void => {
-  const blueMailbox = getWorldObject('mailbox');
-  const redMailbox = getWorldObject('mailbox-east');
-  const northMailbox = getWorldObject('mailbox-post-office-return');
-  const blueMailboxPathPoint = blueMailbox.interactable?.position ?? blueMailbox.position;
-  const redMailboxPathPoint = redMailbox.interactable?.position ?? redMailbox.position;
-  const northMailboxPathPoint = northMailbox.interactable?.position ?? northMailbox.position;
-  const boardPathPoint = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
-  const well = getWorldObjectsByKind('well')[0];
-
-  addPathSegment(
-    group,
-    'village:main-path-spawn-to-plaza',
-    new THREE.Vector2(playerSpawnPosition[0], playerSpawnPosition[2]),
-    new THREE.Vector2(well.position[0], well.position[2]),
-    3.4,
-    materials.path,
-  );
-  addPathSegment(
-    group,
-    'village:main-path-plaza-to-north-house',
-    new THREE.Vector2(well.position[0], well.position[2]),
-    new THREE.Vector2(northMailboxPathPoint[0], northMailboxPathPoint[2]),
-    3.2,
-    materials.path,
-  );
-  addPathSegment(
-    group,
-    'village:side-path-blue-house',
-    new THREE.Vector2(well.position[0], well.position[2]),
-    new THREE.Vector2(blueMailboxPathPoint[0], blueMailboxPathPoint[2]),
-    2.35,
-    materials.sidePath,
-  );
-  addPathSegment(
-    group,
-    'village:side-path-red-house',
-    new THREE.Vector2(well.position[0], well.position[2]),
-    new THREE.Vector2(redMailboxPathPoint[0], redMailboxPathPoint[2]),
-    2.35,
-    materials.sidePath,
-  );
-  addPathSegment(
-    group,
-    'village:side-path-post-office-board',
-    new THREE.Vector2(playerSpawnPosition[0], playerSpawnPosition[2]),
-    new THREE.Vector2(boardPathPoint[0], boardPathPoint[2]),
-    2.2,
-    materials.sidePath,
-  );
+  getVillagePathGuides().forEach((path) => {
+    addPathSegment(
+      group,
+      path.id,
+      new THREE.Vector2(path.start[0], path.start[2]),
+      new THREE.Vector2(path.end[0], path.end[2]),
+      path.width,
+      path.kind === 'main' ? materials.path : materials.sidePath,
+    );
+  });
 };
 
 const addHouse = (

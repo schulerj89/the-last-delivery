@@ -17,6 +17,11 @@ import {
 } from './game/performance';
 import { createPlayerController, createPlayerDebugOverlay } from './game/player';
 import { createResourceTracker } from './game/resources';
+import {
+  createVillageLayoutDebugHud,
+  createVillageLayoutDebugView,
+  layoutDebugConfig,
+} from './world/layoutDebug';
 import { createPlayground } from './world/playground';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
@@ -55,6 +60,10 @@ scene.add(visualBoundsDebugView.object);
 const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisionWorld);
 appResources.trackObject3D(collisionDebugView.object);
 scene.add(collisionDebugView.object);
+
+const layoutDebugView = createVillageLayoutDebugView(window.innerWidth, window.innerHeight);
+scene.add(layoutDebugView.object);
+const layoutDebugHud = createVillageLayoutDebugHud(app);
 
 const deliveryBoardObjectiveMarker = appResources.trackObject3D(createDeliveryBoardObjectiveMarker());
 scene.add(deliveryBoardObjectiveMarker);
@@ -106,16 +115,53 @@ scene.add(keyLight);
 
 let animationFrameId: number | null = null;
 let isDisposed = false;
+let preLayoutDebugState: { collision: boolean; visualBounds: boolean } | null = null;
 
 const handleResize = (): void => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  layoutDebugView.resize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(getCappedPixelRatio(window.devicePixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
+const setLayoutModeActive = (active: boolean): void => {
+  if (layoutDebugView.isActive() === active) {
+    return;
+  }
+
+  if (active) {
+    preLayoutDebugState = {
+      collision: collisionDebugView.isVisible(),
+      visualBounds: visualBoundsDebugView.isVisible(),
+    };
+    layoutDebugView.setActive(true);
+    collisionDebugView.setVisible(true);
+    visualBoundsDebugView.setVisible(true);
+    return;
+  }
+
+  layoutDebugView.setActive(false);
+
+  if (preLayoutDebugState) {
+    collisionDebugView.setVisible(preLayoutDebugState.collision);
+    visualBoundsDebugView.setVisible(preLayoutDebugState.visualBounds);
+    preLayoutDebugState = null;
+  }
+};
+
 const handleDebugKeyDown = (event: KeyboardEvent): void => {
   if (event.repeat) {
+    return;
+  }
+
+  if (event.key === layoutDebugConfig.toggleKey) {
+    event.preventDefault();
+    setLayoutModeActive(!layoutDebugView.isActive());
+    return;
+  }
+
+  if (layoutDebugView.isActive()) {
     return;
   }
 
@@ -157,6 +203,8 @@ const dispose = (): void => {
   deliveryGuidanceOverlay.dispose();
   performanceMonitor.dispose();
   performanceDebugOverlay.dispose();
+  layoutDebugHud.dispose();
+  layoutDebugView.dispose();
   visualBoundsDebugView.dispose();
   appResources.dispose();
   disposeAssetCache();
@@ -192,8 +240,10 @@ const animate = (): void => {
   deliveryDebugOverlay.update(deliveryState);
   deliveryGuidanceOverlay.update(deliveryState);
   deliveryBoardOverlay.update(deliveryState);
-  renderer.render(scene, camera);
-  performanceDebugOverlay.update(performanceMonitor.update(rawDeltaSeconds, renderer, getAssetRuntimeStats()));
+  renderer.render(scene, layoutDebugView.isActive() ? layoutDebugView.camera : camera);
+  const performanceSnapshot = performanceMonitor.update(rawDeltaSeconds, renderer, getAssetRuntimeStats());
+  performanceDebugOverlay.update(performanceSnapshot);
+  layoutDebugHud.update(layoutDebugView.isActive(), performanceSnapshot);
   animationFrameId = window.requestAnimationFrame(animate);
 };
 
