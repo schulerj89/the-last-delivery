@@ -30,7 +30,7 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
       size: [1.8, 1.8, 0.45],
     },
     interactable: {
-      position: [-2.2, 0, 7.5],
+      position: [-3.15, 0, 8.65],
       radius: 1.25,
     },
     objectiveAnchor: {

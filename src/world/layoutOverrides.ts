@@ -1,4 +1,6 @@
 import type * as THREE from 'three';
+import type { AssetFitMode } from '../game/assets';
+import { isAssetFitMode } from '../game/assets';
 import type { WorldObjectDefinition } from './types';
 
 export const layoutOverrideDocumentVersion = 1;
@@ -9,6 +11,7 @@ export interface LayoutTransformOverride {
   rotation?: THREE.Vector3Tuple;
   scaleMultiplier?: number;
   yOffset?: number;
+  fitMode?: AssetFitMode;
   updatedAt?: string;
 }
 
@@ -146,6 +149,14 @@ export const validateLayoutOverrideDocument = (
         }
       }
 
+      if (entry.fitMode !== undefined) {
+        if (typeof entry.fitMode === 'string' && isAssetFitMode(entry.fitMode)) {
+          override.fitMode = entry.fitMode;
+        } else {
+          errors.push(`Override ${id} fitMode must be a valid asset fit mode.`);
+        }
+      }
+
       if (entry.updatedAt !== undefined) {
         if (typeof entry.updatedAt === 'string' && entry.updatedAt.trim().length > 0) {
           override.updatedAt = entry.updatedAt;
@@ -263,12 +274,13 @@ export const mergeWorldObjectOverrides = (
       }
     }
 
-    if (override.scaleMultiplier !== undefined || override.yOffset !== undefined) {
+    if (override.scaleMultiplier !== undefined || override.yOffset !== undefined || override.fitMode !== undefined) {
       if (nextObject.render?.mode === 'asset') {
         nextObject.render = {
           ...nextObject.render,
           scaleMultiplier: override.scaleMultiplier ?? nextObject.render.scaleMultiplier,
           yOffset: override.yOffset ?? nextObject.render.yOffset,
+          fitMode: override.fitMode ?? nextObject.render.fitMode,
         };
       } else {
         nextObject.layoutTransform = {

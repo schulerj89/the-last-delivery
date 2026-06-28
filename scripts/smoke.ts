@@ -543,6 +543,7 @@ const runLayoutOverrideSmoke = (): void => {
         rotation: [0, Math.PI / 2, 0],
         scaleMultiplier: 1.1,
         yOffset: 0.15,
+        fitMode: 'contain',
         updatedAt: '2026-06-28T00:00:00.000Z',
       },
     ],
@@ -578,16 +579,26 @@ const runLayoutOverrideSmoke = (): void => {
   const emptyMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, emptyDocument);
   const generatedMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, generatedVillageLayoutOverrides);
   const overriddenMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, validDocument);
+  const generatedValidation = validateLayoutOverrideDocument(generatedVillageLayoutOverrides, knownObjectIds);
+  const baseBoard = baseVillageWorldObjects.find((object) => object.id === 'delivery-board');
   const overriddenBoard = overriddenMerged.find((object) => object.id === 'delivery-board');
+  const boardDeltaX = (validDocument.overrides[0].position?.[0] ?? 0) - (baseBoard?.position[0] ?? 0);
 
+  assert(generatedValidation.ok, 'Generated village layout overrides should validate against known object ids.');
+  assert(generatedVillageLayoutOverrides.overrides.length > 0, 'Generated village layout overrides should include authored placements.');
+  assert(
+    generatedVillageLayoutOverrides.overrides.some((override) => override.fitMode === 'contain'),
+    'Generated village layout overrides should include asset fit tuning.',
+  );
   assert(emptyMerged.length === baseVillageWorldObjects.length, 'Empty generated overrides should not change object count.');
   assert(generatedMerged.length === baseVillageWorldObjects.length, 'Generated overrides should merge without changing object count.');
   assert(overriddenMerged.length === baseVillageWorldObjects.length, 'Layout overrides should merge without changing object count.');
   assert(overriddenBoard?.position[0] === -3.25, 'Merged overrides should update object position.');
   assert(
-    Math.abs((overriddenBoard?.interactable?.position[0] ?? 0) - -1.95) < 0.001,
+    Math.abs((overriddenBoard?.interactable?.position[0] ?? 0) - ((baseBoard?.interactable?.position[0] ?? 0) + boardDeltaX)) < 0.001,
     'Merged position overrides should move interactable anchors by delta.',
   );
+  assert(overriddenBoard?.layoutTransform?.scaleMultiplier === 1.1, 'Primitive layout overrides should preserve scale multiplier.');
 
   const editableObjects = createEditablePlacementObjects(baseVillageWorldObjects);
   const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
@@ -759,6 +770,23 @@ const runWorldDefinitionSmoke = (): void => {
     assert(job.destinationName === target.mailbox.destinationName, `Delivery job destination should match mailbox target metadata: ${job.id}`);
     assert(job.description.trim().length > 0, `Delivery job should have a description: ${job.id}`);
     assert(Number.isFinite(job.reward) && job.reward > 0, `Delivery job reward should be positive: ${job.id}`);
+
+    const targetInteractable = target.interactable;
+
+    if (targetInteractable) {
+      villageWorldObjects.filter((object) => object.collider && object.id !== target.id).forEach((colliderObject) => {
+        const collider = colliderObject.collider;
+
+        if (!collider) {
+          return;
+        }
+
+        assert(
+          getHorizontalBoxDistance(targetInteractable.position, collider.position, collider.size) >= villageLayoutConfig.spacing.interactableClearanceRadius,
+          `Delivery target ${target.id} should keep a clear approach from collider ${colliderObject.id}.`,
+        );
+      });
+    }
   });
 
   const mailboxDestinations = new Set(mailboxObjects.map((mailbox) => mailbox.mailbox?.destinationName));

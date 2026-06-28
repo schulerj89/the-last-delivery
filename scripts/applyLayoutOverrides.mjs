@@ -8,6 +8,7 @@ const villageDefinitionPath = path.join(repoRoot, 'src', 'world', 'villageDefini
 const generatedOutputPath = path.join(repoRoot, 'src', 'world', 'villageOverrides.generated.ts');
 const checkOnly = process.argv.includes('--check');
 const layoutOverrideDocumentVersion = 1;
+const assetFitModes = new Set(['none', 'contain', 'cover', 'exact']);
 
 const formatRelative = (filePath) => path.relative(repoRoot, filePath).replaceAll(path.sep, '/');
 
@@ -96,6 +97,13 @@ const validateLayoutDocument = (value, knownObjectIds) => {
       && (typeof override.yOffset !== 'number' || !Number.isFinite(override.yOffset))
     ) {
       errors.push(`Override ${override.id} yOffset must be a finite number.`);
+    }
+
+    if (
+      override.fitMode !== undefined
+      && (typeof override.fitMode !== 'string' || !assetFitModes.has(override.fitMode))
+    ) {
+      errors.push(`Override ${override.id} fitMode must be a valid asset fit mode.`);
     }
 
     if (

@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.37.0] - 2026-06-28
+
+### Added
+
+- Added authored `layout-edits/village-layout.json` placement overrides and generated `src/world/villageOverrides.generated.ts` from the permanent layout workflow.
+- Added optional `fitMode` support to layout override validation, generation, and runtime merge for asset-backed world objects.
+- Added smoke checks for generated layout override validation, asset fit tuning, and delivery-target approach clearance.
+
+### Changed
+
+- Cleaned up the first village composition by pushing houses and trees farther to the perimeter, moving foliage and dressing out of walk lanes, and clustering crates/barrels/cart dressing near edges.
+- Moved the delivery board interact point to the front approach from spawn so the board reads sooner and has clearer access.
+- Tuned object rotations, scale multipliers, Y offsets, and fit modes through generated layout overrides while keeping collision proxies independent from visual meshes.
+
 ## [0.36.0] - 2026-06-28
 
 ### Added
