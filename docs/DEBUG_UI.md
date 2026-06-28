@@ -9,6 +9,7 @@ Developer UI is separate from gameplay UI. Objective guidance, interaction promp
 - `F3`: show or hide developer UI panels.
 - `F4`: cycle debug detail through hidden, compact, and expanded.
 - `F5`: toggle expanded performance details.
+- `F10`: toggle collision boxes in the gameplay view.
 
 ## Detail Levels
 

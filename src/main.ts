@@ -6,7 +6,7 @@ import {
   thirdPersonCameraSettings,
   type ThirdPersonCameraController,
 } from './game/camera';
-import { createDevDebugPanelManager } from './game/debug/debugUiManager';
+import { createDevDebugPanelManager, debugUiConfig } from './game/debug/debugUiManager';
 import {
   createDeliveryBoardOverlay,
   createDeliveryController,
@@ -187,6 +187,12 @@ const handleDebugKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
+  if (event.key === debugUiConfig.collisionKey) {
+    event.preventDefault();
+    collisionDebugView.toggle();
+    return;
+  }
+
   if (layoutDebugView.isActive() && placementEditor.handleKeyDown(event)) {
     return;
   }
@@ -296,6 +302,7 @@ const animate = (): void => {
     layoutObjectCountsByKind,
     selectedEditorObjectId: placementEditor.getSelectedObjectId(),
     environmentPresetName: environment.presetName,
+    collisionDebugVisible: collisionDebugView.isVisible(),
   });
   animationFrameId = window.requestAnimationFrame(animate);
 };

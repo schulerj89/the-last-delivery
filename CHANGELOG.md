@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.42.0] - 2026-06-28
+
+### Added
+
+- Added `F10` as a dedicated collision-box debug toggle for the gameplay view while keeping the existing `C` shortcut.
+- Added collision-box visibility to the central debug panel and documented the new F-key control.
+- Added smoke coverage for the collision debug F-key binding.
+
 ## [0.41.0] - 2026-06-28
 
 ### Added

@@ -502,6 +502,7 @@ const runVisualPolishSmoke = (): void => {
   assert(debugUiConfig.toggleKey === 'F3', 'Debug panel visibility should use F3.');
   assert(debugUiConfig.detailKey === 'F4', 'Debug detail level should use F4.');
   assert(debugUiConfig.performanceKey === 'F5', 'Performance details should use F5.');
+  assert(debugUiConfig.collisionKey === 'F10', 'Collision boxes should use an F-key debug toggle.');
   assert(debugUiConfig.helpKey === 'F1', 'Debug help hint should use F1.');
   assert(debugUiConfig.layoutKey === 'F2', 'Debug help hint should include F2 layout mode.');
   assert(debugDetailLevels.includes('hidden'), 'Debug detail levels should include hidden.');

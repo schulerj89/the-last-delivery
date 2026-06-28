@@ -12,6 +12,7 @@ export const debugUiConfig = {
   toggleKey: 'F3',
   detailKey: 'F4',
   performanceKey: 'F5',
+  collisionKey: 'F10',
   hiddenClassName: 'debug-ui-hidden',
   initialVisible: true,
   initialDetailLevel: 'compact' as DebugDetailLevel,
@@ -40,6 +41,7 @@ export interface DebugUiUpdate {
   layoutObjectCountsByKind: Readonly<Record<string, number>>;
   selectedEditorObjectId: string | null;
   environmentPresetName: string;
+  collisionDebugVisible: boolean;
 }
 
 export interface DebugUiKeyOptions {
@@ -136,6 +138,7 @@ const createCompactLines = (update: DebugUiUpdate): string[] => [
   `FPS ${formatWhole(update.performance.currentFps)}  Calls ${update.performance.renderCalls}`,
   `Delivery ${formatActiveDelivery(update.delivery)}`,
   `Player ${formatVector(update.player.position)}`,
+  `Collision boxes ${update.collisionDebugVisible ? 'on' : 'off'}`,
   ...(update.layoutModeActive ? [`Selected ${update.selectedEditorObjectId ?? 'none'}`] : []),
 ];
 
@@ -190,6 +193,7 @@ const createExpandedLines = (update: DebugUiUpdate, state: DebugUiState): string
     '',
     'Layout',
     `Mode ${update.layoutModeActive ? 'active' : 'inactive'}`,
+    `Collision boxes ${update.collisionDebugVisible ? 'visible' : 'hidden'}`,
     `Objects ${formatCounts(update.layoutObjectCountsByKind)}`,
     `Selected ${update.layoutModeActive ? update.selectedEditorObjectId ?? 'none' : 'layout off'}`,
   );
@@ -213,7 +217,7 @@ export const createDevDebugPanelManager = (
   body.className = 'dev-debug-panel__body';
   hint.className = 'dev-debug-panel__hint';
   help.className = 'dev-debug-panel__help';
-  hint.textContent = `${debugUiConfig.helpKey} help  ${debugUiConfig.layoutKey} layout  ${debugUiConfig.toggleKey} debug`;
+  hint.textContent = `${debugUiConfig.helpKey} help  ${debugUiConfig.layoutKey} layout  ${debugUiConfig.toggleKey} debug  ${debugUiConfig.collisionKey} collision`;
   help.textContent = [
     'Debug Controls',
     `${debugUiConfig.helpKey}: toggle this help`,
@@ -221,6 +225,7 @@ export const createDevDebugPanelManager = (
     `${debugUiConfig.toggleKey}: show/hide developer UI panels`,
     `${debugUiConfig.detailKey}: cycle hidden / compact / expanded`,
     `${debugUiConfig.performanceKey}: toggle expanded performance details`,
+    `${debugUiConfig.collisionKey}: toggle collision boxes`,
     'Layout mode keeps gameplay state unchanged.',
   ].join('\n');
   panel.append(title, body, help, hint);
