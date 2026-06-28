@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.31.0] - 2026-06-28
+
+### Added
+
+- Added per-instance material normalization for selected GLB asset kinds so trees, rocks, houses, props, and signs use calmer village palette colors without mutating cached source assets.
+- Added an F3 debug overlay collapse toggle that hides debug panels by default while keeping objective guidance and interaction UI visible.
+- Added a central plaza surface and smoke checks for visual-polish config, collapsed debug state, material override colors, gameplay UI visibility, and plaza fallback initialization.
+
+### Changed
+
+- Reduced central visual clutter by moving the remaining path rock to the boundary and making the path/plaza ground palette clearer.
+- Hid the layout debug HUD during normal third-person play while preserving F2 layout mode and the placement editor.
+
 ## [0.30.0] - 2026-06-28
 
 ### Added

@@ -27,6 +27,11 @@ import {
 } from '../src/game/assets';
 import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
+import {
+  createDebugOverlayVisibilityState,
+  debugOverlayVisibilityConfig,
+  isGameplayUiSelectorVisibleWhenDebugCollapsed,
+} from '../src/game/debug/debugOverlayVisibility';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
 import {
   createPlayerFallbackVisual,
@@ -49,6 +54,12 @@ import {
   getLayoutObjectCountsByKind,
   layoutDebugConfig,
 } from '../src/world/layoutDebug';
+import {
+  assetMaterialOverrideConfig,
+  assetMaterialOverrideKinds,
+  isAssetMaterialOverrideKind,
+  isValidMaterialOverrideColor,
+} from '../src/world/assetMaterialOverrides';
 import {
   createEditablePlacementObjects,
   createPlacementTransformDraft,
@@ -380,6 +391,48 @@ const runAssetFittingSmoke = (): void => {
   assert(targetSize.x === 2 && targetSize.y === 4 && targetSize.z === 6, 'Target bounds should preserve positive dimensions.');
   assert(targetCenter.y === 2.5, 'Target bounds should apply Y offset to the center.');
   assert(createAssetTargetBounds([0, 0, 0], [0, 1, 1]) === null, 'Non-positive target dimensions should fail safely.');
+};
+
+const runVisualPolishSmoke = (): void => {
+  const debugVisibilityState = createDebugOverlayVisibilityState();
+
+  assert(debugOverlayVisibilityConfig.toggleKey === 'F3', 'Debug overlay collapse should use F3.');
+  assert(debugOverlayVisibilityConfig.initialCollapsed, 'Debug overlay panels should start collapsed for normal play.');
+  assert(debugVisibilityState.collapsed, 'Debug overlay collapsed state should initialize.');
+  assert(debugOverlayVisibilityConfig.hiddenPanelSelector === '.debug-overlay', 'Debug overlay collapse should target debug panels only.');
+  assert(
+    isGameplayUiSelectorVisibleWhenDebugCollapsed('.delivery-guidance'),
+    'Objective guidance should remain visible when debug panels are collapsed.',
+  );
+  assert(
+    isGameplayUiSelectorVisibleWhenDebugCollapsed('.interaction-prompt'),
+    'Interaction prompt should remain visible when debug panels are collapsed.',
+  );
+  assert(
+    !isGameplayUiSelectorVisibleWhenDebugCollapsed(debugOverlayVisibilityConfig.hiddenPanelSelector),
+    'Collapsed debug panel selector should not be treated as required gameplay UI.',
+  );
+
+  assert(isAssetMaterialOverrideKind('tree'), 'Tree assets should have material override support.');
+  assert(isAssetMaterialOverrideKind('rock'), 'Rock assets should have material override support.');
+  assert(isAssetMaterialOverrideKind('cottage'), 'Cottage assets should have material override support.');
+  assert(!isAssetMaterialOverrideKind('mailbox'), 'Procedural mailboxes should not use GLB material overrides.');
+  assert(assetMaterialOverrideKinds.length > 0, 'Material override kinds should initialize.');
+  assetMaterialOverrideKinds.forEach((kind) => {
+    const palette = assetMaterialOverrideConfig[kind];
+
+    assert(isValidMaterialOverrideColor(palette.primaryColor), `Material override primary color should be valid: ${kind}`);
+    assert(
+      palette.secondaryColor === undefined || isValidMaterialOverrideColor(palette.secondaryColor),
+      `Material override secondary color should be valid: ${kind}`,
+    );
+    assert(
+      palette.accentColor === undefined || isValidMaterialOverrideColor(palette.accentColor),
+      `Material override accent color should be valid: ${kind}`,
+    );
+    assert(palette.roughness >= 0 && palette.roughness <= 1, `Material override roughness should be normalized: ${kind}`);
+    assert(palette.metalness >= 0 && palette.metalness <= 1, `Material override metalness should be normalized: ${kind}`);
+  });
 };
 
 const runWorldDefinitionSmoke = (): void => {
@@ -988,6 +1041,7 @@ const runModuleSmoke = (): void => {
   assert(playground.getObjectByName('village:main-path-plaza-to-north-house') !== undefined, 'Main plaza-to-north-house path should initialize.');
   assert(playground.getObjectByName('village:side-path-blue-house') !== undefined, 'Blue house side path should initialize.');
   assert(playground.getObjectByName('village:side-path-red-house') !== undefined, 'Red house side path should initialize.');
+  assert(playground.getObjectByName('village:central-plaza-surface') !== undefined, 'Central plaza surface should initialize.');
   assert(playground.getObjectByName('village:label-post-office') !== undefined, 'Post office label sign should initialize.');
   assert(playground.getObjectByName('village:label-blue-house') !== undefined, 'Blue house label sign should initialize.');
   assert(playground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');
@@ -1028,6 +1082,7 @@ const runModuleSmoke = (): void => {
 runAssetRegistrySmoke();
 await runAssetCacheSmoke();
 runAssetFittingSmoke();
+runVisualPolishSmoke();
 runWorldDefinitionSmoke();
 runVillageLayoutConfigSmoke();
 runLayoutDebugSmoke();

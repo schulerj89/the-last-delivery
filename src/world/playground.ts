@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { canLoadGltfAssets, createModelInstance, fitAssetObjectToBounds } from '../game/assets';
+import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
 import { createMailboxProp } from './props/createMailbox';
 import type { WorldObjectDefinition } from './types';
 import {
@@ -21,10 +22,11 @@ const fenceRailThickness = 0.12;
 const fencePostThickness = 0.18;
 
 const materials = {
-  ground: new THREE.MeshStandardMaterial({ color: 0x38473d, roughness: 0.9 }),
-  path: new THREE.MeshStandardMaterial({ color: 0xb59668, roughness: 0.95 }),
-  sidePath: new THREE.MeshStandardMaterial({ color: 0x6f958e, roughness: 0.95 }),
-  pathEdge: new THREE.MeshStandardMaterial({ color: 0xe7d3a1, roughness: 0.9 }),
+  ground: new THREE.MeshStandardMaterial({ color: 0x314237, roughness: 0.92 }),
+  plaza: new THREE.MeshStandardMaterial({ color: 0xa8895e, roughness: 0.96 }),
+  path: new THREE.MeshStandardMaterial({ color: 0xc8aa70, roughness: 0.95 }),
+  sidePath: new THREE.MeshStandardMaterial({ color: 0x9b8c65, roughness: 0.95 }),
+  pathEdge: new THREE.MeshStandardMaterial({ color: 0xf0d88f, roughness: 0.9 }),
   fence: new THREE.MeshStandardMaterial({ color: 0x8d7657, roughness: 0.75 }),
   crate: new THREE.MeshStandardMaterial({ color: 0x9a6435, roughness: 0.85 }),
   crateStrap: new THREE.MeshStandardMaterial({ color: 0x5a3826, roughness: 0.8 }),
@@ -172,6 +174,16 @@ const tryApplyAssetRender = (
       assetObject.userData.assetFitMode = fitResult.fitMode;
       assetObject.userData.visualBounds = fitResult.visualBox;
 
+      const disposeMaterialOverrides = applyAssetMaterialOverrides(assetObject, object);
+      const disposeAssetInstance = assetObject.userData.disposeAssetInstance;
+      assetObject.userData.disposeAssetInstance = () => {
+        disposeMaterialOverrides();
+
+        if (typeof disposeAssetInstance === 'function') {
+          disposeAssetInstance();
+        }
+      };
+
       options.visualBoundsDebugView?.setObjectBounds(object.id, fitResult.visualBox);
       group.add(assetObject);
     })
@@ -237,6 +249,23 @@ const addGroundRing = (
   ring.receiveShadow = true;
   group.add(ring);
   return ring;
+};
+
+const addGroundDisk = (
+  group: THREE.Group,
+  name: string,
+  radius: number,
+  position: THREE.Vector3Tuple,
+  material: THREE.Material,
+): THREE.Mesh => {
+  const disk = new THREE.Mesh(new THREE.CircleGeometry(radius, 48), material);
+  disk.name = name;
+  disk.userData.label = name;
+  disk.position.set(...position);
+  disk.rotation.x = -Math.PI / 2;
+  disk.receiveShadow = true;
+  group.add(disk);
+  return disk;
 };
 
 const addCylinder = (
@@ -430,6 +459,16 @@ const addPaths = (group: THREE.Group): void => {
       path.kind === 'main' ? materials.path : materials.sidePath,
     );
   });
+};
+
+const addCentralPlazaSurface = (group: THREE.Group): void => {
+  addGroundDisk(
+    group,
+    'village:central-plaza-surface',
+    villageLayoutConfig.spacing.plazaOpenRadius - 0.45,
+    [0, 0.018, 0],
+    materials.plaza,
+  );
 };
 
 const addHouse = (
@@ -836,6 +875,7 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
   const playground = nameObject(new THREE.Group(), 'village:square-blockout');
 
   addGround(playground);
+  addCentralPlazaSurface(playground);
   addPaths(playground);
   addFence(playground);
   addSpawnMarker(playground);

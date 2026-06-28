@@ -343,7 +343,7 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
   {
     id: 'nature-rock-path-a',
     kind: 'rock',
-    position: [-3.5, 0.22, -3.2],
+    position: [-11.2, 0.22, -6.8],
     dimensions: [0.75, 0.44, 0.75],
     render: {
       mode: 'asset',

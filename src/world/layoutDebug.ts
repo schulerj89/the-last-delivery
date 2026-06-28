@@ -453,6 +453,12 @@ export const createVillageLayoutDebugHud = (parent: HTMLElement): VillageLayoutD
 
   return {
     update(active, snapshot) {
+      overlay.hidden = !active;
+
+      if (!active) {
+        return;
+      }
+
       overlay.textContent = [
         `Layout F2: ${active ? 'active' : 'inactive'}`,
         `Objects ${objectCountText}`,

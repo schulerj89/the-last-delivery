@@ -3,6 +3,10 @@ import './style.css';
 import { disposeAssetCache, getAssetRuntimeStats } from './game/assets';
 import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
 import {
+  createDebugOverlayVisibilityController,
+  debugOverlayVisibilityConfig,
+} from './game/debug/debugOverlayVisibility';
+import {
   createDeliveryBoardOverlay,
   createDeliveryController,
   createDeliveryDebugOverlay,
@@ -94,6 +98,7 @@ const followCamera = createThirdPersonCameraController({
 const cameraDebugOverlay = createCameraDebugOverlay(app);
 const deliveryDebugOverlay = createDeliveryDebugOverlay(app);
 const deliveryGuidanceOverlay = createDeliveryGuidanceOverlay(app);
+const debugOverlayVisibility = createDebugOverlayVisibilityController(app);
 const performanceMonitor = createPerformanceMonitor({
   config: {
     debugWarningsEnabled: import.meta.env.DEV,
@@ -172,6 +177,12 @@ const handleDebugKeyDown = (event: KeyboardEvent): void => {
     return;
   }
 
+  if (event.key === debugOverlayVisibilityConfig.toggleKey) {
+    event.preventDefault();
+    debugOverlayVisibility.toggle();
+    return;
+  }
+
   if (layoutDebugView.isActive() && placementEditor.handleKeyDown(event)) {
     return;
   }
@@ -216,6 +227,7 @@ const dispose = (): void => {
   cameraDebugOverlay.dispose();
   deliveryDebugOverlay.dispose();
   deliveryGuidanceOverlay.dispose();
+  debugOverlayVisibility.dispose();
   performanceMonitor.dispose();
   performanceDebugOverlay.dispose();
   placementEditor.dispose();

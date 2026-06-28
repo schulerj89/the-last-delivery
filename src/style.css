@@ -32,6 +32,10 @@ canvas {
   pointer-events: none;
 }
 
+.debug-overlays-collapsed .debug-overlay {
+  display: none;
+}
+
 .debug-overlay--camera {
   top: 122px;
 }
@@ -59,6 +63,10 @@ canvas {
   font: 12px/1.45 Consolas, 'Courier New', monospace;
   white-space: pre-wrap;
   pointer-events: none;
+}
+
+.layout-debug-hud[hidden] {
+  display: none;
 }
 
 .placement-editor-hud {
