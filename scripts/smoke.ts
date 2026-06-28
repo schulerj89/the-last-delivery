@@ -2319,9 +2319,11 @@ const runModuleSmoke = (): void => {
   activeCollisionMailboxes.forEach((mailbox) => {
     assert(authoredPlayground.getObjectByName(`village:${mailbox.id}:rounded-body`) !== undefined, `Mailbox procedural body should initialize: ${mailbox.id}.`);
     assert(authoredPlayground.getObjectByName(`village:${mailbox.id}:mail-symbol`) !== undefined, `Mailbox mail symbol should initialize: ${mailbox.id}.`);
+    assert(authoredPlayground.getObjectByName(`village:${mailbox.id}:interaction-ring`) === undefined, `Mailbox destination circle should not render: ${mailbox.id}.`);
   });
   if (activeDeliveryBoard) {
     assert(authoredPlayground.getObjectByName(`village:${activeDeliveryBoard.id}:panel`) !== undefined, 'The active delivery board fallback should initialize.');
+    assert(authoredPlayground.getObjectByName(`village:${activeDeliveryBoard.id}:interaction-ring`) === undefined, 'Delivery board destination circle should not render.');
   }
   if (activeCrates[0]) {
     assert(authoredPlayground.getObjectByName(`village:${activeCrates[0].id}`) !== undefined, 'Crate primitive fallback should initialize when crates are active.');
@@ -2376,16 +2378,29 @@ const runModuleSmoke = (): void => {
   assert(marker.name === 'objective:delivery-target', 'Delivery target objective marker should initialize.');
   assert(marker.visible === false, 'Delivery target objective marker should start hidden.');
   assert(marker.getObjectByName('objective:delivery-target:halo') !== undefined, 'Delivery target objective marker should include a readable halo.');
+  assert(marker.getObjectByName('objective:delivery-target:diamond') !== undefined, 'Delivery target objective marker should include a readable diamond.');
+  assert(marker.getObjectByName('objective:delivery-target:stem') === undefined, 'Delivery target objective marker should not include a stem.');
   assert(objectiveMarkerSettings.bobAmplitude >= 0.1, 'Objective marker bob should be readable from distance.');
+  assert(objectiveMarkerSettings.verticalClearance > 0, 'Objective marker should keep vertical clearance above target assets.');
   assert(!setObjectiveMarkerTarget(marker, 'missing-editor-target'), 'Objective marker should fail safely for missing editor targets.');
   if (activeDeliveryJobs[0]) {
-    assert(resolveObjectiveAnchorForWorldObject(activeDeliveryJobs[0].targetWorldObjectId).length === 3, 'Objective marker should resolve active target anchors.');
+    const targetObject = villageWorldObjects.find((object) => object.id === activeDeliveryJobs[0]?.targetWorldObjectId);
+    const targetAnchor = resolveObjectiveAnchorForWorldObject(activeDeliveryJobs[0].targetWorldObjectId);
+
+    assert(targetAnchor.length === 3, 'Objective marker should resolve active target anchors.');
+    assert(
+      targetObject === undefined
+        || targetAnchor[1] >= targetObject.position[1] + (targetObject.dimensions?.[1] ?? 1.6),
+      'Objective marker should resolve above the target asset height.',
+    );
     assert(setObjectiveMarkerTarget(marker, activeDeliveryJobs[0].targetWorldObjectId), 'Objective marker should accept an active target.');
     assert(marker.userData.targetWorldObjectId === activeDeliveryJobs[0].targetWorldObjectId, 'Objective marker should track target object id.');
+    assert(marker.position.x === targetAnchor[0] && marker.position.z === targetAnchor[2], 'Objective marker should stay horizontally aligned with the active target.');
   }
 
   const boardMarker = createDeliveryBoardObjectiveMarker();
   assert(boardMarker.name === 'objective:delivery-board', 'Delivery board objective marker should initialize.');
+  assert(boardMarker.getObjectByName('objective:delivery-board:stem') === undefined, 'Delivery board objective marker should not include a stem.');
   updateObjectiveMarker(boardMarker, 1);
   assert(boardMarker.position.y > 0, 'Objective marker animation should keep marker above the ground.');
 };

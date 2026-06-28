@@ -56,7 +56,6 @@ const materials = {
   boardFrame: new THREE.MeshStandardMaterial({ color: 0xf0ca72, roughness: 0.65 }),
   boardPaper: new THREE.MeshStandardMaterial({ color: 0xf3ead2, roughness: 0.75 }),
   boardPin: new THREE.MeshStandardMaterial({ color: 0xef5d45, roughness: 0.5 }),
-  interactablePad: new THREE.MeshStandardMaterial({ color: 0x3baea3, roughness: 0.8 }),
   spawnPad: new THREE.MeshStandardMaterial({ color: 0xf2d16b, roughness: 0.75 }),
   signPost: new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 0.78 }),
   signPanel: new THREE.MeshStandardMaterial({ color: 0xf0ca72, roughness: 0.72 }),
@@ -935,18 +934,6 @@ const addMailbox = (
 ): void => {
   const fallbackObjects: THREE.Object3D[] = [];
 
-  if (mailbox.interactable) {
-    const interactionPosition = mailbox.interactable.position;
-    fallbackObjects.push(addGroundRing(
-      group,
-      `village:${mailbox.id}:interaction-ring`,
-      0.72,
-      0.025,
-      [interactionPosition[0], 0.035, interactionPosition[2]],
-      materials.interactablePad,
-    ));
-  }
-
   const mailboxProp = createMailboxProp({
     id: mailbox.id,
     position: mailbox.position,
@@ -971,16 +958,7 @@ const addDeliveryBoard = (group: THREE.Group): void => {
 
   const name = `village:${deliveryBoardObject.id}`;
   const [x, , z] = deliveryBoardObject.position;
-  const interactionPosition = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
 
-  addGroundRing(
-    group,
-    `${name}:interaction-ring`,
-    0.85,
-    0.025,
-    [interactionPosition[0], 0.035, interactionPosition[2]],
-    materials.interactablePad,
-  );
   addBox(group, `${name}:left-post`, [0.16, 1.8, 0.16], [x - 0.6, 0.9, z], materials.boardFrame);
   addBox(group, `${name}:right-post`, [0.16, 1.8, 0.16], [x + 0.6, 0.9, z], materials.boardFrame);
   addBox(group, `${name}:panel`, [1.55, 1, 0.12], [x, 1.3, z], materials.board);

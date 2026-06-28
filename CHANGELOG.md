@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.11] - 2026-06-28
+
+### Fixed
+
+- Removed mailbox and delivery-board destination ground circles so the floating objective icon is the only destination marker.
+- Simplified objective markers by removing the vertical stem and keeping only the bouncing/spinning halo and diamond.
+- Made objective marker anchor height resolve relative to the current target object dimensions and render scale.
+
 ## [0.53.10] - 2026-06-28
 
 ### Fixed

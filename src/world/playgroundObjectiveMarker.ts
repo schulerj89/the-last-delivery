@@ -6,6 +6,7 @@ export const objectiveMarkerSettings = {
   bobAmplitude: 0.12,
   bobSpeed: 2.6,
   rotationSpeed: 1.25,
+  verticalClearance: 0.68,
 };
 
 const createObjectiveMarker = (
@@ -53,23 +54,34 @@ const createObjectiveMarker = (
   halo.renderOrder = 20;
   marker.add(halo);
 
-  const stem = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.035, 0.035, 0.62, 8),
-    material,
-  );
-  stem.name = `${name}:stem`;
-  stem.userData.label = stem.name;
-  stem.position.y = -0.56;
-  stem.renderOrder = 20;
-  marker.add(stem);
-
   return marker;
 };
 
+const getObjectRenderTransform = (object: WorldObjectDefinition): {
+  scaleMultiplier: number;
+  yOffset: number;
+} => {
+  const renderSettings = object.render?.mode === 'asset' ? object.render : undefined;
+
+  return {
+    scaleMultiplier: Math.max(
+      renderSettings?.scaleMultiplier ?? object.layoutTransform?.scaleMultiplier ?? 1,
+      0.001,
+    ),
+    yOffset: renderSettings?.yOffset ?? object.layoutTransform?.yOffset ?? 0,
+  };
+};
+
 const getObjectiveAnchorPosition = (object: WorldObjectDefinition): THREE.Vector3Tuple => (
-  object.objectiveAnchor?.position ?? [
+  [
     object.position[0],
-    object.position[1] + (object.dimensions?.[1] ?? 1.6) + 0.6,
+    Math.max(
+      object.objectiveAnchor?.position[1] ?? Number.NEGATIVE_INFINITY,
+      object.position[1]
+        + getObjectRenderTransform(object).yOffset
+        + (object.dimensions?.[1] ?? 1.6) * getObjectRenderTransform(object).scaleMultiplier
+        + objectiveMarkerSettings.verticalClearance,
+    ),
     object.position[2],
   ]
 );
@@ -93,10 +105,6 @@ export const setObjectiveMarkerTarget = (
   if (!worldObjectId) {
     marker.userData.targetWorldObjectId = null;
     return false;
-  }
-
-  if (marker.userData.targetWorldObjectId === worldObjectId) {
-    return true;
   }
 
   const position = tryResolveObjectiveAnchorForWorldObject(worldObjectId);
