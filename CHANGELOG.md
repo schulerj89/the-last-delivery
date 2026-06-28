@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.12.0] - 2026-06-28
+
+### Added
+
+- Added a small world definition layer for first-village object records.
+- Centralized delivery board and mailbox positions, collider data, interaction data, and objective anchors.
+- Added smoke checks for world object uniqueness, interactable positions, collider sizes, and delivery target existence.
+
 ## [0.11.0] - 2026-06-28
 
 ### Added

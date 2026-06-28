@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { deliveryBoardObject, mailboxObject } from './villageDefinition';
 
 const villageWidth = 18;
 const villageDepth = 14;
@@ -242,11 +243,14 @@ const addPathSegment = (
 };
 
 const addPaths = (group: THREE.Group): void => {
+  const mailboxPathPoint = mailboxObject.interactable?.position ?? mailboxObject.position;
+  const boardPathPoint = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
+
   addPathSegment(
     group,
     'village:main-path-delivery-route',
-    new THREE.Vector2(-3.3, 2.8),
-    new THREE.Vector2(3.6, -3.2),
+    new THREE.Vector2(mailboxPathPoint[0], mailboxPathPoint[2]),
+    new THREE.Vector2(boardPathPoint[0], boardPathPoint[2]),
     1.35,
   );
   addPathSegment(
@@ -344,44 +348,64 @@ const addVillageProps = (group: THREE.Group): void => {
 };
 
 const addMailbox = (group: THREE.Group): void => {
-  addGroundRing(group, 'playground:mailbox-interaction-ring', 0.72, 0.025, [-3.3, 0.035, 2.8], materials.interactablePad);
-  addBox(group, 'playground:mailbox-post', [0.16, 0.9, 0.16], [-4.2, 0.45, 2.8], materials.fence);
-  addBox(group, 'playground:mailbox-box', [0.85, 0.42, 0.5], [-4.2, 1.03, 2.8], materials.mailbox);
-  addBox(group, 'playground:mailbox-door-highlight', [0.08, 0.28, 0.36], [-4.64, 1.03, 2.8], materials.mailboxDoor);
-  addBox(group, 'playground:mailbox-flag', [0.08, 0.38, 0.46], [-3.74, 1.19, 2.8], materials.mailboxFlag);
+  const [x, , z] = mailboxObject.position;
+  const interactionPosition = mailboxObject.interactable?.position ?? mailboxObject.position;
+
+  addGroundRing(
+    group,
+    'playground:mailbox-interaction-ring',
+    0.72,
+    0.025,
+    [interactionPosition[0], 0.035, interactionPosition[2]],
+    materials.interactablePad,
+  );
+  addBox(group, 'playground:mailbox-post', [0.16, 0.9, 0.16], [x, 0.45, z], materials.fence);
+  addBox(group, 'playground:mailbox-box', [0.85, 0.42, 0.5], [x, 1.03, z], materials.mailbox);
+  addBox(group, 'playground:mailbox-door-highlight', [0.08, 0.28, 0.36], [x - 0.44, 1.03, z], materials.mailboxDoor);
+  addBox(group, 'playground:mailbox-flag', [0.08, 0.38, 0.46], [x + 0.46, 1.19, z], materials.mailboxFlag);
 };
 
 const addDeliveryBoard = (group: THREE.Group): void => {
-  addGroundRing(group, 'playground:delivery-board-interaction-ring', 0.85, 0.025, [3.6, 0.035, -3.2], materials.interactablePad);
-  addBox(group, 'playground:delivery-board-left-post', [0.16, 1.8, 0.16], [4.25, 0.9, -3.2], materials.boardFrame);
-  addBox(group, 'playground:delivery-board-right-post', [0.16, 1.8, 0.16], [5.45, 0.9, -3.2], materials.boardFrame);
-  addBox(group, 'playground:delivery-board-panel', [1.55, 1, 0.12], [4.85, 1.3, -3.2], materials.board);
+  const [x, , z] = deliveryBoardObject.position;
+  const interactionPosition = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
+
+  addGroundRing(
+    group,
+    'playground:delivery-board-interaction-ring',
+    0.85,
+    0.025,
+    [interactionPosition[0], 0.035, interactionPosition[2]],
+    materials.interactablePad,
+  );
+  addBox(group, 'playground:delivery-board-left-post', [0.16, 1.8, 0.16], [x - 0.6, 0.9, z], materials.boardFrame);
+  addBox(group, 'playground:delivery-board-right-post', [0.16, 1.8, 0.16], [x + 0.6, 0.9, z], materials.boardFrame);
+  addBox(group, 'playground:delivery-board-panel', [1.55, 1, 0.12], [x, 1.3, z], materials.board);
   addBox(
     group,
     'playground:delivery-board-header-placeholder',
     [1.25, 0.12, 0.14],
-    [4.85, 1.62, -3.12],
+    [x, 1.62, z + 0.08],
     materials.boardFrame,
   );
   addBox(
     group,
     'playground:delivery-board-note-large',
     [0.55, 0.34, 0.14],
-    [4.58, 1.26, -3.12],
+    [x - 0.27, 1.26, z + 0.08],
     materials.boardPaper,
   );
   addBox(
     group,
     'playground:delivery-board-note-small',
     [0.42, 0.24, 0.14],
-    [5.12, 1.19, -3.12],
+    [x + 0.27, 1.19, z + 0.08],
     materials.boardPaper,
   );
   addBox(
     group,
     'playground:delivery-board-note-pin',
     [0.12, 0.12, 0.16],
-    [4.58, 1.44, -3.1],
+    [x - 0.27, 1.44, z + 0.1],
     materials.boardPin,
   );
 };

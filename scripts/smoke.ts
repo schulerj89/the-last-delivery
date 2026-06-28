@@ -11,12 +11,42 @@ import {
   createMailboxObjectiveMarker,
   updateObjectiveMarker,
 } from '../src/world/playgroundObjectiveMarker';
+import { deliveryTargetObjectId, villageWorldObjects } from '../src/world/villageDefinition';
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
     throw new Error(message);
   }
 }
+
+const isFiniteVector3Tuple = (value: readonly number[]): boolean => (
+  value.length === 3 && value.every((component) => Number.isFinite(component))
+);
+
+const runWorldDefinitionSmoke = (): void => {
+  const ids = new Set<string>();
+
+  villageWorldObjects.forEach((object) => {
+    assert(!ids.has(object.id), `World object id should be unique: ${object.id}`);
+    ids.add(object.id);
+    assert(isFiniteVector3Tuple(object.position), `World object should have a valid position: ${object.id}`);
+
+    if (object.interactable) {
+      assert(isFiniteVector3Tuple(object.interactable.position), `Interactable should have a valid position: ${object.id}`);
+      assert(object.interactable.radius > 0, `Interactable should have a positive radius: ${object.id}`);
+    }
+
+    if (object.collider) {
+      assert(isFiniteVector3Tuple(object.collider.position), `Collider should have a valid position: ${object.id}`);
+      assert(
+        object.collider.size.every((component) => component > 0),
+        `Collider should have positive size components: ${object.id}`,
+      );
+    }
+  });
+
+  assert(ids.has(deliveryTargetObjectId), 'Delivery target world object should exist.');
+};
 
 const runDeliveryStateSmoke = (): void => {
   const delivery = createDeliveryController();
@@ -81,6 +111,7 @@ const runModuleSmoke = (): void => {
   assert(boardMarker.position.y > 0, 'Objective marker animation should keep marker above the ground.');
 };
 
+runWorldDefinitionSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();
 runModuleSmoke();

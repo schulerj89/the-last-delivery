@@ -1,5 +1,19 @@
 import * as THREE from 'three';
 import type { CollisionWorld } from '../game/collision';
+import { deliveryBoardObject, mailboxObject } from './villageDefinition';
+import type { WorldObjectDefinition } from './types';
+
+const createWorldObjectCollisionBox = (object: WorldObjectDefinition) => {
+  if (!object.collider) {
+    throw new Error(`Missing collider for world object: ${object.id}`);
+  }
+
+  return {
+    id: object.id,
+    center: new THREE.Vector3(...object.collider.position),
+    size: new THREE.Vector3(...object.collider.size),
+  };
+};
 
 export const playgroundCollisionWorld: CollisionWorld = {
   bounds: {
@@ -64,15 +78,7 @@ export const playgroundCollisionWorld: CollisionWorld = {
       center: new THREE.Vector3(5.8, 0.18, 5.35),
       size: new THREE.Vector3(0.65, 0.36, 0.6),
     },
-    {
-      id: 'mailbox',
-      center: new THREE.Vector3(-4.2, 0.65, 2.8),
-      size: new THREE.Vector3(1, 1.3, 0.75),
-    },
-    {
-      id: 'delivery-board',
-      center: new THREE.Vector3(4.85, 0.9, -3.2),
-      size: new THREE.Vector3(1.8, 1.8, 0.45),
-    },
+    createWorldObjectCollisionBox(mailboxObject),
+    createWorldObjectCollisionBox(deliveryBoardObject),
   ],
 };

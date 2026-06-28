@@ -1,12 +1,30 @@
 import * as THREE from 'three';
 import type { DeliveryController } from '../game/delivery';
 import type { Interactable } from '../game/interaction';
+import type { WorldObjectDefinition } from './types';
+import { deliveryBoardObject, mailboxObject } from './villageDefinition';
+
+const createInteractablePosition = (object: WorldObjectDefinition): THREE.Vector3 => {
+  if (!object.interactable) {
+    throw new Error(`Missing interactable data for world object: ${object.id}`);
+  }
+
+  return new THREE.Vector3(...object.interactable.position);
+};
+
+const getInteractableRadius = (object: WorldObjectDefinition): number => {
+  if (!object.interactable) {
+    throw new Error(`Missing interactable data for world object: ${object.id}`);
+  }
+
+  return object.interactable.radius;
+};
 
 export const createPlaygroundInteractables = (delivery: DeliveryController): readonly Interactable[] => [
   {
-    id: 'mailbox',
-    position: new THREE.Vector3(-3.3, 0, 2.8),
-    radius: 1.15,
+    id: mailboxObject.id,
+    position: createInteractablePosition(mailboxObject),
+    radius: getInteractableRadius(mailboxObject),
     prompt: () => (
       delivery.getState().status === 'delivery-accepted'
         ? 'Complete delivery'
@@ -19,9 +37,9 @@ export const createPlaygroundInteractables = (delivery: DeliveryController): rea
     ),
   },
   {
-    id: 'delivery-board',
-    position: new THREE.Vector3(3.6, 0, -3.2),
-    radius: 1.25,
+    id: deliveryBoardObject.id,
+    position: createInteractablePosition(deliveryBoardObject),
+    radius: getInteractableRadius(deliveryBoardObject),
     prompt: () => (
       delivery.getState().status === 'delivery-accepted'
         ? 'Delivery in progress'

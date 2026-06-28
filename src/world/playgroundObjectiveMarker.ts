@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import type { WorldObjectDefinition } from './types';
+import { deliveryBoardObject, mailboxObject } from './villageDefinition';
 
 const createObjectiveMarker = (
   name: string,
@@ -32,12 +34,20 @@ const createObjectiveMarker = (
   return marker;
 };
 
+const getObjectiveAnchorPosition = (object: WorldObjectDefinition): THREE.Vector3Tuple => {
+  if (!object.objectiveAnchor) {
+    throw new Error(`Missing objective anchor for world object: ${object.id}`);
+  }
+
+  return object.objectiveAnchor.position;
+};
+
 export const createDeliveryBoardObjectiveMarker = (): THREE.Group => (
-  createObjectiveMarker('objective:delivery-board', [4.85, 2.35, -3.2], 0x7cf2cf)
+  createObjectiveMarker('objective:delivery-board', getObjectiveAnchorPosition(deliveryBoardObject), 0x7cf2cf)
 );
 
 export const createMailboxObjectiveMarker = (): THREE.Group => (
-  createObjectiveMarker('objective:mailbox', [-4.2, 2.15, 2.8], 0xffe45c)
+  createObjectiveMarker('objective:mailbox', getObjectiveAnchorPosition(mailboxObject), 0xffe45c)
 );
 
 export const updateObjectiveMarker = (marker: THREE.Object3D, elapsedSeconds: number): void => {
