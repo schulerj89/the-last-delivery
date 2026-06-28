@@ -36,9 +36,11 @@ import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
 import {
   createPlayerFallbackVisual,
   createPlayerVisual,
+  fitAndAlignCharacterModel,
   playerCharacterAssetId,
   playerCharacterVisualSettings,
   playerMovementSettings,
+  resolveVisibleCharacterMeshNames,
 } from '../src/game/player';
 import {
   clampFrameDelta,
@@ -1112,6 +1114,26 @@ const runModuleSmoke = (): void => {
   assert(Number.isFinite(playerCharacterVisualSettings.rotationY), 'Player character visual rotation should be finite.');
   assert(isFiniteVector3Tuple(playerCharacterVisualSettings.offset), 'Player character visual offset should be a valid vector.');
   assert(playerCharacterVisualSettings.visibleMeshNames.length > 0, 'Player character visual should select a courier-style mesh subset.');
+  assert(playerCharacterVisualSettings.visibleMeshNames.includes('Outerwear_036'), 'Player character mesh filter should use the actual outerwear mesh name.');
+
+  const filterFallback = resolveVisibleCharacterMeshNames(['Body_010', 'Outerwear_036'], ['missing-mesh-name'], 'configured');
+  assert(filterFallback.usedFallbackAll, 'Player mesh filtering should fall back to all meshes if the configured filter hides everything.');
+  assert(filterFallback.visibleMeshCount === 2, 'Player mesh filter fallback should keep every available mesh visible.');
+
+  const filterConfigured = resolveVisibleCharacterMeshNames(['Body_010', 'Outerwear_036'], ['Body_010'], 'configured');
+  assert(!filterConfigured.usedFallbackAll, 'Player mesh filtering should not fall back when at least one mesh matches.');
+  assert(filterConfigured.visibleMeshCount === 1, 'Player mesh filtering should respect configured visible mesh names.');
+
+  const emptyAlignment = fitAndAlignCharacterModel(new Group(), playerMovementSettings.radius);
+  assert(!emptyAlignment.validBounds, 'Player character alignment should handle empty bounds safely.');
+  assert(emptyAlignment.boundingBoxSize.every((component) => Number.isFinite(component)), 'Empty player character alignment should return finite bounds.');
+
+  const alignmentMesh = new Mesh(new BoxGeometry(1, 2, 1), new MeshBasicMaterial());
+  const alignmentResult = fitAndAlignCharacterModel(alignmentMesh, playerMovementSettings.radius);
+  assert(alignmentResult.validBounds, 'Player character alignment should fit valid model bounds.');
+  assert(Math.abs(alignmentResult.boundingBoxMin[1]) < 0.001, 'Player character alignment should place feet on the ground.');
+  assert(alignmentResult.appliedScale > 0, 'Player character alignment should apply a positive scale.');
+  disposeFitSmokeMesh(alignmentMesh);
 
   const fallbackVisual = createPlayerFallbackVisual();
   assert(fallbackVisual.name === 'player:placeholder', 'Player fallback visual should initialize.');
@@ -1124,7 +1146,20 @@ const runModuleSmoke = (): void => {
   });
   assert(playerVisual.object.name === 'player', 'Player visual root should initialize.');
   assert(playerVisual.fallback.visible, 'Player fallback should start visible until the character model loads.');
+  assert(playerVisual.fallback.parent === playerVisual.object, 'Player fallback should stay attached to the single moving player root.');
   assert(playerVisual.object.getObjectByName('player:placeholder-body') !== undefined, 'Player visual should contain primitive fallback geometry.');
+  const initialVisualStatus = playerVisual.getStatus();
+  assert(initialVisualStatus.mode === 'fallback' || initialVisualStatus.mode === 'loading', 'Player visual status should initialize safely.');
+  assert(initialVisualStatus.assetId === playerCharacterAssetId, 'Player visual status should expose the selected asset id.');
+  assert(initialVisualStatus.assetUrl.endsWith('.glb'), 'Player visual status should expose the selected asset URL.');
+  assert(initialVisualStatus.fallbackVisible, 'Player fallback should remain available if the GLB cannot load.');
+  assert(initialVisualStatus.totalMeshCount >= initialVisualStatus.visibleMeshCount, 'Player visual mesh counts should be ordered.');
+  playerVisual.forceFallbackVisual();
+  assert(playerVisual.getStatus().mode === 'fallback', 'Player visual debug control should force fallback mode.');
+  playerVisual.forceCharacterVisual();
+  playerVisual.showAllCharacterMeshes();
+  playerVisual.showConfiguredCharacterMeshes();
+  assert(playerVisual.object.children.includes(playerVisual.fallback), 'Player object should remain the single visual root after debug toggles.');
   playerVisual.dispose();
 
   assert(thirdPersonCameraSettings.distance > 0, 'Camera distance should be positive.');

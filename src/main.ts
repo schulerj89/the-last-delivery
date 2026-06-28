@@ -86,6 +86,10 @@ const deliveryTargetObjectiveMarker = appResources.trackObject3D(createDeliveryT
 scene.add(deliveryTargetObjectiveMarker);
 
 const player = createPlayerController({ collisionWorld: playgroundCollisionWorld });
+const playerRootHelper = new THREE.AxesHelper(0.8);
+playerRootHelper.name = 'debug:player-root-axis';
+playerRootHelper.visible = false;
+player.object.add(playerRootHelper);
 appResources.trackObject3D(player.object);
 scene.add(player.object);
 
@@ -154,11 +158,13 @@ const setLayoutModeActive = (active: boolean): void => {
     placementEditor.setActive(true);
     collisionDebugView.setVisible(true);
     visualBoundsDebugView.setVisible(true);
+    playerRootHelper.visible = true;
     return;
   }
 
   placementEditor.setActive(false);
   layoutDebugView.setActive(false);
+  playerRootHelper.visible = false;
 
   if (preLayoutDebugState) {
     collisionDebugView.setVisible(preLayoutDebugState.collision);
@@ -227,6 +233,13 @@ const dispose = (): void => {
   window.removeEventListener('resize', handleResize);
   window.removeEventListener('keydown', handleDebugKeyDown);
   window.removeEventListener('keyup', handleDebugKeyUp);
+  playerRootHelper.parent?.remove(playerRootHelper);
+  playerRootHelper.geometry.dispose();
+  if (Array.isArray(playerRootHelper.material)) {
+    playerRootHelper.material.forEach((material) => material.dispose());
+  } else {
+    playerRootHelper.material.dispose();
+  }
   player.dispose();
   followCamera.dispose();
   interaction.dispose();

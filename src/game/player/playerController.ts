@@ -64,7 +64,10 @@ const rotateToward = (object: THREE.Object3D, targetYaw: number, deltaSeconds: n
 };
 
 export const createPlayerController = ({ collisionWorld }: PlayerControllerOptions = {}): PlayerController => {
-  const visual = createPlayerVisual();
+  const visual = createPlayerVisual(console, {
+    collisionRadius: playerMovementSettings.radius,
+    debugEnabled: import.meta.env.DEV,
+  });
   const object = visual.object;
   const pressedKeys = new Set<string>();
   const velocity = new THREE.Vector3();
@@ -89,6 +92,24 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
 
     if (key === 'r') {
       resetToSpawn();
+    }
+
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    if (event.key === 'F6') {
+      visual.forceFallbackVisual();
+      event.preventDefault();
+    } else if (event.key === 'F7') {
+      visual.forceCharacterVisual();
+      event.preventDefault();
+    } else if (event.key === 'F8') {
+      visual.showAllCharacterMeshes();
+      event.preventDefault();
+    } else if (event.key === 'F9') {
+      visual.showConfiguredCharacterMeshes();
+      event.preventDefault();
     }
   };
 
@@ -151,7 +172,11 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
         grounded: object.position.y === groundedY,
         hitBounds: hitBoundsLastFrame,
         collisionHits: [...lastCollisionHits],
+        visualStatus: visual.getStatus(),
       };
+    },
+    getVisualStatus() {
+      return visual.getStatus();
     },
     dispose() {
       window.removeEventListener('keydown', handleKeyDown);

@@ -2,6 +2,21 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.34.0] - 2026-06-28
+
+### Added
+
+- Added player visual status reporting for character load mode, asset URL, mesh counts, animation names, bounds, root transform, scale, rotation, offset, and fallback visibility.
+- Added player debug overlay character visual diagnostics.
+- Added dev visual toggles: `F6` force fallback, `F7` force character, `F8` show all character meshes, and `F9` restore the configured mesh filter.
+- Added player-root axis helper visibility while F2 layout mode is active.
+- Added smoke checks for safe visual status initialization, mesh-filter fallback behavior, safe bounds alignment, fallback availability, and single-root player visuals.
+
+### Changed
+
+- Updated courier mesh filtering so a bad allowlist cannot silently hide every mesh.
+- Fixed the configured courier outerwear mesh name and added bounds-based character fitting so the loaded model is centered on the player origin with feet on the ground.
+
 ## [0.33.0] - 2026-06-28
 
 ### Added

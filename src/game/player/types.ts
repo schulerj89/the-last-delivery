@@ -1,5 +1,6 @@
 import type * as THREE from 'three';
 import type { CollisionWorld } from '../collision';
+import type { PlayerVisualStatus } from './playerVisual';
 
 export interface PlayerState {
   position: THREE.Vector3;
@@ -7,6 +8,7 @@ export interface PlayerState {
   grounded: boolean;
   hitBounds: boolean;
   collisionHits: string[];
+  visualStatus: PlayerVisualStatus;
 }
 
 export interface PlayerMovementSettings {
@@ -27,5 +29,6 @@ export interface PlayerController {
   update(deltaSeconds: number): void;
   resetToSpawn(): void;
   getState(): PlayerState;
+  getVisualStatus(): PlayerVisualStatus;
   dispose(): void;
 }
