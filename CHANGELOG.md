@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.35.1] - 2026-06-28
+
+### Fixed
+
+- Fixed skinned GLB model instances by cloning cached character assets with Three.js `SkeletonUtils.clone` instead of `Object3D.clone(true)`, so the courier skeleton follows the moving player instance instead of remaining at the source asset origin.
+- Added smoke coverage for skinned GLB instance cloning to ensure runtime instances do not share cached source skeleton bones.
+
 ## [0.35.0] - 2026-06-28
 
 ### Added

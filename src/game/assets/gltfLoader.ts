@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as cloneSkeletonAwareObject } from 'three/addons/utils/SkeletonUtils.js';
 import { disposeMaterial } from '../resources';
 import { getAssetDefinition, type AssetDefinition } from './assetRegistry';
 
@@ -155,6 +156,10 @@ const createStats = (
   };
 };
 
+export const cloneGltfSourceForInstance = (source: THREE.Object3D): THREE.Object3D => (
+  cloneSkeletonAwareObject(source)
+);
+
 export const createAssetCache = ({
   canLoad = defaultCanLoad,
   loadSource = loadGltfSource,
@@ -224,7 +229,7 @@ export const createAssetCache = ({
 
   const createInstance = async (assetId: string): Promise<AssetInstanceHandle> => {
     const entry = await loadAssetEntry(assetId);
-    const object = entry.source.clone(true);
+    const object = cloneGltfSourceForInstance(entry.source);
     let disposed = false;
 
     incrementInstanceCount(instanceCounts, assetId);

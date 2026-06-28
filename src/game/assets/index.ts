@@ -20,6 +20,7 @@ export {
 } from './assetRegistry';
 export {
   canLoadGltfAssets,
+  cloneGltfSourceForInstance,
   createAssetCache,
   createGltfAssetInstance,
   createModelInstance,

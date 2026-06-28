@@ -1,15 +1,21 @@
 import {
+  Bone,
   BoxGeometry,
+  Float32BufferAttribute,
   Group,
   Mesh,
   MeshBasicMaterial,
   Object3D,
+  Skeleton,
+  SkinnedMesh,
   Texture,
+  Uint16BufferAttribute,
   Vector3,
 } from 'three';
 import {
   assetFitModes,
   assetRegistry,
+  cloneGltfSourceForInstance,
   createAssetCache,
   createAssetTargetBounds,
   defaultWorldAssetFitMode,
@@ -333,6 +339,47 @@ const runAssetCacheSmoke = async (): Promise<void> => {
   }
   assert(disabledFailedSafely, 'Disabled asset cache should reject so primitive fallback can remain.');
   assert(disabledCache.getRuntimeStats().totalSceneInstances === 0, 'Failed asset loads should not create scene instances.');
+
+  const skinnedSource = new Group();
+  skinnedSource.name = 'smoke:skinned-source';
+  const rootBone = new Bone();
+  const childBone = new Bone();
+  rootBone.name = 'smoke:root-bone';
+  childBone.name = 'smoke:child-bone';
+  childBone.position.y = 1;
+  rootBone.add(childBone);
+
+  const skinnedGeometry = new BoxGeometry(1, 1, 1);
+  const vertexCount = skinnedGeometry.attributes.position.count;
+  const skinIndices: number[] = [];
+  const skinWeights: number[] = [];
+  for (let index = 0; index < vertexCount; index += 1) {
+    skinIndices.push(0, 0, 0, 0);
+    skinWeights.push(1, 0, 0, 0);
+  }
+  skinnedGeometry.setAttribute('skinIndex', new Uint16BufferAttribute(skinIndices, 4));
+  skinnedGeometry.setAttribute('skinWeight', new Float32BufferAttribute(skinWeights, 4));
+
+  const skinnedMaterial = new MeshBasicMaterial();
+  const skinnedMesh = new SkinnedMesh(skinnedGeometry, skinnedMaterial);
+  skinnedMesh.name = 'smoke:skinned-mesh';
+  skinnedSource.add(rootBone, skinnedMesh);
+  skinnedMesh.bind(new Skeleton([rootBone, childBone]));
+
+  const skinnedClone = cloneGltfSourceForInstance(skinnedSource);
+  const clonedSkinnedMesh = skinnedClone.getObjectByName('smoke:skinned-mesh');
+
+  assert(clonedSkinnedMesh instanceof SkinnedMesh, 'GLB instance clone should preserve skinned meshes.');
+  assert(clonedSkinnedMesh !== skinnedMesh, 'GLB instance clone should create a separate skinned mesh object.');
+  assert(clonedSkinnedMesh.skeleton !== skinnedMesh.skeleton, 'Skinned GLB instances should not share the cached source skeleton.');
+  assert(clonedSkinnedMesh.skeleton.bones[0] !== rootBone, 'Skinned GLB instance bones should be cloned from the cached source.');
+  assert(
+    skinnedClone.getObjectByName('smoke:root-bone') === clonedSkinnedMesh.skeleton.bones[0],
+    'Skinned GLB instance skeleton should point at bones inside the instance clone.',
+  );
+
+  skinnedGeometry.dispose();
+  skinnedMaterial.dispose();
 };
 
 const disposeFitSmokeMesh = (mesh: Mesh): void => {
