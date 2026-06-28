@@ -18,6 +18,8 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - The default playground view is a clean editor canvas: grass ground and boundary fence only.
 - The Object panel lists editable world objects and their current collision, interactable, objective, and destination data.
 - The Asset panel lists registered runtime GLB assets that are safe to preview.
+- The Gameplay panel assigns the selected object a role/action such as spawn, post office, delivery board, mailbox target, or decorative.
+- The Button Instructions panel explains the editor buttons inside the HUD.
 
 ## Editor Camera
 
@@ -84,6 +86,16 @@ Browser file saving is explicit. The editor does not silently write source files
 - Click `Preview Asset` to load that GLB onto the selected object using the current transform and dimensions.
 - Click `Use Primitive` to clear the asset preview and export a primitive render override.
 - Collision remains authored from the world object data; visual asset previews do not create mesh collision.
+
+## Gameplay Roles
+
+- Click `Set Spawn` to make the selected object define the player spawn point when promoted to source.
+- Click `Post Office` to mark a selected asset as the post office landmark.
+- Click `Delivery Board` to assign the `open-delivery-board` interaction action.
+- Click `Mailbox Target` to assign the `complete-delivery` interaction action and expose destination/variant fields.
+- Click `Decorative` to clear gameplay behavior from a selected prop.
+- Gameplay roles, interaction actions, destination names, and mailbox variants export into the active editor JSON.
+- Existing authored objects remain available as starting templates, but behavior can now live on the selected asset/object through exported metadata.
 
 ## Drag Placement
 

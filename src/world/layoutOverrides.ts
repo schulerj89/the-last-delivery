@@ -3,10 +3,17 @@ import type { AssetFitMode } from '../game/assets';
 import { isAssetFitMode, isKnownAssetId } from '../game/assets';
 import type {
   WorldColliderDefinition,
+  WorldGameplayDefinition,
   WorldInteractableDefinition,
+  WorldMailboxDefinition,
   WorldObjectDefinition,
   WorldObjectiveAnchorDefinition,
 } from './types';
+import {
+  isMailboxVariant,
+  isWorldGameplayRole,
+  isWorldInteractionAction,
+} from './worldObjectGameplay';
 
 export const layoutOverrideDocumentVersion = 1;
 
@@ -24,6 +31,8 @@ export interface LayoutTransformOverride {
   collider?: WorldColliderDefinition | null;
   interactable?: WorldInteractableDefinition | null;
   objectiveAnchor?: WorldObjectiveAnchorDefinition | null;
+  mailbox?: WorldMailboxDefinition | null;
+  gameplay?: WorldGameplayDefinition | null;
   updatedAt?: string;
 }
 
@@ -69,6 +78,19 @@ const cloneObjectiveAnchor = (
   objectiveAnchor: WorldObjectiveAnchorDefinition,
 ): WorldObjectiveAnchorDefinition => ({
   position: cloneTuple(objectiveAnchor.position),
+});
+
+const cloneMailbox = (
+  mailbox: WorldMailboxDefinition,
+): WorldMailboxDefinition => ({
+  variant: mailbox.variant,
+  destinationName: mailbox.destinationName,
+});
+
+const cloneGameplay = (
+  gameplay: WorldGameplayDefinition,
+): WorldGameplayDefinition => ({
+  ...gameplay,
 });
 
 const addDelta = (
@@ -277,6 +299,62 @@ export const validateLayoutOverrideDocument = (
         }
       }
 
+      if (entry.mailbox !== undefined) {
+        if (entry.mailbox === null) {
+          override.mailbox = null;
+        } else if (
+          isRecord(entry.mailbox)
+          && isMailboxVariant(entry.mailbox.variant)
+          && typeof entry.mailbox.destinationName === 'string'
+          && entry.mailbox.destinationName.trim().length > 0
+        ) {
+          override.mailbox = {
+            variant: entry.mailbox.variant,
+            destinationName: entry.mailbox.destinationName,
+          };
+        } else {
+          errors.push(`Override ${id} mailbox must be null or include variant and destinationName.`);
+        }
+      }
+
+      if (entry.gameplay !== undefined) {
+        if (entry.gameplay === null) {
+          override.gameplay = null;
+        } else if (isRecord(entry.gameplay) && isWorldGameplayRole(entry.gameplay.role)) {
+          const gameplay: WorldGameplayDefinition = {
+            role: entry.gameplay.role,
+          };
+
+          if (entry.gameplay.action !== undefined) {
+            if (isWorldInteractionAction(entry.gameplay.action)) {
+              gameplay.action = entry.gameplay.action;
+            } else {
+              errors.push(`Override ${id} gameplay action must be a valid interaction action.`);
+            }
+          }
+
+          if (entry.gameplay.destinationName !== undefined) {
+            if (typeof entry.gameplay.destinationName === 'string') {
+              gameplay.destinationName = entry.gameplay.destinationName;
+            } else {
+              errors.push(`Override ${id} gameplay destinationName must be a string.`);
+            }
+          }
+
+          if (entry.gameplay.mailboxVariant !== undefined) {
+            if (isMailboxVariant(entry.gameplay.mailboxVariant)) {
+              gameplay.mailboxVariant = entry.gameplay.mailboxVariant;
+            } else {
+              errors.push(`Override ${id} gameplay mailboxVariant must be blue, red, or green.`);
+            }
+          }
+
+          override.gameplay = gameplay;
+        } else {
+          errors.push(`Override ${id} gameplay must be null or include a valid role.`);
+        }
+      }
+
       if (entry.updatedAt !== undefined) {
         if (typeof entry.updatedAt === 'string' && entry.updatedAt.trim().length > 0) {
           override.updatedAt = entry.updatedAt;
@@ -343,6 +421,7 @@ const cloneWorldObject = (object: WorldObjectDefinition): WorldObjectDefinition 
     }
     : undefined,
   mailbox: object.mailbox ? { ...object.mailbox } : undefined,
+  gameplay: object.gameplay ? { ...object.gameplay } : undefined,
   layoutTransform: object.layoutTransform ? { ...object.layoutTransform } : undefined,
 });
 
@@ -447,6 +526,14 @@ export const mergeWorldObjectOverrides = (
 
     if (override.objectiveAnchor !== undefined) {
       nextObject.objectiveAnchor = override.objectiveAnchor === null ? undefined : cloneObjectiveAnchor(override.objectiveAnchor);
+    }
+
+    if (override.mailbox !== undefined) {
+      nextObject.mailbox = override.mailbox === null ? undefined : cloneMailbox(override.mailbox);
+    }
+
+    if (override.gameplay !== undefined) {
+      nextObject.gameplay = override.gameplay === null ? undefined : cloneGameplay(override.gameplay);
     }
 
     return nextObject;

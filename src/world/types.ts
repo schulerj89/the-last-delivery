@@ -13,10 +13,21 @@ export type WorldObjectKind =
   | 'rock'
   | 'sack'
   | 'signpost'
+  | 'spawn-point'
   | 'tree'
   | 'well';
 
 export type MailboxVariant = 'red' | 'blue' | 'green';
+export type WorldGameplayRole =
+  | 'decorative'
+  | 'player-spawn'
+  | 'post-office'
+  | 'delivery-board'
+  | 'mailbox';
+export type WorldInteractionAction =
+  | 'none'
+  | 'open-delivery-board'
+  | 'complete-delivery';
 
 export interface WorldColliderDefinition {
   position: THREE.Vector3Tuple;
@@ -35,6 +46,13 @@ export interface WorldObjectiveAnchorDefinition {
 export interface WorldMailboxDefinition {
   variant: MailboxVariant;
   destinationName: string;
+}
+
+export interface WorldGameplayDefinition {
+  role: WorldGameplayRole;
+  action?: WorldInteractionAction;
+  destinationName?: string;
+  mailboxVariant?: MailboxVariant;
 }
 
 export interface WorldLayoutTransformDefinition {
@@ -65,5 +83,6 @@ export interface WorldObjectDefinition {
   interactable?: WorldInteractableDefinition;
   objectiveAnchor?: WorldObjectiveAnchorDefinition;
   mailbox?: WorldMailboxDefinition;
+  gameplay?: WorldGameplayDefinition;
   layoutTransform?: WorldLayoutTransformDefinition;
 }

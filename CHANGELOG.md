@@ -2,6 +2,16 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.46.0] - 2026-06-28
+
+### Added
+
+- Added explicit world gameplay metadata for object roles and interaction actions, including player spawn, post office, delivery board, mailbox, and decorative roles.
+- Added placement editor gameplay controls and preset buttons for assigning spawn, post office, delivery board, mailbox target, or decorative behavior to selected objects/assets.
+- Added a compact button-instructions panel inside the placement editor HUD.
+- Added player spawn as an editable world object so spawn placement can be promoted through the layout override workflow.
+- Extended layout override validation, generated source promotion, and smoke checks to cover gameplay roles, interaction actions, mailbox metadata, and spawn resolution.
+
 ## [0.45.0] - 2026-06-28
 
 ### Added

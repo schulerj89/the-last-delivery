@@ -7,12 +7,14 @@ import { shouldRenderAuthoredPlaygroundObjects } from './playgroundComposition';
 import {
   deliveryBoardObject,
   getWorldObjectsByKind,
+  getWorldObjectsByGameplayRole,
   playerSpawnPosition,
   villageWorldObjects,
 } from './villageDefinition';
 import { villageLayoutConfig } from './villageLayoutConfig';
 import { getVillagePathGuides } from './villagePaths';
 import type { PlaygroundVisualBoundsDebugView } from './playgroundVisualBoundsDebug';
+import { getWorldObjectMailbox } from './worldObjectGameplay';
 
 const villageBounds = villageLayoutConfig.bounds;
 const villageWidth = villageBounds.maxX - villageBounds.minX;
@@ -130,6 +132,10 @@ const getAssetId = (object: WorldObjectDefinition): string | null => (
 );
 
 const getSceneObjectNamePrefixes = (objectId: string): readonly string[] => {
+  if (objectId === 'player-spawn') {
+    return ['playground:player-spawn'];
+  }
+
   if (objectId === 'delivery-board') {
     return ['playground:delivery-board'];
   }
@@ -673,7 +679,7 @@ const addVillageLabels = (group: THREE.Group): void => {
 };
 
 const addPostOffice = (group: THREE.Group, options: PlaygroundOptions): void => {
-  const postOffice = getWorldObjectsByKind('post-office')[0];
+  const postOffice = getWorldObjectsByGameplayRole('post-office')[0] ?? getWorldObjectsByKind('post-office')[0];
   const [x, , z] = postOffice.position;
   const [width, height, depth] = getDimensions(postOffice);
   const fallbackObjects: THREE.Object3D[] = [];
@@ -889,28 +895,40 @@ const addWell = (group: THREE.Group): void => {
   addBox(group, 'village:well-roof', [diameter * 1.2, 0.16, diameter * 0.95], [x, height + 1.12, z], materials.houseRoof);
 };
 
-const addMailbox = (group: THREE.Group, mailbox: WorldObjectDefinition): void => {
+const addMailbox = (
+  group: THREE.Group,
+  mailbox: WorldObjectDefinition,
+  options: PlaygroundOptions,
+): void => {
+  const fallbackObjects: THREE.Object3D[] = [];
+
   if (mailbox.interactable) {
     const interactionPosition = mailbox.interactable.position;
-    addGroundRing(
+    fallbackObjects.push(addGroundRing(
       group,
       `village:${mailbox.id}:interaction-ring`,
       0.72,
       0.025,
       [interactionPosition[0], 0.035, interactionPosition[2]],
       materials.interactablePad,
-    );
+    ));
   }
 
-  group.add(createMailboxProp({
+  const mailboxProp = createMailboxProp({
     id: mailbox.id,
     position: mailbox.position,
-    variant: mailbox.mailbox?.variant,
-  }));
+    variant: getWorldObjectMailbox(mailbox)?.variant,
+  });
+  group.add(mailboxProp);
+  fallbackObjects.push(mailboxProp);
+  tryApplyAssetRender(group, mailbox, fallbackObjects, options);
 };
 
-const addMailboxes = (group: THREE.Group): void => {
-  getWorldObjectsByKind('mailbox').forEach((mailbox) => addMailbox(group, mailbox));
+const addMailboxes = (group: THREE.Group, options: PlaygroundOptions): void => {
+  getWorldObjectsByGameplayRole('mailbox')
+    .filter((mailbox) => mailbox.kind === 'mailbox')
+    .filter((mailbox) => getWorldObjectMailbox(mailbox))
+    .forEach((mailbox) => addMailbox(group, mailbox, options));
 };
 
 const addDeliveryBoard = (group: THREE.Group): void => {
@@ -984,7 +1002,7 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
   addVillageProps(playground, options);
   addFantasyDressing(playground, options);
   addNatureProps(playground, options);
-  addMailboxes(playground);
+  addMailboxes(playground, options);
   addDeliveryBoard(playground);
   addVillageLabels(playground);
   applyAuthoredSceneTransforms(playground);

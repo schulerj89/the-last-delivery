@@ -145,8 +145,22 @@ import { createPlaygroundVisualBoundsDebugView } from '../src/world/playgroundVi
 import { createMailboxProp } from '../src/world/props/createMailbox';
 import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
 import { generatedVillageLayoutOverrides } from '../src/world/villageOverrides.generated';
-import { baseVillageWorldObjects, playerSpawnPosition, villageWorldObjects } from '../src/world/villageDefinition';
+import {
+  baseVillageWorldObjects,
+  getWorldObjectsByGameplayRole,
+  getWorldObjectsByInteractionAction,
+  playerSpawnPosition,
+  villageWorldObjects,
+} from '../src/world/villageDefinition';
 import { getVillagePathGuides } from '../src/world/villagePaths';
+import {
+  getDefaultActionForRole,
+  getWorldObjectGameplay,
+  getWorldObjectMailbox,
+  isMailboxVariant,
+  isWorldGameplayRole,
+  isWorldInteractionAction,
+} from '../src/world/worldObjectGameplay';
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
@@ -634,6 +648,24 @@ const runLayoutOverrideSmoke = (): void => {
         active: false,
         renderMode: 'asset',
         assetId: 'fantasy-box-001',
+        gameplay: {
+          role: 'decorative',
+          action: 'none',
+        },
+        updatedAt: '2026-06-28T00:00:00.000Z',
+      },
+      {
+        id: 'mailbox',
+        mailbox: {
+          variant: 'green',
+          destinationName: 'Smoke Test Mailbox',
+        },
+        gameplay: {
+          role: 'mailbox',
+          action: 'complete-delivery',
+          destinationName: 'Smoke Test Mailbox',
+          mailboxVariant: 'green',
+        },
         updatedAt: '2026-06-28T00:00:00.000Z',
       },
     ],
@@ -676,6 +708,20 @@ const runLayoutOverrideSmoke = (): void => {
     }, knownObjectIds).ok,
     'Unknown asset ids should be rejected.',
   );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...validDocument,
+      overrides: [{ id: 'delivery-board', gameplay: { role: 'quest-giver' } }],
+    }, knownObjectIds).ok,
+    'Unknown gameplay roles should be rejected.',
+  );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...validDocument,
+      overrides: [{ id: 'mailbox', mailbox: { variant: 'purple', destinationName: 'Bad Mailbox' } }],
+    }, knownObjectIds).ok,
+    'Invalid mailbox variants should be rejected.',
+  );
 
   const serializedDocument = serializeLayoutOverrideDocument(validDocument);
   const parsedDocument = parseLayoutOverrideJson(serializedDocument, knownObjectIds);
@@ -694,6 +740,7 @@ const runLayoutOverrideSmoke = (): void => {
   const baseBoard = baseVillageWorldObjects.find((object) => object.id === 'delivery-board');
   const overriddenBoard = overriddenMerged.find((object) => object.id === 'delivery-board');
   const overriddenCrate = overriddenMerged.find((object) => object.id === 'crate-large');
+  const overriddenMailbox = overriddenMerged.find((object) => object.id === 'mailbox');
   const boardDeltaX = (validDocument.overrides[0].position?.[0] ?? 0) - (baseBoard?.position[0] ?? 0);
 
   assert(generatedValidation.ok, 'Generated village layout overrides should validate against known object ids.');
@@ -715,6 +762,11 @@ const runLayoutOverrideSmoke = (): void => {
     'Merged position overrides should move interactable anchors by delta.',
   );
   assert(overriddenBoard?.layoutTransform?.scaleMultiplier === 1.1, 'Primitive layout overrides should preserve scale multiplier.');
+  assert(overriddenCrate !== undefined, 'Overridden crate should resolve.');
+  assert(overriddenMailbox !== undefined, 'Overridden mailbox should resolve.');
+  assert(getWorldObjectGameplay(overriddenCrate).role === 'decorative', 'Merged overrides should preserve decorative gameplay roles.');
+  assert(overriddenMailbox?.mailbox?.destinationName === 'Smoke Test Mailbox', 'Merged overrides should update mailbox metadata.');
+  assert(getWorldObjectGameplay(overriddenMailbox).action === 'complete-delivery', 'Merged overrides should update gameplay actions.');
 
   const editableObjects = createEditablePlacementObjects(baseVillageWorldObjects);
   const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
@@ -730,6 +782,10 @@ const runLayoutOverrideSmoke = (): void => {
   draft.scaleMultiplier = 1.1;
   draft.yOffset = 0.15;
   draft.assetId = 'fantasy-pointer-001';
+  draft.gameplayRole = 'mailbox';
+  draft.interactionAction = 'complete-delivery';
+  draft.destinationName = 'Draft Mailbox';
+  draft.mailboxVariant = 'blue';
 
   const draftDocument = createLayoutOverrideDocumentFromPlacementDrafts(
     new Map([[deliveryBoard.id, draft]]),
@@ -741,6 +797,9 @@ const runLayoutOverrideSmoke = (): void => {
   assert(draftDocument.overrides[0]?.id === 'delivery-board', 'Placement draft JSON should include object id.');
   assert(draftDocument.overrides[0]?.active === false, 'Placement draft JSON should include active state changes.');
   assert(draftDocument.overrides[0]?.assetId === 'fantasy-pointer-001', 'Placement draft JSON should include asset choices.');
+  assert(draftDocument.overrides[0]?.gameplay?.role === 'mailbox', 'Placement draft JSON should include gameplay roles.');
+  assert(draftDocument.overrides[0]?.gameplay?.action === 'complete-delivery', 'Placement draft JSON should include gameplay actions.');
+  assert(draftDocument.overrides[0]?.mailbox?.destinationName === 'Draft Mailbox', 'Placement draft JSON should include mailbox metadata.');
   assert(
     validateLayoutOverrideDocument(draftDocument, knownObjectIds).ok,
     'Placement draft JSON should validate against known world objects.',
@@ -762,6 +821,13 @@ const runWorldDefinitionSmoke = (): void => {
     assert(!ids.has(object.id), `World object id should be unique: ${object.id}`);
     ids.add(object.id);
     assert(isFiniteVector3Tuple(object.position), `World object should have a valid position: ${object.id}`);
+
+    const gameplay = getWorldObjectGameplay(object);
+    assert(isWorldGameplayRole(gameplay.role), `World object gameplay role should be valid: ${object.id}`);
+    assert(
+      gameplay.action === undefined || isWorldInteractionAction(gameplay.action),
+      `World object gameplay action should be valid: ${object.id}`,
+    );
 
     if (object.dimensions) {
       assert(
@@ -806,9 +872,19 @@ const runWorldDefinitionSmoke = (): void => {
         `Collider should have positive size components: ${object.id}`,
       );
     }
+
+    const mailboxMetadata = getWorldObjectMailbox(object);
+
+    if (mailboxMetadata) {
+      assert(isMailboxVariant(mailboxMetadata.variant), `World object mailbox variant should be valid: ${object.id}`);
+      assert(mailboxMetadata.destinationName.trim().length > 0, `World object mailbox destination should not be empty: ${object.id}`);
+    }
   });
 
   const mailboxObjects = villageWorldObjects.filter((object) => object.kind === 'mailbox');
+  const spawnObjects = getWorldObjectsByGameplayRole('player-spawn');
+  const deliveryBoardActionObjects = getWorldObjectsByInteractionAction('open-delivery-board');
+  const deliveryTargetActionObjects = getWorldObjectsByInteractionAction('complete-delivery');
   const cottageObjects = villageWorldObjects.filter((object) => object.kind === 'cottage');
   const treeObjects = villageWorldObjects.filter((object) => object.kind === 'tree');
   const bushObjects = villageWorldObjects.filter((object) => object.kind === 'bush');
@@ -841,6 +917,12 @@ const runWorldDefinitionSmoke = (): void => {
 
   console.info(`World object counts by kind: ${JSON.stringify(worldObjectCountsByKind)}.`);
 
+  assert(getDefaultActionForRole('mailbox') === 'complete-delivery', 'Mailbox roles should default to complete-delivery.');
+  assert(getDefaultActionForRole('delivery-board') === 'open-delivery-board', 'Delivery board roles should default to open-delivery-board.');
+  assert(spawnObjects.length === 1, 'World should define exactly one player spawn role.');
+  assert(deliveryBoardActionObjects.length >= 1, 'World should define a delivery board action object.');
+  assert(deliveryTargetActionObjects.length >= 3, 'World should define mailbox delivery action objects.');
+  assert(playerSpawnPosition[0] === spawnObjects[0]?.position[0] && playerSpawnPosition[2] === spawnObjects[0]?.position[2], 'Player spawn export should resolve from the spawn role object.');
   assert(isInsideVillageBounds(playerSpawnPosition), 'Player spawn should be inside the intended village bounds.');
 
   villageWorldObjects.forEach((object) => {
@@ -1096,10 +1178,12 @@ const runPlacementEditorSmoke = (): void => {
   const editableObjects = createEditablePlacementObjects();
   const snapValues = getPlacementEditorSnapValues();
   const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
+  const playerSpawn = getEditablePlacementObjectById('player-spawn', editableObjects);
   const missingObject = getEditablePlacementObjectById('missing-object', editableObjects);
 
   assert(editableObjects.length > 0, 'Placement editor editable object list should initialize.');
   assert(deliveryBoard !== null, 'Placement editor should resolve important editable objects.');
+  assert(playerSpawn !== null, 'Placement editor should expose the player spawn as an editable object.');
   assert(missingObject === null, 'Placement editor should handle missing object ids safely.');
   assert(snapValues.length === 3, 'Placement editor should expose three snap values.');
   assert(snapValues.every((value) => value > 0), 'Placement editor snap values should be positive.');
@@ -1146,6 +1230,10 @@ const runPlacementEditorSmoke = (): void => {
   draft.rotationY += Math.PI / 4;
   draft.scaleMultiplier = 1.1;
   draft.yOffset = 0.25;
+  draft.gameplayRole = 'mailbox';
+  draft.interactionAction = 'complete-delivery';
+  draft.destinationName = 'Smoke Editor Mailbox';
+  draft.mailboxVariant = 'red';
 
   const serialized = serializePlacementTransform(deliveryBoard.worldObject, draft);
   const serializedAgain = serializePlacementTransform(deliveryBoard.worldObject, draft);
@@ -1153,12 +1241,15 @@ const runPlacementEditorSmoke = (): void => {
   assert(serialized.includes("id: 'delivery-board'"), 'Placement transform serialization should include the object id.');
   assert(serialized.includes('position:'), 'Placement transform serialization should include position.');
   assert(serialized.includes('rotation:'), 'Placement transform serialization should include rotation.');
+  assert(serialized.includes("gameplay: { role: 'mailbox'"), 'Placement transform serialization should include gameplay role metadata.');
+  assert(serialized.includes("mailbox: { variant: 'red'"), 'Placement transform serialization should include mailbox metadata.');
 
   const draftMap = new Map([[deliveryBoard.id, draft]]);
   const serializedAll = serializePlacementTransforms(draftMap, editableObjects);
   assert(serializedAll.startsWith('{'), 'All-placement serialization should be stable layout override JSON.');
   assert(serializedAll.includes('"version": 1'), 'All-placement serialization should include the layout override version.');
   assert(serializedAll.includes('"id": "delivery-board"'), 'All-placement serialization should include edited transforms.');
+  assert(serializedAll.includes('"gameplay"'), 'All-placement serialization should include gameplay metadata when edited.');
 };
 
 const runDeliveryStateSmoke = (): void => {

@@ -1,11 +1,20 @@
 import type * as THREE from 'three';
-import type { WorldObjectDefinition, WorldObjectKind } from './types';
+import type { WorldGameplayRole, WorldInteractionAction, WorldObjectDefinition, WorldObjectKind } from './types';
 import { mergeWorldObjectOverrides } from './layoutOverrides';
 import { generatedVillageLayoutOverrides } from './villageOverrides.generated';
-
-export const playerSpawnPosition: THREE.Vector3Tuple = [0, 0, 10];
+import { getWorldObjectGameplay } from './worldObjectGameplay';
 
 export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
+  {
+    id: 'player-spawn',
+    kind: 'spawn-point',
+    position: [0, 0, 10],
+    dimensions: [1.2, 0.1, 1.2],
+    gameplay: {
+      role: 'player-spawn',
+      action: 'none',
+    },
+  },
   {
     id: 'post-office',
     kind: 'post-office',
@@ -14,6 +23,10 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
     render: {
       mode: 'asset',
       assetId: 'fantasy-house-001',
+    },
+    gameplay: {
+      role: 'post-office',
+      action: 'none',
     },
     collider: {
       position: [-6.5, 0.93, 6.5],
@@ -35,6 +48,10 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
     },
     objectiveAnchor: {
       position: [-3.5, 2.35, 7.5],
+    },
+    gameplay: {
+      role: 'delivery-board',
+      action: 'open-delivery-board',
     },
   },
   {
@@ -88,6 +105,12 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
       variant: 'blue',
       destinationName: 'Blue House Mailbox',
     },
+    gameplay: {
+      role: 'mailbox',
+      action: 'complete-delivery',
+      destinationName: 'Blue House Mailbox',
+      mailboxVariant: 'blue',
+    },
     collider: {
       position: [-5.8, 0.65, -1.2],
       size: [1, 1.3, 0.75],
@@ -109,6 +132,12 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
       variant: 'red',
       destinationName: 'Hill Path Mailbox',
     },
+    gameplay: {
+      role: 'mailbox',
+      action: 'complete-delivery',
+      destinationName: 'Hill Path Mailbox',
+      mailboxVariant: 'red',
+    },
     collider: {
       position: [5.8, 0.62, -0.4],
       size: [0.9, 1.2, 0.7],
@@ -129,6 +158,12 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
     mailbox: {
       variant: 'green',
       destinationName: 'Post Office Return Box',
+    },
+    gameplay: {
+      role: 'mailbox',
+      action: 'complete-delivery',
+      destinationName: 'Post Office Return Box',
+      mailboxVariant: 'green',
     },
     collider: {
       position: [1.8, 0.65, -5.8],
@@ -443,6 +478,21 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = mergeWorldO
   generatedVillageLayoutOverrides,
 ).filter((worldObject) => worldObject.active !== false);
 
+export const getWorldObjectsByGameplayRole = (
+  role: WorldGameplayRole,
+): readonly WorldObjectDefinition[] => (
+  villageWorldObjects.filter((worldObject) => getWorldObjectGameplay(worldObject).role === role)
+);
+
+export const getWorldObjectsByInteractionAction = (
+  action: WorldInteractionAction,
+): readonly WorldObjectDefinition[] => (
+  villageWorldObjects.filter((worldObject) => getWorldObjectGameplay(worldObject).action === action)
+);
+
+const playerSpawnObject = getWorldObjectsByGameplayRole('player-spawn')[0];
+export const playerSpawnPosition: THREE.Vector3Tuple = playerSpawnObject?.position ?? [0, 0, 10];
+
 export const getWorldObject = (id: string): WorldObjectDefinition => {
   const object = villageWorldObjects.find((worldObject) => worldObject.id === id);
 
@@ -460,4 +510,5 @@ export const getWorldObjectsByKind = (kind: WorldObjectKind): readonly WorldObje
 export const collidableWorldObjects = villageWorldObjects.filter((worldObject) => worldObject.collider);
 export const interactableWorldObjects = villageWorldObjects.filter((worldObject) => worldObject.interactable);
 
-export const deliveryBoardObject = getWorldObject('delivery-board');
+export const deliveryBoardObject = getWorldObjectsByInteractionAction('open-delivery-board')[0]
+  ?? getWorldObject('delivery-board');

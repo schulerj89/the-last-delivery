@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { DeliveryController } from '../game/delivery';
 import type { Interactable } from '../game/interaction';
 import type { WorldObjectDefinition } from './types';
-import { deliveryBoardObject, getWorldObjectsByKind } from './villageDefinition';
+import { deliveryBoardObject, getWorldObjectsByInteractionAction } from './villageDefinition';
 import { playgroundCompositionConfig } from './playgroundComposition';
 
 interface PlaygroundInteractableOptions {
@@ -38,7 +38,7 @@ export const createPlaygroundInteractables = (
   }
 
   return [
-    ...getWorldObjectsByKind('mailbox')
+    ...getWorldObjectsByInteractionAction('complete-delivery')
       .filter((mailbox) => mailbox.interactable)
       .map((mailbox): Interactable => ({
         id: mailbox.id,

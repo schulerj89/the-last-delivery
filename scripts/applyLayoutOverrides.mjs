@@ -10,6 +10,9 @@ const generatedOutputPath = path.join(repoRoot, 'src', 'world', 'villageOverride
 const checkOnly = process.argv.includes('--check');
 const layoutOverrideDocumentVersion = 1;
 const assetFitModes = new Set(['none', 'contain', 'cover', 'exact']);
+const gameplayRoles = new Set(['decorative', 'player-spawn', 'post-office', 'delivery-board', 'mailbox']);
+const interactionActions = new Set(['none', 'open-delivery-board', 'complete-delivery']);
+const mailboxVariants = new Set(['blue', 'red', 'green']);
 
 const formatRelative = (filePath) => path.relative(repoRoot, filePath).replaceAll(path.sep, '/');
 
@@ -177,6 +180,49 @@ const validateLayoutDocument = (value, knownObjectIds) => {
         || !isFiniteTuple3(override.objectiveAnchor.position)
       )) {
         errors.push(`Override ${override.id} objectiveAnchor must be null or include a position tuple.`);
+      }
+    }
+
+    if (override.mailbox !== undefined) {
+      if (override.mailbox !== null && (
+        !isRecord(override.mailbox)
+        || !mailboxVariants.has(override.mailbox.variant)
+        || typeof override.mailbox.destinationName !== 'string'
+        || override.mailbox.destinationName.trim().length === 0
+      )) {
+        errors.push(`Override ${override.id} mailbox must be null or include variant and destinationName.`);
+      }
+    }
+
+    if (override.gameplay !== undefined) {
+      if (override.gameplay !== null) {
+        if (!isRecord(override.gameplay) || !gameplayRoles.has(override.gameplay.role)) {
+          errors.push(`Override ${override.id} gameplay must be null or include a valid role.`);
+        }
+
+        if (
+          isRecord(override.gameplay)
+          && override.gameplay.action !== undefined
+          && !interactionActions.has(override.gameplay.action)
+        ) {
+          errors.push(`Override ${override.id} gameplay action must be a valid interaction action.`);
+        }
+
+        if (
+          isRecord(override.gameplay)
+          && override.gameplay.destinationName !== undefined
+          && typeof override.gameplay.destinationName !== 'string'
+        ) {
+          errors.push(`Override ${override.id} gameplay destinationName must be a string.`);
+        }
+
+        if (
+          isRecord(override.gameplay)
+          && override.gameplay.mailboxVariant !== undefined
+          && !mailboxVariants.has(override.gameplay.mailboxVariant)
+        ) {
+          errors.push(`Override ${override.id} gameplay mailboxVariant must be blue, red, or green.`);
+        }
       }
     }
 

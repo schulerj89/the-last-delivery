@@ -12,9 +12,22 @@ import {
   type LayoutOverrideDocument,
   type LayoutTransformOverride,
 } from './layoutOverrides';
-import type { WorldObjectDefinition } from './types';
+import type {
+  MailboxVariant,
+  WorldGameplayRole,
+  WorldInteractionAction,
+  WorldObjectDefinition,
+} from './types';
 import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
 import { villageWorldObjects } from './villageDefinition';
+import {
+  getDefaultActionForRole,
+  getWorldObjectGameplay,
+  getWorldObjectMailbox,
+  mailboxVariants,
+  worldGameplayRoles,
+  worldInteractionActions,
+} from './worldObjectGameplay';
 
 export const placementEditorConfig = {
   draftStorageKey: 'the-last-delivery:village-layout-draft',
@@ -48,6 +61,10 @@ export interface PlacementTransformDraft {
   scaleMultiplier: number;
   yOffset: number;
   assetId: string | null;
+  gameplayRole: WorldGameplayRole;
+  interactionAction: WorldInteractionAction;
+  destinationName: string;
+  mailboxVariant: MailboxVariant;
 }
 
 export interface PlacementEditor {
@@ -211,6 +228,10 @@ export const clonePlacementDraft = (draft: PlacementTransformDraft): PlacementTr
   scaleMultiplier: draft.scaleMultiplier,
   yOffset: draft.yOffset,
   assetId: draft.assetId,
+  gameplayRole: draft.gameplayRole,
+  interactionAction: draft.interactionAction,
+  destinationName: draft.destinationName,
+  mailboxVariant: draft.mailboxVariant,
 });
 
 export const capPlacementHistoryLength = <T>(
@@ -224,6 +245,8 @@ export const createPlacementTransformDraft = (
   object: WorldObjectDefinition,
 ): PlacementTransformDraft => {
   const assetRenderSettings = getAssetRenderSettings(object);
+  const gameplay = getWorldObjectGameplay(object);
+  const mailbox = getWorldObjectMailbox(object);
 
   return {
     id: object.id,
@@ -233,6 +256,10 @@ export const createPlacementTransformDraft = (
     scaleMultiplier: assetRenderSettings?.scaleMultiplier ?? object.layoutTransform?.scaleMultiplier ?? 1,
     yOffset: assetRenderSettings?.yOffset ?? object.layoutTransform?.yOffset ?? 0,
     assetId: assetRenderSettings?.assetId ?? null,
+    gameplayRole: gameplay.role,
+    interactionAction: gameplay.action ?? getDefaultActionForRole(gameplay.role),
+    destinationName: gameplay.destinationName ?? mailbox?.destinationName ?? '',
+    mailboxVariant: gameplay.mailboxVariant ?? mailbox?.variant ?? 'blue',
   };
 };
 
@@ -263,6 +290,16 @@ export const serializePlacementTransform = (
     lines.push(`  // scaleMultiplier ${formatNumber(draft.scaleMultiplier)} and yOffset ${formatNumber(draft.yOffset)} are temporary for primitive render.`);
   }
 
+  lines.push(
+    `  gameplay: { role: '${draft.gameplayRole}', action: '${draft.interactionAction}' },`,
+  );
+
+  if (draft.gameplayRole === 'mailbox') {
+    lines.push(
+      `  mailbox: { variant: '${draft.mailboxVariant}', destinationName: '${draft.destinationName || 'Mailbox'}' },`,
+    );
+  }
+
   lines.push(`}`);
   return lines.join('\n');
 };
@@ -277,6 +314,10 @@ export const serializePlacementTransforms = (
 };
 
 const getSceneObjectNamePrefixes = (objectId: string): readonly string[] => {
+  if (objectId === 'player-spawn') {
+    return ['playground:player-spawn'];
+  }
+
   if (objectId === 'delivery-board') {
     return ['playground:delivery-board'];
   }
@@ -421,7 +462,11 @@ const isChangedDraft = (
     || draft.position.some((value, index) => value !== initial.position[index])
     || draft.rotationY !== initial.rotationY
     || draft.scaleMultiplier !== initial.scaleMultiplier
-    || draft.yOffset !== initial.yOffset;
+    || draft.yOffset !== initial.yOffset
+    || draft.gameplayRole !== initial.gameplayRole
+    || draft.interactionAction !== initial.interactionAction
+    || draft.destinationName !== initial.destinationName
+    || draft.mailboxVariant !== initial.mailboxVariant;
 };
 
 const createOverrideFromDraft = (
@@ -462,6 +507,26 @@ const createOverrideFromDraft = (
     } else {
       override.renderMode = 'primitive';
     }
+  }
+
+  if (
+    draft.gameplayRole !== initial.gameplayRole
+    || draft.interactionAction !== initial.interactionAction
+    || draft.destinationName !== initial.destinationName
+    || draft.mailboxVariant !== initial.mailboxVariant
+  ) {
+    override.mailbox = draft.gameplayRole === 'mailbox'
+      ? {
+        variant: draft.mailboxVariant,
+        destinationName: draft.destinationName || 'Mailbox',
+      }
+      : null;
+    override.gameplay = {
+      role: draft.gameplayRole,
+      action: draft.interactionAction,
+      destinationName: draft.gameplayRole === 'mailbox' ? draft.destinationName : undefined,
+      mailboxVariant: draft.gameplayRole === 'mailbox' ? draft.mailboxVariant : undefined,
+    };
   }
 
   return Object.keys(override).length > 2 ? override : null;
@@ -511,9 +576,22 @@ export const createPlacementEditor = ({
   const assetPanel = document.createElement('div');
   const assetSelect = document.createElement('select');
   const assetProperties = document.createElement('pre');
+  const gameplayPanel = document.createElement('div');
+  const gameplayRoleSelect = document.createElement('select');
+  const interactionActionSelect = document.createElement('select');
+  const mailboxVariantSelect = document.createElement('select');
+  const destinationNameInput = document.createElement('input');
+  const gameplayProperties = document.createElement('pre');
+  const instructionsPanel = document.createElement('div');
+  const instructionsText = document.createElement('pre');
   const toggleActiveButton = document.createElement('button');
   const applyAssetButton = document.createElement('button');
   const clearAssetButton = document.createElement('button');
+  const markDecorativeButton = document.createElement('button');
+  const markSpawnButton = document.createElement('button');
+  const markPostOfficeButton = document.createElement('button');
+  const markDeliveryBoardButton = document.createElement('button');
+  const markMailboxButton = document.createElement('button');
   const saveDraftButton = document.createElement('button');
   const saveActiveButton = document.createElement('button');
   const loadDraftButton = document.createElement('button');
@@ -553,16 +631,34 @@ export const createPlacementEditor = ({
   controls.className = 'placement-editor-hud__controls';
   objectPanel.className = 'placement-editor-hud__panel';
   assetPanel.className = 'placement-editor-hud__panel';
+  gameplayPanel.className = 'placement-editor-hud__panel';
+  instructionsPanel.className = 'placement-editor-hud__panel';
   objectSelect.className = 'placement-editor-hud__select';
   assetSelect.className = 'placement-editor-hud__select';
+  gameplayRoleSelect.className = 'placement-editor-hud__select';
+  interactionActionSelect.className = 'placement-editor-hud__select';
+  mailboxVariantSelect.className = 'placement-editor-hud__select';
+  destinationNameInput.className = 'placement-editor-hud__input';
   objectProperties.className = 'placement-editor-hud__properties';
   assetProperties.className = 'placement-editor-hud__properties';
+  gameplayProperties.className = 'placement-editor-hud__properties';
+  instructionsText.className = 'placement-editor-hud__properties';
   toggleActiveButton.type = 'button';
   toggleActiveButton.textContent = 'Toggle Active';
   applyAssetButton.type = 'button';
   applyAssetButton.textContent = 'Preview Asset';
   clearAssetButton.type = 'button';
   clearAssetButton.textContent = 'Use Primitive';
+  markDecorativeButton.type = 'button';
+  markDecorativeButton.textContent = 'Decorative';
+  markSpawnButton.type = 'button';
+  markSpawnButton.textContent = 'Set Spawn';
+  markPostOfficeButton.type = 'button';
+  markPostOfficeButton.textContent = 'Post Office';
+  markDeliveryBoardButton.type = 'button';
+  markDeliveryBoardButton.textContent = 'Delivery Board';
+  markMailboxButton.type = 'button';
+  markMailboxButton.textContent = 'Mailbox Target';
   saveDraftButton.type = 'button';
   saveDraftButton.textContent = 'Save Draft';
   saveActiveButton.type = 'button';
@@ -584,6 +680,17 @@ export const createPlacementEditor = ({
   importTextArea.className = 'placement-editor-hud__import';
   importTextArea.placeholder = 'Paste active town editor JSON or layout override JSON here.';
   importTextArea.spellcheck = false;
+  destinationNameInput.type = 'text';
+  destinationNameInput.placeholder = 'Destination name, e.g. Blue House Mailbox';
+  instructionsText.textContent = [
+    'Button Instructions',
+    'Preview Asset: put selected GLB on selected object.',
+    'Use Primitive: clear selected GLB preview.',
+    'Toggle Active: show/hide selected object in editor JSON.',
+    'Set Spawn / Post Office / Delivery Board / Mailbox Target: assign gameplay role/action to selected asset.',
+    'Save Active JSON: save working town layout locally.',
+    'Copy JSON / Save JSON File: export layout for layout:apply.',
+  ].join('\n');
   objectSelect.append(...editableObjects.map((object, index) => {
     const option = document.createElement('option');
     option.value = String(index);
@@ -594,6 +701,24 @@ export const createPlacementEditor = ({
     const option = document.createElement('option');
     option.value = asset.id;
     option.textContent = `${asset.id} (${asset.sourcePack})`;
+    return option;
+  }));
+  gameplayRoleSelect.append(...worldGameplayRoles.map((role) => {
+    const option = document.createElement('option');
+    option.value = role;
+    option.textContent = role;
+    return option;
+  }));
+  interactionActionSelect.append(...worldInteractionActions.map((action) => {
+    const option = document.createElement('option');
+    option.value = action;
+    option.textContent = action;
+    return option;
+  }));
+  mailboxVariantSelect.append(...mailboxVariants.map((variant) => {
+    const option = document.createElement('option');
+    option.value = variant;
+    option.textContent = variant;
     return option;
   }));
   helpOverlay.className = 'placement-editor-help';
@@ -611,13 +736,27 @@ export const createPlacementEditor = ({
     'Ctrl+S save active JSON  Ctrl+O reload active JSON  Ctrl+Shift+Delete clear',
     'C copy selected TS  Shift+C copy active JSON',
     'Object panel toggles active state. Asset panel previews registered GLBs.',
+    'Gameplay panel assigns spawn, board, post office, mailbox, or decorative roles.',
   ].join('\n');
   objectPanel.append(objectSelect, objectProperties);
   assetPanel.append(assetSelect, assetProperties);
+  gameplayPanel.append(
+    gameplayRoleSelect,
+    interactionActionSelect,
+    mailboxVariantSelect,
+    destinationNameInput,
+    gameplayProperties,
+  );
+  instructionsPanel.append(instructionsText);
   controls.append(
     toggleActiveButton,
     applyAssetButton,
     clearAssetButton,
+    markDecorativeButton,
+    markSpawnButton,
+    markPostOfficeButton,
+    markDeliveryBoardButton,
+    markMailboxButton,
     saveActiveButton,
     loadActiveButton,
     saveDraftButton,
@@ -628,7 +767,7 @@ export const createPlacementEditor = ({
     saveJsonFileButton,
     importJsonButton,
   );
-  overlay.append(summary, objectPanel, assetPanel, controls, importTextArea);
+  overlay.append(summary, instructionsPanel, objectPanel, assetPanel, gameplayPanel, controls, importTextArea);
   parent.append(overlay);
   parent.append(helpOverlay);
 
@@ -998,6 +1137,32 @@ export const createPlacementEditor = ({
         draft.assetId = override.assetId;
       }
 
+      if (override.gameplay !== undefined) {
+        if (override.gameplay === null) {
+          const initialGameplay = createPlacementTransformDraft(editableObject.worldObject);
+          draft.gameplayRole = initialGameplay.gameplayRole;
+          draft.interactionAction = initialGameplay.interactionAction;
+          draft.destinationName = initialGameplay.destinationName;
+          draft.mailboxVariant = initialGameplay.mailboxVariant;
+        } else {
+          draft.gameplayRole = override.gameplay.role;
+          draft.interactionAction = override.gameplay.action ?? getDefaultActionForRole(override.gameplay.role);
+          draft.destinationName = override.gameplay.destinationName ?? draft.destinationName;
+          draft.mailboxVariant = override.gameplay.mailboxVariant ?? draft.mailboxVariant;
+        }
+      }
+
+      if (override.mailbox !== undefined) {
+        if (override.mailbox === null) {
+          if (draft.gameplayRole !== 'mailbox') {
+            draft.destinationName = '';
+          }
+        } else {
+          draft.destinationName = override.mailbox.destinationName;
+          draft.mailboxVariant = override.mailbox.variant;
+        }
+      }
+
       draftsByObjectId.set(override.id, draft);
     });
 
@@ -1312,7 +1477,8 @@ export const createPlacementEditor = ({
       `collider: ${object.collider ? `pos ${formatTuple(object.collider.position)} size ${formatTuple(object.collider.size)}` : 'none'}`,
       `interactable: ${object.interactable ? `pos ${formatTuple(object.interactable.position)} radius ${formatNumber(object.interactable.radius)}` : 'none'}`,
       `objective: ${object.objectiveAnchor ? formatTuple(object.objectiveAnchor.position) : 'none'}`,
-      `mailbox: ${object.mailbox?.destinationName ?? 'none'}`,
+      `gameplay: ${draft.gameplayRole} / ${draft.interactionAction}`,
+      `mailbox: ${draft.gameplayRole === 'mailbox' ? `${draft.destinationName || 'Mailbox'} (${draft.mailboxVariant})` : 'none'}`,
     ].join('\n');
   };
 
@@ -1345,6 +1511,44 @@ export const createPlacementEditor = ({
       ].join('\n');
   };
 
+  const updateGameplayPanel = (
+    selectedObject: EditablePlacementObject | null,
+    draft: PlacementTransformDraft | null,
+  ): void => {
+    const hasSelection = selectedObject !== null && draft !== null;
+
+    gameplayRoleSelect.disabled = !hasSelection;
+    interactionActionSelect.disabled = !hasSelection;
+    mailboxVariantSelect.disabled = !hasSelection;
+    destinationNameInput.disabled = !hasSelection;
+
+    if (!hasSelection || !draft) {
+      gameplayProperties.textContent = [
+        'Gameplay Actions',
+        'No object selected.',
+        'Pick an object, then assign a role/action.',
+      ].join('\n');
+      return;
+    }
+
+    gameplayRoleSelect.value = draft.gameplayRole;
+    interactionActionSelect.value = draft.interactionAction;
+    mailboxVariantSelect.value = draft.mailboxVariant;
+    destinationNameInput.value = draft.destinationName;
+    mailboxVariantSelect.hidden = draft.gameplayRole !== 'mailbox';
+    destinationNameInput.hidden = draft.gameplayRole !== 'mailbox';
+
+    gameplayProperties.textContent = [
+      'Gameplay Actions',
+      `role: ${draft.gameplayRole}`,
+      `action: ${draft.interactionAction}`,
+      draft.gameplayRole === 'mailbox'
+        ? `destination: ${draft.destinationName || 'Mailbox'} (${draft.mailboxVariant})`
+        : 'destination: n/a',
+      'These values export into active JSON and can be promoted with layout:apply.',
+    ].join('\n');
+  };
+
   const updateHud = (): void => {
     const selectedObject = getSelectedObject();
     const draft = getSelectedDraft();
@@ -1353,6 +1557,7 @@ export const createPlacementEditor = ({
     overlay.hidden = !active;
     updateObjectPropertiesPanel(selectedObject, draft);
     updateAssetPropertiesPanel(selectedObject, draft);
+    updateGameplayPanel(selectedObject, draft);
 
     if (!active) {
       return;
@@ -1661,6 +1866,55 @@ export const createPlacementEditor = ({
     updateHud();
   };
 
+  const updateSelectedGameplay = (
+    role: WorldGameplayRole,
+    options: {
+      action?: WorldInteractionAction;
+      destinationName?: string;
+      mailboxVariant?: MailboxVariant;
+    } = {},
+  ): void => {
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (!selectedObject || !draft) {
+      status = 'No selected object for gameplay role.';
+      updateHud();
+      return;
+    }
+
+    pushUndoSnapshot();
+    draft.gameplayRole = role;
+    draft.interactionAction = options.action ?? getDefaultActionForRole(role);
+    draft.destinationName = role === 'mailbox'
+      ? (options.destinationName ?? draft.destinationName) || `${selectedObject.id} Mailbox`
+      : '';
+    draft.mailboxVariant = options.mailboxVariant ?? draft.mailboxVariant;
+    draft.active = true;
+    status = `${selectedObject.id} role set to ${role}.`;
+    applyDraftToScene(selectedObject);
+    updateHud();
+  };
+
+  const updateSelectedGameplayFromControls = (): void => {
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (!selectedObject || !draft) {
+      return;
+    }
+
+    pushUndoSnapshot();
+    const role = gameplayRoleSelect.value as WorldGameplayRole;
+    draft.gameplayRole = role;
+    draft.interactionAction = interactionActionSelect.value as WorldInteractionAction;
+    draft.destinationName = role === 'mailbox' ? destinationNameInput.value : '';
+    draft.mailboxVariant = mailboxVariantSelect.value as MailboxVariant;
+    status = `${selectedObject.id} gameplay updated.`;
+    applyDraftToScene(selectedObject);
+    updateHud();
+  };
+
   const applySelectedAsset = (): void => {
     const selectedObject = getSelectedObject();
     const draft = getSelectedDraft();
@@ -1705,11 +1959,26 @@ export const createPlacementEditor = ({
     void saveJsonFile();
   };
 
+  const handleMarkDecorativeClick = (): void => updateSelectedGameplay('decorative');
+  const handleMarkSpawnClick = (): void => updateSelectedGameplay('player-spawn');
+  const handleMarkPostOfficeClick = (): void => updateSelectedGameplay('post-office');
+  const handleMarkDeliveryBoardClick = (): void => updateSelectedGameplay('delivery-board');
+  const handleMarkMailboxClick = (): void => updateSelectedGameplay('mailbox');
+
   objectSelect.addEventListener('change', handleObjectSelectChange);
   assetSelect.addEventListener('change', updateHud);
+  gameplayRoleSelect.addEventListener('change', updateSelectedGameplayFromControls);
+  interactionActionSelect.addEventListener('change', updateSelectedGameplayFromControls);
+  mailboxVariantSelect.addEventListener('change', updateSelectedGameplayFromControls);
+  destinationNameInput.addEventListener('change', updateSelectedGameplayFromControls);
   toggleActiveButton.addEventListener('click', toggleSelectedActive);
   applyAssetButton.addEventListener('click', applySelectedAsset);
   clearAssetButton.addEventListener('click', clearSelectedAsset);
+  markDecorativeButton.addEventListener('click', handleMarkDecorativeClick);
+  markSpawnButton.addEventListener('click', handleMarkSpawnClick);
+  markPostOfficeButton.addEventListener('click', handleMarkPostOfficeClick);
+  markDeliveryBoardButton.addEventListener('click', handleMarkDeliveryBoardClick);
+  markMailboxButton.addEventListener('click', handleMarkMailboxClick);
   saveActiveButton.addEventListener('click', saveActiveJsonToStorage);
   loadActiveButton.addEventListener('click', handleLoadActiveButtonClick);
   saveDraftButton.addEventListener('click', saveDraftToStorage);
@@ -1910,9 +2179,18 @@ export const createPlacementEditor = ({
       resetSceneObjects();
       objectSelect.removeEventListener('change', handleObjectSelectChange);
       assetSelect.removeEventListener('change', updateHud);
+      gameplayRoleSelect.removeEventListener('change', updateSelectedGameplayFromControls);
+      interactionActionSelect.removeEventListener('change', updateSelectedGameplayFromControls);
+      mailboxVariantSelect.removeEventListener('change', updateSelectedGameplayFromControls);
+      destinationNameInput.removeEventListener('change', updateSelectedGameplayFromControls);
       toggleActiveButton.removeEventListener('click', toggleSelectedActive);
       applyAssetButton.removeEventListener('click', applySelectedAsset);
       clearAssetButton.removeEventListener('click', clearSelectedAsset);
+      markDecorativeButton.removeEventListener('click', handleMarkDecorativeClick);
+      markSpawnButton.removeEventListener('click', handleMarkSpawnClick);
+      markPostOfficeButton.removeEventListener('click', handleMarkPostOfficeClick);
+      markDeliveryBoardButton.removeEventListener('click', handleMarkDeliveryBoardClick);
+      markMailboxButton.removeEventListener('click', handleMarkMailboxClick);
       saveActiveButton.removeEventListener('click', saveActiveJsonToStorage);
       loadActiveButton.removeEventListener('click', handleLoadActiveButtonClick);
       saveDraftButton.removeEventListener('click', saveDraftToStorage);

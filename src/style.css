@@ -184,7 +184,8 @@ canvas {
   border-top: 1px solid rgb(248 242 220 / 14%);
 }
 
-.placement-editor-hud__select {
+.placement-editor-hud__select,
+.placement-editor-hud__input {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
@@ -223,6 +224,7 @@ canvas {
 .placement-editor-hud button:hover,
 .placement-editor-hud button:focus-visible,
 .placement-editor-hud__select:focus,
+.placement-editor-hud__input:focus,
 .placement-editor-hud__import:focus {
   border-color: rgb(240 202 114 / 86%);
   outline: none;

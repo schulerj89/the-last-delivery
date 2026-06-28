@@ -5,6 +5,7 @@ import type { WorldObjectDefinition } from './types';
 import { villageLayoutConfig } from './villageLayoutConfig';
 import { playerSpawnPosition, villageWorldObjects } from './villageDefinition';
 import { getVillagePathGuides } from './villagePaths';
+import { getWorldObjectGameplay, getWorldObjectMailbox } from './worldObjectGameplay';
 
 export const layoutDebugConfig = {
   toggleKey: 'F2',
@@ -29,6 +30,7 @@ export const layoutDebugConfig = {
   viewPadding: 3,
   helperY: 0.08,
   importantObjectIds: [
+    'player-spawn',
     'post-office',
     'delivery-board',
     'town-well',
@@ -365,8 +367,14 @@ const createGroundLabel = (
 };
 
 const getObjectLabelText = (object: WorldObjectDefinition): string => {
-  if (object.mailbox) {
-    return object.mailbox.destinationName.replace(' Mailbox', '');
+  const mailbox = getWorldObjectMailbox(object);
+
+  if (mailbox) {
+    return mailbox.destinationName.replace(' Mailbox', '');
+  }
+
+  if (getWorldObjectGameplay(object).role === 'player-spawn') {
+    return 'Spawn';
   }
 
   if (object.id === 'delivery-board') {
@@ -384,17 +392,16 @@ const getObjectLabelText = (object: WorldObjectDefinition): string => {
   return object.id.replace('cottage-', '');
 };
 
-const createObjectLabels = (): THREE.Object3D[] => [
-  createGroundLabel('layout:label:spawn', 'Spawn', playerSpawnPosition, '#ffffff'),
-  ...getImportantLayoutObjects().map((object) => (
+const createObjectLabels = (): THREE.Object3D[] => (
+  getImportantLayoutObjects().map((object) => (
     createGroundLabel(
-      `layout:label:${object.id}`,
+      object.id === 'player-spawn' ? 'layout:label:spawn' : `layout:label:${object.id}`,
       getObjectLabelText(object),
-      object.interactable?.position ?? object.position,
-      object.kind === 'mailbox' ? '#58f0ff' : colors.label,
+      object.interactable?.position ?? (object.id === 'player-spawn' ? playerSpawnPosition : object.position),
+      getWorldObjectGameplay(object).role === 'mailbox' ? '#58f0ff' : colors.label,
     )
-  )),
-];
+  ))
+);
 
 const configureOverviewCamera = (
   camera: THREE.OrthographicCamera,
