@@ -2,6 +2,21 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.28.0] - 2026-06-28
+
+### Added
+
+- Added smoke validation for village bounds, spawn bounds, interactable bounds, interactable clearance from major colliders, world object counts by kind, and decorative prop budget.
+- Added explicit layout object budgets for decorative prop count and crate/barrel dressing clusters.
+
+### Changed
+
+- Reworked the first village into the documented `x -14..14` and `z -12..14` bounds.
+- Moved spawn, post office, delivery board, well, cottages, mailboxes, signs, forest-edge props, and dressing clusters into a cleaner open village composition.
+- Rebuilt visible pathing into a wider spawn-to-plaza-to-north-house main path plus blue-house, red-house, and post-office side paths.
+- Updated playground collision bounds to use the shared village layout config.
+- Removed loose sack dressing and the south-corner rock to reduce decorative clutter while preserving the delivery loop.
+
 ## [0.27.0] - 2026-06-28
 
 ### Added

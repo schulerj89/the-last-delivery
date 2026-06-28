@@ -57,7 +57,7 @@ import {
 import { createPlaygroundVisualBoundsDebugView } from '../src/world/playgroundVisualBoundsDebug';
 import { createMailboxProp } from '../src/world/props/createMailbox';
 import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
-import { villageWorldObjects } from '../src/world/villageDefinition';
+import { playerSpawnPosition, villageWorldObjects } from '../src/world/villageDefinition';
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
@@ -86,6 +86,35 @@ const selectedCharacterAssetIdSet = new Set<string>(selectedCharacterAssetIds);
 const isFiniteVector3Tuple = (value: readonly number[]): boolean => (
   value.length === 3 && value.every((component) => Number.isFinite(component))
 );
+
+const isInsideVillageBounds = (position: readonly number[]): boolean => (
+  position[0] >= villageLayoutConfig.bounds.minX
+  && position[0] <= villageLayoutConfig.bounds.maxX
+  && position[2] >= villageLayoutConfig.bounds.minZ
+  && position[2] <= villageLayoutConfig.bounds.maxZ
+);
+
+const getHorizontalBoxDistance = (
+  point: readonly number[],
+  center: readonly number[],
+  size: readonly number[],
+): number => {
+  const dx = Math.max(Math.abs(point[0] - center[0]) - size[0] / 2, 0);
+  const dz = Math.max(Math.abs(point[2] - center[2]) - size[2] / 2, 0);
+
+  return Math.hypot(dx, dz);
+};
+
+const decorativePropKinds = new Set([
+  'barrel',
+  'bush',
+  'cart',
+  'crate',
+  'rock',
+  'sack',
+  'signpost',
+  'tree',
+]);
 
 const getRuntimeAssetFileUrl = (assetUrl: string): URL => (
   new URL(`../public${assetUrl}`, import.meta.url)
@@ -397,6 +426,9 @@ const runWorldDefinitionSmoke = (): void => {
   const signpostObjects = villageWorldObjects.filter((object) => object.kind === 'signpost');
   const cartObjects = villageWorldObjects.filter((object) => object.kind === 'cart');
   const sackObjects = villageWorldObjects.filter((object) => object.kind === 'sack');
+  const crateObjects = villageWorldObjects.filter((object) => object.kind === 'crate');
+  const barrelObjects = villageWorldObjects.filter((object) => object.kind === 'barrel');
+  const decorativePropObjects = villageWorldObjects.filter((object) => decorativePropKinds.has(object.kind));
   const assetRenderedObjects = villageWorldObjects.filter((object) => object.render?.mode === 'asset');
   const selectedNatureObjects = assetRenderedObjects.filter((object) => (
     object.render?.mode === 'asset' && selectedNatureAssetIdSet.has(object.render.assetId)
@@ -413,6 +445,56 @@ const runWorldDefinitionSmoke = (): void => {
   const postOffice = villageWorldObjects.find((object) => object.id === 'post-office');
   const well = villageWorldObjects.find((object) => object.id === 'town-well');
   const deliveryTarget = villageWorldObjects.find((object) => object.id === deliveryJobs[0].targetWorldObjectId);
+  const worldObjectCountsByKind = villageWorldObjects.reduce<Record<string, number>>((counts, object) => {
+    counts[object.kind] = (counts[object.kind] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  console.info(`World object counts by kind: ${JSON.stringify(worldObjectCountsByKind)}.`);
+
+  assert(isInsideVillageBounds(playerSpawnPosition), 'Player spawn should be inside the intended village bounds.');
+
+  villageWorldObjects.forEach((object) => {
+    assert(isInsideVillageBounds(object.position), `World object should be inside intended village bounds: ${object.id}`);
+
+    if (object.interactable) {
+      assert(isInsideVillageBounds(object.interactable.position), `Interactable should be inside intended village bounds: ${object.id}`);
+    }
+  });
+
+  villageWorldObjects.filter((object) => object.interactable).forEach((interactableObject) => {
+    const interactable = interactableObject.interactable;
+
+    if (!interactable) {
+      return;
+    }
+
+    villageWorldObjects.filter((object) => object.collider && object.id !== interactableObject.id).forEach((colliderObject) => {
+      const collider = colliderObject.collider;
+
+      if (!collider) {
+        return;
+      }
+
+      assert(
+        getHorizontalBoxDistance(interactable.position, collider.position, collider.size) >= villageLayoutConfig.spacing.interactableClearanceRadius,
+        `Interactable ${interactableObject.id} should keep layout clearance from collider ${colliderObject.id}.`,
+      );
+    });
+  });
+
+  villageWorldObjects.filter((object) => object.collider).forEach((colliderObject) => {
+    const collider = colliderObject.collider;
+
+    if (!collider) {
+      return;
+    }
+
+    assert(
+      getHorizontalBoxDistance(playerSpawnPosition, collider.position, collider.size) >= villageLayoutConfig.spacing.interactableClearanceRadius,
+      `Spawn should keep layout clearance from collider ${colliderObject.id}.`,
+    );
+  });
 
   deliveryJobs.forEach((job) => {
     const target = villageWorldObjects.find((object) => object.id === job.targetWorldObjectId);
@@ -444,14 +526,17 @@ const runWorldDefinitionSmoke = (): void => {
   assert(selectedFantasyObjects.length >= 12, 'Village should place selected fantasy assets through world definitions.');
   assert(decorativeNatureObjects.every((object) => object.render?.mode === 'asset'), 'Decorative nature objects should use asset-backed render definitions.');
   assert(decorativeNatureObjects.every((object) => object.collider === undefined), 'Decorative forest and path-framing nature props should not add collision.');
+  assert(decorativePropObjects.length < villageLayoutConfig.objectBudgets.decorativePropMaxCount, 'Decorative prop count should stay below the configured layout budget.');
+  assert(crateObjects.length + barrelObjects.length <= villageLayoutConfig.objectBudgets.crateBarrelClusterMaxCount * villageLayoutConfig.objectBudgets.crateBarrelClusterMaxObjects, 'Crate/barrel dressing should fit within the configured cluster budget.');
+  assert(['crate-large', 'crate-small-a', 'barrel-north-a'].every((id) => villageWorldObjects.some((object) => object.id === id)), 'Post office dressing cluster should stay defined.');
+  assert(['crate-small-b', 'barrel-north-b', 'cart-south-path'].every((id) => villageWorldObjects.some((object) => object.id === id)), 'Market dressing cluster should stay defined.');
   assert(treeObjects.length >= 6, 'Village should include a small forest edge of tree props.');
   assert(bushObjects.length >= 4, 'Village should include foliage props around paths and boundaries.');
   assert(cottageObjects.every((object) => object.render?.mode === 'asset'), 'Every cottage should use a selected fantasy house render with primitive fallback.');
   assert(signpostObjects.length >= 4, 'Village should define fantasy pointer signpost props.');
   assert(cartObjects.length === 1, 'Village should define one fantasy cart dressing prop.');
   assert(cartObjects.every((object) => object.collider), 'Large cart dressing should keep a simple collider.');
-  assert(sackObjects.length >= 2, 'Village should define fantasy sack dressing props.');
-  assert(sackObjects.every((object) => object.collider === undefined), 'Small sack dressing should stay non-collidable.');
+  assert(sackObjects.length === 0, 'Clean village relayout should remove loose sack dressing for now.');
   assert(mailboxObjects.length === 3, 'Village should define exactly three procedural mailbox targets.');
   assert(mailboxObjects.every((object) => object.interactable), 'Every village mailbox should be interactable.');
   assert(mailboxObjects.every((object) => object.objectiveAnchor), 'Every village mailbox should have an objective anchor.');
@@ -469,11 +554,11 @@ const runWorldDefinitionSmoke = (): void => {
     (deliveryBoard.position[0] - postOffice.position[0]) ** 2
     + (deliveryBoard.position[2] - postOffice.position[2]) ** 2
   );
-  assert(boardToPostOfficeDistanceSq < 8, 'Delivery board should stay near the post office placeholder.');
+  assert(boardToPostOfficeDistanceSq < 12, 'Delivery board should stay near the post office placeholder.');
 };
 
 const runVillageLayoutConfigSmoke = (): void => {
-  const { bounds, densityBudget, spacing, zones } = villageLayoutConfig;
+  const { bounds, densityBudget, objectBudgets, spacing, zones } = villageLayoutConfig;
   const densityTotal = (
     densityBudget.openWalkableSpace
     + densityBudget.landmarkStructures
@@ -493,6 +578,9 @@ const runVillageLayoutConfigSmoke = (): void => {
   assert(spacing.decorativeClusterMinProps === 3, 'Village layout should define minimum decorative cluster size.');
   assert(spacing.decorativeClusterMaxProps === 5, 'Village layout should define maximum decorative cluster size.');
   assert(spacing.decorativeClusterMinProps < spacing.decorativeClusterMaxProps, 'Decorative cluster range should be ordered.');
+  assert(objectBudgets.decorativePropMaxCount > 0, 'Village layout should define a positive decorative prop budget.');
+  assert(objectBudgets.crateBarrelClusterMaxCount === 2, 'Village layout should limit crate/barrel dressing to two clusters.');
+  assert(objectBudgets.crateBarrelClusterMaxObjects === 3, 'Village layout should limit crate/barrel cluster size.');
   assert(Math.abs(densityTotal - 1) < 0.001, 'Village layout density budget should total 100%.');
 
   const zoneIds = new Set(zones.map((zone) => zone.id));
@@ -798,11 +886,14 @@ const runModuleSmoke = (): void => {
   assert(playground.getObjectByName('village:barrel-north-a') !== undefined, 'Fantasy barrel primitive fallback should initialize.');
   assert(playground.getObjectByName('village:signpost-post-office:post') !== undefined, 'Fantasy pointer primitive fallback should initialize.');
   assert(playground.getObjectByName('village:cart-south-path:bed') !== undefined, 'Fantasy cart primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:sack-post-office-a') !== undefined, 'Fantasy sack primitive fallback should initialize.');
   assert(playground.getObjectByName('village:tree-northwest:trunk') !== undefined, 'Tree primitive fallback should initialize.');
   assert(playground.getObjectByName('village:tree-northwest:canopy') !== undefined, 'Tree canopy primitive fallback should initialize.');
   assert(playground.getObjectByName('village:bush-side-path-a') !== undefined, 'Bush primitive fallback should initialize.');
   assert(playground.getObjectByName('village:nature-rock-path-a') !== undefined, 'Asset-targeted nature rock fallback should initialize.');
+  assert(playground.getObjectByName('village:main-path-spawn-to-plaza') !== undefined, 'Main spawn-to-plaza path should initialize.');
+  assert(playground.getObjectByName('village:main-path-plaza-to-north-house') !== undefined, 'Main plaza-to-north-house path should initialize.');
+  assert(playground.getObjectByName('village:side-path-blue-house') !== undefined, 'Blue house side path should initialize.');
+  assert(playground.getObjectByName('village:side-path-red-house') !== undefined, 'Red house side path should initialize.');
   assert(playground.getObjectByName('village:label-post-office') !== undefined, 'Post office label sign should initialize.');
   assert(playground.getObjectByName('village:label-blue-house') !== undefined, 'Blue house label sign should initialize.');
   assert(playground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');

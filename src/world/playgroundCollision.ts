@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { CollisionWorld } from '../game/collision';
 import type { WorldObjectDefinition } from './types';
+import { villageLayoutConfig } from './villageLayoutConfig';
 import { collidableWorldObjects } from './villageDefinition';
 
 const createWorldObjectCollisionBox = (object: WorldObjectDefinition) => {
@@ -17,10 +18,10 @@ const createWorldObjectCollisionBox = (object: WorldObjectDefinition) => {
 
 export const playgroundCollisionWorld: CollisionWorld = {
   bounds: {
-    minX: -8.55,
-    maxX: 8.55,
-    minZ: -6.55,
-    maxZ: 6.55,
+    minX: villageLayoutConfig.bounds.minX,
+    maxX: villageLayoutConfig.bounds.maxX,
+    minZ: villageLayoutConfig.bounds.minZ,
+    maxZ: villageLayoutConfig.bounds.maxZ,
   },
   boxes: collidableWorldObjects.map(createWorldObjectCollisionBox),
 };

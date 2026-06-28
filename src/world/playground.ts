@@ -8,10 +8,14 @@ import {
   getWorldObjectsByKind,
   playerSpawnPosition,
 } from './villageDefinition';
+import { villageLayoutConfig } from './villageLayoutConfig';
 import type { PlaygroundVisualBoundsDebugView } from './playgroundVisualBoundsDebug';
 
-const villageWidth = 18;
-const villageDepth = 14;
+const villageBounds = villageLayoutConfig.bounds;
+const villageWidth = villageBounds.maxX - villageBounds.minX;
+const villageDepth = villageBounds.maxZ - villageBounds.minZ;
+const villageCenterX = villageBounds.minX + villageWidth / 2;
+const villageCenterZ = villageBounds.minZ + villageDepth / 2;
 const fenceHeight = 1;
 const fenceRailThickness = 0.12;
 const fencePostThickness = 0.18;
@@ -295,48 +299,47 @@ const addGround = (group: THREE.Group): void => {
     materials.ground,
   );
   ground.rotation.x = -Math.PI / 2;
+  ground.position.set(villageCenterX, 0, villageCenterZ);
   ground.receiveShadow = true;
   group.add(nameObject(ground, 'village:ground'));
 };
 
 const addFence = (group: THREE.Group): void => {
-  const halfWidth = villageWidth / 2;
-  const halfDepth = villageDepth / 2;
   const postY = fenceHeight / 2;
   const postSpacing = 2;
 
-  for (let x = -halfWidth; x <= halfWidth; x += postSpacing) {
-    const postIndex = Math.round((x + halfWidth) / postSpacing);
+  for (let x = villageBounds.minX; x <= villageBounds.maxX; x += postSpacing) {
+    const postIndex = Math.round((x - villageBounds.minX) / postSpacing);
     addBox(
       group,
       `village:boundary-post-north-${postIndex}`,
       [fencePostThickness, fenceHeight, fencePostThickness],
-      [x, postY, -halfDepth],
+      [x, postY, villageBounds.minZ],
       materials.fence,
     );
     addBox(
       group,
       `village:boundary-post-south-${postIndex}`,
       [fencePostThickness, fenceHeight, fencePostThickness],
-      [x, postY, halfDepth],
+      [x, postY, villageBounds.maxZ],
       materials.fence,
     );
   }
 
-  for (let z = -halfDepth + postSpacing; z <= halfDepth - postSpacing; z += postSpacing) {
-    const postIndex = Math.round((z + halfDepth) / postSpacing);
+  for (let z = villageBounds.minZ + postSpacing; z <= villageBounds.maxZ - postSpacing; z += postSpacing) {
+    const postIndex = Math.round((z - villageBounds.minZ) / postSpacing);
     addBox(
       group,
       `village:boundary-post-west-${postIndex}`,
       [fencePostThickness, fenceHeight, fencePostThickness],
-      [-halfWidth, postY, z],
+      [villageBounds.minX, postY, z],
       materials.fence,
     );
     addBox(
       group,
       `village:boundary-post-east-${postIndex}`,
       [fencePostThickness, fenceHeight, fencePostThickness],
-      [halfWidth, postY, z],
+      [villageBounds.maxX, postY, z],
       materials.fence,
     );
   }
@@ -348,28 +351,28 @@ const addFence = (group: THREE.Group): void => {
       group,
       `village:boundary-rail-north-${railName}`,
       [villageWidth, fenceRailThickness, fenceRailThickness],
-      [0, y, -halfDepth],
+      [villageCenterX, y, villageBounds.minZ],
       materials.fence,
     );
     addBox(
       group,
       `village:boundary-rail-south-${railName}`,
       [villageWidth, fenceRailThickness, fenceRailThickness],
-      [0, y, halfDepth],
+      [villageCenterX, y, villageBounds.maxZ],
       materials.fence,
     );
     addBox(
       group,
       `village:boundary-rail-west-${railName}`,
       [fenceRailThickness, fenceRailThickness, villageDepth],
-      [-halfWidth, y, 0],
+      [villageBounds.minX, y, villageCenterZ],
       materials.fence,
     );
     addBox(
       group,
       `village:boundary-rail-east-${railName}`,
       [fenceRailThickness, fenceRailThickness, villageDepth],
-      [halfWidth, y, 0],
+      [villageBounds.maxX, y, villageCenterZ],
       materials.fence,
     );
   });
@@ -417,25 +420,53 @@ const addPathSegment = (
 };
 
 const addPaths = (group: THREE.Group): void => {
-  const mailbox = getWorldObject('mailbox');
-  const mailboxPathPoint = mailbox.interactable?.position ?? mailbox.position;
+  const blueMailbox = getWorldObject('mailbox');
+  const redMailbox = getWorldObject('mailbox-east');
+  const northMailbox = getWorldObject('mailbox-post-office-return');
+  const blueMailboxPathPoint = blueMailbox.interactable?.position ?? blueMailbox.position;
+  const redMailboxPathPoint = redMailbox.interactable?.position ?? redMailbox.position;
+  const northMailboxPathPoint = northMailbox.interactable?.position ?? northMailbox.position;
   const boardPathPoint = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
   const well = getWorldObjectsByKind('well')[0];
 
   addPathSegment(
     group,
-    'village:main-path-delivery-route',
-    new THREE.Vector2(mailboxPathPoint[0], mailboxPathPoint[2]),
-    new THREE.Vector2(boardPathPoint[0], boardPathPoint[2]),
-    1.35,
+    'village:main-path-spawn-to-plaza',
+    new THREE.Vector2(playerSpawnPosition[0], playerSpawnPosition[2]),
+    new THREE.Vector2(well.position[0], well.position[2]),
+    3.4,
     materials.path,
   );
   addPathSegment(
     group,
-    'village:side-path-spawn-connector',
-    new THREE.Vector2(playerSpawnPosition[0], playerSpawnPosition[2]),
+    'village:main-path-plaza-to-north-house',
     new THREE.Vector2(well.position[0], well.position[2]),
-    1.05,
+    new THREE.Vector2(northMailboxPathPoint[0], northMailboxPathPoint[2]),
+    3.2,
+    materials.path,
+  );
+  addPathSegment(
+    group,
+    'village:side-path-blue-house',
+    new THREE.Vector2(well.position[0], well.position[2]),
+    new THREE.Vector2(blueMailboxPathPoint[0], blueMailboxPathPoint[2]),
+    2.35,
+    materials.sidePath,
+  );
+  addPathSegment(
+    group,
+    'village:side-path-red-house',
+    new THREE.Vector2(well.position[0], well.position[2]),
+    new THREE.Vector2(redMailboxPathPoint[0], redMailboxPathPoint[2]),
+    2.35,
+    materials.sidePath,
+  );
+  addPathSegment(
+    group,
+    'village:side-path-post-office-board',
+    new THREE.Vector2(playerSpawnPosition[0], playerSpawnPosition[2]),
+    new THREE.Vector2(boardPathPoint[0], boardPathPoint[2]),
+    2.2,
     materials.sidePath,
   );
 };
@@ -541,10 +572,10 @@ const addLabelSign = (
 };
 
 const addVillageLabels = (group: THREE.Group): void => {
-  addLabelSign(group, 'village:label-post-office', 'Post Office', [4.55, 0, -4.25], '#3baea3');
-  addLabelSign(group, 'village:label-blue-house', 'Blue House', [-4.95, 0, 2.25], '#4f88b8', Math.PI * 0.08);
-  addLabelSign(group, 'village:label-red-house', 'Red House', [5.6, 0, 1], '#b35d52', -Math.PI * 0.12);
-  addLabelSign(group, 'village:label-side-path', 'Side Path', [0.9, 0, -1.05], '#6f958e', -Math.PI * 0.35);
+  addLabelSign(group, 'village:label-post-office', 'Post Office', [-4.1, 0, 7.4], '#3baea3', Math.PI * 0.05);
+  addLabelSign(group, 'village:label-blue-house', 'Blue House', [-6.25, 0, -2.05], '#4f88b8', Math.PI * 0.12);
+  addLabelSign(group, 'village:label-red-house', 'Red House', [6.25, 0, -1.1], '#b35d52', -Math.PI * 0.14);
+  addLabelSign(group, 'village:label-side-path', 'North Path', [2.25, 0, 2.25], '#6f958e', -Math.PI * 0.28);
 };
 
 const addPostOffice = (group: THREE.Group, options: PlaygroundOptions): void => {
