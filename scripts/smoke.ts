@@ -146,7 +146,11 @@ import {
 } from '../src/world/placementEditor';
 import { createPlayground } from '../src/world/playground';
 import { playgroundCompositionConfig } from '../src/world/playgroundComposition';
-import { createPlaygroundCollisionWorld, playgroundCollisionWorld } from '../src/world/playgroundCollision';
+import {
+  createPlaygroundCollisionWorld,
+  playgroundCollisionFootprintScale,
+  playgroundCollisionWorld,
+} from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
 import {
   createDeliveryBoardObjectiveMarker,
@@ -2147,6 +2151,7 @@ const runModuleSmoke = (): void => {
   const activeDeliveryBoard = getWorldObjectsByInteractionAction('open-delivery-board')[0];
   const activePostOffice = getWorldObjectsByGameplayRole('post-office')[0] ?? villageWorldObjects.find((object) => object.kind === 'post-office');
   const activeCottages = villageWorldObjects.filter((object) => object.kind === 'cottage');
+  const activeCollidableCottages = activeCottages.filter((object) => object.collider);
   const activeCrates = villageWorldObjects.filter((object) => object.kind === 'crate');
   const activeBarrels = villageWorldObjects.filter((object) => object.kind === 'barrel');
   const activeSignposts = villageWorldObjects.filter((object) => object.kind === 'signpost');
@@ -2165,6 +2170,20 @@ const runModuleSmoke = (): void => {
   assert(activeDeliveryBoard === undefined || !activeDeliveryBoard.collider || authoredCollisionIds.has(activeDeliveryBoard.id), 'The active delivery board collision box should initialize when collidable.');
   assert(activePostOffice === undefined || !activePostOffice.collider || authoredCollisionIds.has(activePostOffice.id), 'The active post office collision should initialize when collidable.');
   assert(activeCottages.length === 0 || activeCottages.some((object) => !object.collider || authoredCollisionIds.has(object.id)), 'Active cottages should initialize collision or remain explicitly non-collidable.');
+  assert(playgroundCollisionFootprintScale.cottage !== undefined && playgroundCollisionFootprintScale.cottage < 1, 'Cottage collision should be smaller than the visual footprint for mailbox access.');
+  assert(playgroundCollisionFootprintScale['post-office'] !== undefined && playgroundCollisionFootprintScale['post-office'] < 1, 'Post office collision should be smaller than the visual footprint for nearby interactions.');
+  activeCollidableCottages.forEach((cottage) => {
+    const box = authoredCollisionWorld.boxes.find((collisionBox) => collisionBox.id === cottage.id);
+    assert(box !== undefined, `Collidable cottage should create a collision box: ${cottage.id}.`);
+    assert(box.size.x < (cottage.collider?.size[0] ?? 0), `Cottage collision X footprint should be inset: ${cottage.id}.`);
+    assert(box.size.z < (cottage.collider?.size[2] ?? 0), `Cottage collision Z footprint should be inset: ${cottage.id}.`);
+  });
+  if (activePostOffice?.collider) {
+    const box = authoredCollisionWorld.boxes.find((collisionBox) => collisionBox.id === activePostOffice.id);
+    assert(box !== undefined, 'Collidable post office should create a collision box.');
+    assert(box.size.x < activePostOffice.collider.size[0], 'Post office collision X footprint should be inset.');
+    assert(box.size.z < activePostOffice.collider.size[2], 'Post office collision Z footprint should be inset.');
+  }
 
   const mailboxProp = createMailboxProp({
     id: 'smoke-mailbox',

@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.7] - 2026-06-28
+
+### Fixed
+
+- Reduced cottage and post-office collision footprints so nearby editor-placed mailboxes remain reachable.
+- Added smoke coverage for house collision inset tuning.
+
 ## [0.53.6] - 2026-06-28
 
 ### Fixed
