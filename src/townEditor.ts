@@ -50,6 +50,8 @@ root.innerHTML = `
       <span>Wheel zoom</span>
       <span>Right-drag orbit</span>
       <span>Middle-drag pan</span>
+      <span>Ctrl+D duplicate</span>
+      <span>Click empty deselect</span>
       <span>Delete selected</span>
     </div>
     <div class="town-editor__viewport"></div>

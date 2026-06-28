@@ -124,6 +124,8 @@ import {
   canUseTownEditorFilePicker,
   clonePlacementDraft,
   createLayoutOverrideDocumentFromPlacementDrafts,
+  createDuplicatePlacementObjectId,
+  createDuplicatePlacementPosition,
   createPlacementObjectOverrideFromTemplate,
   createPrimitivePlacementPreviewObject,
   createDraggedPlacementPosition,
@@ -704,6 +706,8 @@ const runTownEditorRouteSmoke = (): void => {
   assert(townEditorScript.includes('getAssetThumbnailDataUrl'), 'Town editor should render asset thumbnails for palette cards.');
   assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load runtime models through the existing asset loader.');
   assert(townEditorScript.includes('group.scale.setScalar'), 'Town editor thumbnails should scale the centered wrapper, not push model pivots off-center.');
+  assert(townEditorScript.includes('Ctrl+D duplicate'), 'Town editor toolbar should advertise selected-object duplication.');
+  assert(townEditorScript.includes('Click empty deselect'), 'Town editor toolbar should advertise empty-space deselection.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
   assert(markerItems.length >= 3, 'Town editor marker palette should initialize important world markers.');
@@ -728,6 +732,10 @@ const runTownEditorRouteSmoke = (): void => {
   assert(
     resolveTownEditorPlacementCandidate(crateItem, 0) !== null,
     'Town editor should resolve an initial placement candidate.',
+  );
+  assert(
+    resolveTownEditorPlacementCandidate(pavementItem, 25) === 'pavement-tile-square',
+    'Town editor generated tiles should remain reusable after repeated placements.',
   );
   assert(
     resolveTownEditorPlacementCandidate({ ...crateItem, placeable: false }, 0) === null,
@@ -1451,6 +1459,24 @@ const runPlacementEditorSmoke = (): void => {
   const pavementDraft = createPlacementTransformDraft(pavementTile.worldObject);
   pavementDraft.active = true;
   pavementDraft.scaleMultiplier = 2.5;
+  const existingDuplicateIds = [
+    pavementTile.id,
+    `editor-${pavementTile.id}-copy-1`,
+  ];
+  const duplicateObjectId = createDuplicatePlacementObjectId(pavementTile.id, existingDuplicateIds);
+  assert(
+    duplicateObjectId === `editor-${pavementTile.id}-copy-2`,
+    'Placement editor should create stable unique duplicate object ids.',
+  );
+  const duplicatePosition = createDuplicatePlacementPosition(pavementTile.worldObject, pavementDraft, snapValues[1]);
+  assert(
+    duplicatePosition[0] > pavementDraft.position[0],
+    'Placement editor duplicates should be offset beside the source object.',
+  );
+  assert(
+    duplicatePosition[1] === pavementDraft.position[1],
+    'Placement editor duplicates should preserve the source ground height.',
+  );
   const spawnPreview = createPrimitivePlacementPreviewObject(playerSpawn.worldObject);
   assert(spawnPreview !== null, 'Player spawn marker should create an editor primitive preview.');
   if (spawnPreview) {

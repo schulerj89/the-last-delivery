@@ -15,6 +15,8 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - The standalone builder starts in the close 3D view. Press `V` to switch to overview when needed.
 - Layout debug circles and labels are hidden in the standalone builder; spawn, board, mailbox, and district concepts come from the editor panels/catalog instead of appearing pre-drawn in the canvas.
 - Click a placed object or use `Tab` to select it, then use the keyboard controls to fine tune position, rotation, scale, and Y offset.
+- Click empty grass to clear selection.
+- Press `Ctrl+D` or click `Duplicate Selected` to create another editable copy next to the selected object.
 - Press `Delete` or click `Delete Selected` to remove the selected object from the active editor layout.
 - The standalone builder starts on the clean playground canvas with grass and fence only, so authored village objects do not clutter the initial view.
 - Asset squares are reusable. Each drop creates a generated `editor-*` object id that can be moved, scaled, deleted, saved, and promoted.
@@ -54,6 +56,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 
 - `Tab` / `Shift+Tab`: cycle editable objects.
 - Click near an object in the top-down layout view to select it.
+- Click empty ground: clear selection.
 - Click and drag a selected object or object handle to move it across the X/Z ground plane.
 - `WASD` or arrow keys: nudge on the X/Z plane.
 - Hold `WASD` or arrow keys: continuously move the selected object using frame delta time.
@@ -65,6 +68,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - `1` / `2` / `3`: change snap size.
 - `Ctrl+Z`: undo the last editor operation.
 - `Ctrl+Shift+Z` or `Ctrl+Y`: redo the last undone editor operation.
+- `Ctrl+D`: duplicate the selected object with a new `editor-*` id.
 - `Escape`: clear selection.
 - `Delete`: remove the selected object from the active editor layout.
 

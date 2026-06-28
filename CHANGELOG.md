@@ -2,6 +2,18 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.0] - 2026-06-28
+
+### Added
+
+- Added `Duplicate Selected` and `Ctrl+D` support in the placement editor so reusable tiles and props can be copied without dragging from the palette again.
+- Added empty-ground deselection in the editor so clicking away clears the current object selection.
+- Added smoke coverage for duplicate object id generation, duplicate placement offsets, repeated generated tile placement, and updated editor toolbar hints.
+
+### Changed
+
+- Updated the town editor toolbar and editor workflow docs with duplicate and deselect controls.
+
 ## [0.52.0] - 2026-06-28
 
 ### Added

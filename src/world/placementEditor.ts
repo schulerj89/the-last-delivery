@@ -40,6 +40,7 @@ export const placementEditorConfig = {
   scaleStep: 0.05,
   selectionRadiusPadding: 0.8,
   continuousMoveBaseSpeed: 2.25,
+  duplicateMinOffset: 0.5,
   snapSpeedReference: 0.25,
   minSnapSpeedMultiplier: 0.35,
   maxSnapSpeedMultiplier: 2.5,
@@ -181,6 +182,16 @@ const getObjectAssetId = (object: WorldObjectDefinition): string | null => (
   getAssetRenderSettings(object)?.assetId ?? null
 );
 
+const sanitizePlacementObjectIdPart = (value: string): string => (
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/^editor-/, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'object'
+);
+
 export const canUseTownEditorFilePicker = (
   value: unknown = typeof window === 'undefined' ? undefined : window,
 ): boolean => {
@@ -291,6 +302,42 @@ export const createDraggedPlacementPosition = (
     snapEnabled ? snapPlacementCoordinate(x, snapSize) : x,
     draft.position[1],
     snapEnabled ? snapPlacementCoordinate(z, snapSize) : z,
+  ];
+};
+
+export const createDuplicatePlacementObjectId = (
+  sourceObjectId: string,
+  existingObjectIds: Iterable<string>,
+): string => {
+  const existingObjectIdSet = new Set(existingObjectIds);
+  const baseId = sanitizePlacementObjectIdPart(sourceObjectId);
+  let index = 1;
+  let candidateId = `editor-${baseId}-copy-${index}`;
+
+  while (existingObjectIdSet.has(candidateId)) {
+    index += 1;
+    candidateId = `editor-${baseId}-copy-${index}`;
+  }
+
+  return candidateId;
+};
+
+export const createDuplicatePlacementPosition = (
+  object: WorldObjectDefinition,
+  draft: PlacementTransformDraft,
+  snapSize: number,
+): THREE.Vector3Tuple => {
+  const dimensions = object.dimensions ?? [1, 1, 1];
+  const duplicateOffset = Math.max(
+    dimensions[0] * Math.max(draft.scaleMultiplier, 0.001),
+    snapSize,
+    placementEditorConfig.duplicateMinOffset,
+  );
+
+  return [
+    snapPlacementCoordinate(draft.position[0] + duplicateOffset, snapSize),
+    draft.position[1],
+    snapPlacementCoordinate(draft.position[2], snapSize),
   ];
 };
 
@@ -759,6 +806,7 @@ export const createPlacementEditor = ({
   const markDeliveryBoardButton = document.createElement('button');
   const markMailboxButton = document.createElement('button');
   const deleteSelectedButton = document.createElement('button');
+  const duplicateSelectedButton = document.createElement('button');
   const saveDraftButton = document.createElement('button');
   const saveActiveButton = document.createElement('button');
   const loadDraftButton = document.createElement('button');
@@ -830,6 +878,8 @@ export const createPlacementEditor = ({
   markMailboxButton.textContent = 'Mailbox Target';
   deleteSelectedButton.type = 'button';
   deleteSelectedButton.textContent = 'Delete Selected';
+  duplicateSelectedButton.type = 'button';
+  duplicateSelectedButton.textContent = 'Duplicate Selected';
   saveDraftButton.type = 'button';
   saveDraftButton.textContent = 'Save Draft';
   saveActiveButton.type = 'button';
@@ -875,6 +925,7 @@ export const createPlacementEditor = ({
     'Generated pavement: select a pavement object, Toggle Active, then drag/scale it.',
     'Save Active JSON: save working town layout locally.',
     'Copy JSON / Save JSON File: export layout for layout:apply.',
+    'Duplicate Selected or Ctrl+D: create another editable copy next to the selected object.',
     'Delete Selected: remove the selected object from active editor JSON.',
   ].join('\n');
   const createObjectSelectOption = (object: EditablePlacementObject, index: number): HTMLOptionElement => {
@@ -920,6 +971,7 @@ export const createPlacementEditor = ({
     'WASD / arrows hold to move  Shift faster  Alt finer',
     'Q / E rotate  Z / X scale  [ / ] Y offset',
     '1 / 2 / 3 snap size',
+    'Ctrl+D duplicate selected object',
     'Delete removes selected object from active editor JSON',
     'Ctrl+Z undo  Ctrl+Shift+Z or Ctrl+Y redo',
     'Ctrl+S save active JSON  Ctrl+O reload active JSON  Ctrl+Shift+Delete clear',
@@ -947,6 +999,7 @@ export const createPlacementEditor = ({
       saveJsonFileButton,
       importJsonButton,
       clearDraftButton,
+      duplicateSelectedButton,
       deleteSelectedButton,
     );
     overlay.append(summary, controls, importTextArea);
@@ -955,6 +1008,7 @@ export const createPlacementEditor = ({
       toggleActiveButton,
       applyAssetButton,
       clearAssetButton,
+      duplicateSelectedButton,
       deleteSelectedButton,
       markDecorativeButton,
       markSpawnButton,
@@ -1892,6 +1946,7 @@ export const createPlacementEditor = ({
           `RotationY ${formatNumber(THREE.MathUtils.radToDeg(draft.rotationY))}deg`,
           `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
           `Render ${draft.assetId ?? getObjectAssetId(selectedObject.worldObject) ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
+          'Ctrl+D or Duplicate Selected creates another copy.',
           'Delete key or Delete Selected removes this object from active JSON.',
         );
       } else {
@@ -1926,9 +1981,18 @@ export const createPlacementEditor = ({
       `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
       `Render ${draft.assetId ?? renderSettings?.assetId ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
       `Snap ${snap}  Edited ${isChangedDraft(selectedObject.worldObject, draft) ? 'yes' : 'no'}`,
-      'Ctrl+S save active  Ctrl+O reload active  Shift+C copy JSON',
+      'Ctrl+D duplicate  Ctrl+S save active  Ctrl+O reload active  Shift+C copy JSON',
       status,
     ].join('\n');
+  };
+
+  const clearSelection = (nextStatus = 'Selection cleared.'): void => {
+    selectedIndex = -1;
+    objectSelect.value = '';
+    dragState = null;
+    status = nextStatus;
+    updateMarker();
+    updateHud();
   };
 
   const selectIndex = (nextIndex: number): void => {
@@ -2073,6 +2137,105 @@ export const createPlacementEditor = ({
     }
 
     status = `Created ${objectId}${draft.assetId ? ` with ${draft.assetId}` : ''}.`;
+    applyDraftToScene(editableObject);
+    updateMarker();
+    updateHud();
+    return true;
+  };
+
+  const duplicateSelectedObject = (): boolean => {
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (!selectedObject || !draft) {
+      status = 'No selected object to duplicate.';
+      updateHud();
+      return false;
+    }
+
+    const objectId = createDuplicatePlacementObjectId(
+      selectedObject.id,
+      editableObjects.map((object) => object.id),
+    );
+    const duplicatePosition = createDuplicatePlacementPosition(
+      selectedObject.worldObject,
+      draft,
+      getCurrentSnap(),
+    );
+    const templateId = selectedObject.templateId ?? selectedObject.id;
+    const override: LayoutTransformOverride = {
+      id: objectId,
+      kind: selectedObject.kind,
+      templateId,
+      active: true,
+      position: duplicatePosition,
+      rotation: [0, draft.rotationY, 0],
+      dimensions: selectedObject.worldObject.dimensions
+        ? [...selectedObject.worldObject.dimensions]
+        : undefined,
+      renderMode: draft.assetId ? 'asset' : selectedObject.worldObject.render?.mode ?? 'primitive',
+      assetId: draft.assetId ?? undefined,
+      scaleMultiplier: draft.scaleMultiplier,
+      yOffset: draft.yOffset,
+      fitMode: selectedObject.worldObject.render?.mode === 'asset'
+        ? selectedObject.worldObject.render.fitMode
+        : undefined,
+      mailbox: draft.gameplayRole === 'mailbox'
+        ? {
+          variant: draft.mailboxVariant,
+          destinationName: draft.destinationName || 'Mailbox',
+        }
+        : null,
+      gameplay: {
+        role: draft.gameplayRole,
+        action: draft.interactionAction,
+        destinationName: draft.gameplayRole === 'mailbox' ? draft.destinationName : undefined,
+        mailboxVariant: draft.gameplayRole === 'mailbox' ? draft.mailboxVariant : undefined,
+      },
+    };
+    const worldObject = createWorldObjectFromLayoutOverride(
+      override,
+      editableObjects.map((object) => object.worldObject),
+    );
+
+    if (!worldObject) {
+      status = `Could not duplicate ${selectedObject.id}.`;
+      updateHud();
+      return false;
+    }
+
+    const editableObject: EditablePlacementObject = {
+      id: worldObject.id,
+      kind: worldObject.kind,
+      worldObject,
+      templateId,
+      isCreated: true,
+    };
+
+    pushUndoSnapshot();
+    registerEditableObject(editableObject);
+
+    const duplicateDraft = createPlacementTransformDraft(worldObject);
+    duplicateDraft.active = true;
+    duplicateDraft.position = duplicatePosition;
+    duplicateDraft.rotationY = draft.rotationY;
+    duplicateDraft.scaleMultiplier = draft.scaleMultiplier;
+    duplicateDraft.yOffset = draft.yOffset;
+    duplicateDraft.assetId = draft.assetId;
+    duplicateDraft.gameplayRole = draft.gameplayRole;
+    duplicateDraft.interactionAction = draft.interactionAction;
+    duplicateDraft.destinationName = draft.destinationName;
+    duplicateDraft.mailboxVariant = draft.mailboxVariant;
+    draftsByObjectId.set(objectId, duplicateDraft);
+
+    const nextIndex = editableObjects.findIndex((object) => object.id === objectId);
+
+    if (nextIndex >= 0) {
+      selectedIndex = nextIndex;
+      objectSelect.value = String(nextIndex);
+    }
+
+    status = `Duplicated ${selectedObject.id} as ${objectId}.`;
     applyDraftToScene(editableObject);
     updateMarker();
     updateHud();
@@ -2249,6 +2412,8 @@ export const createPlacementEditor = ({
     const nearestIndex = getNearestObjectIndex(hitPoint);
 
     if (nearestIndex < 0) {
+      clearSelection();
+      event.preventDefault();
       return;
     }
 
@@ -2407,12 +2572,8 @@ export const createPlacementEditor = ({
 
     pushUndoSnapshot();
     markPlacementDraftDeleted(draft);
-    status = `Deleted ${selectedObject.id} from the active editor layout. Save JSON to keep this change.`;
     applyDraftToScene(selectedObject);
-    selectedIndex = -1;
-    objectSelect.value = '';
-    updateMarker();
-    updateHud();
+    clearSelection(`Deleted ${selectedObject.id} from the active editor layout. Save JSON to keep this change.`);
   };
 
   const handleOpenJsonFileClick = (): void => {
@@ -2439,6 +2600,7 @@ export const createPlacementEditor = ({
   applyAssetButton.addEventListener('click', applySelectedAsset);
   clearAssetButton.addEventListener('click', clearSelectedAsset);
   deleteSelectedButton.addEventListener('click', deleteSelectedObject);
+  duplicateSelectedButton.addEventListener('click', duplicateSelectedObject);
   markDecorativeButton.addEventListener('click', handleMarkDecorativeClick);
   markSpawnButton.addEventListener('click', handleMarkSpawnClick);
   markPostOfficeButton.addEventListener('click', handleMarkPostOfficeClick);
@@ -2542,6 +2704,12 @@ export const createPlacementEditor = ({
         return true;
       }
 
+      if (!isTextInputTarget && event.ctrlKey && key === 'd') {
+        duplicateSelectedObject();
+        event.preventDefault();
+        return true;
+      }
+
       if (isTextInputTarget) {
         return false;
       }
@@ -2566,10 +2734,7 @@ export const createPlacementEditor = ({
       }
 
       if (key === 'Escape') {
-        selectedIndex = -1;
-        status = 'Selection cleared.';
-        updateMarker();
-        updateHud();
+        clearSelection();
         event.preventDefault();
         return true;
       }
@@ -2663,6 +2828,7 @@ export const createPlacementEditor = ({
       applyAssetButton.removeEventListener('click', applySelectedAsset);
       clearAssetButton.removeEventListener('click', clearSelectedAsset);
       deleteSelectedButton.removeEventListener('click', deleteSelectedObject);
+      duplicateSelectedButton.removeEventListener('click', duplicateSelectedObject);
       markDecorativeButton.removeEventListener('click', handleMarkDecorativeClick);
       markSpawnButton.removeEventListener('click', handleMarkSpawnClick);
       markPostOfficeButton.removeEventListener('click', handleMarkPostOfficeClick);
