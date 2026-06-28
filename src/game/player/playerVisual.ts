@@ -3,20 +3,28 @@ import {
   canLoadGltfAssets,
   createModelInstance,
   getAssetDefinition,
+  loadGltfAssetEntry,
   type AssetInstanceHandle,
 } from '../assets';
 
 export const playerCharacterAssetId = 'creative-courier-character';
+export const playerCharacterAnimationAssetId = 'creative-courier-character-animations';
 
 export type PlayerVisualMode = 'fallback' | 'loading' | 'loaded' | 'error';
 export type PlayerMeshFilterMode = 'configured' | 'all';
 
 export const playerCharacterVisualSettings = {
   assetId: playerCharacterAssetId,
+  animationAssetId: playerCharacterAnimationAssetId,
   scale: 1,
   rotationY: Math.PI,
   offset: [0, 0, 0] as THREE.Vector3Tuple,
   targetHeightFromCollisionRadius: 4.2,
+  preferredIdleAnimationNames: [
+    'Idle_Relaxed',
+    'Idle_Breathing',
+    'Idle_Look_Around',
+  ],
   visibleMeshNames: [
     'Body_010',
     'Male_emotion_usual_001',
@@ -33,10 +41,13 @@ export interface PlayerVisualStatus {
   mode: PlayerVisualMode;
   assetId: string;
   assetUrl: string;
+  animationAssetId: string;
+  animationAssetUrl: string;
   errorMessage?: string;
   totalMeshCount: number;
   visibleMeshCount: number;
   animationNames: readonly string[];
+  activeAnimationName?: string;
   boundingBoxSize: THREE.Vector3Tuple;
   boundingBoxMin: THREE.Vector3Tuple;
   boundingBoxMax: THREE.Vector3Tuple;
@@ -68,6 +79,7 @@ export interface MeshVisibilityResult {
 export interface PlayerVisual {
   object: THREE.Group;
   fallback: THREE.Group;
+  update(deltaSeconds: number): void;
   getStatus(): PlayerVisualStatus;
   forceFallbackVisual(): void;
   forceCharacterVisual(): void;
@@ -139,6 +151,35 @@ const collectCharacterMeshes = (model: THREE.Object3D): THREE.Mesh[] => {
   });
 
   return meshes;
+};
+
+const getClipName = (clip: THREE.AnimationClip, index: number): string => (
+  clip.name || `animation-${index + 1}`
+);
+
+export const selectPlayerIdleAnimationClip = (
+  clips: readonly THREE.AnimationClip[],
+  preferredNames: readonly string[] = playerCharacterVisualSettings.preferredIdleAnimationNames,
+): THREE.AnimationClip | null => {
+  if (clips.length === 0) {
+    return null;
+  }
+
+  const normalizedPreferredNames = preferredNames.map((name) => name.toLowerCase());
+  const exactPreferredClip = clips.find((clip, index) => (
+    normalizedPreferredNames.includes(getClipName(clip, index).toLowerCase())
+  ));
+
+  if (exactPreferredClip) {
+    return exactPreferredClip;
+  }
+
+  const idleClip = clips.find((clip, index) => getClipName(clip, index).toLowerCase().includes('idle'));
+  if (idleClip) {
+    return idleClip;
+  }
+
+  return clips.find((clip, index) => getClipName(clip, index).toLowerCase() !== 'a-pose') ?? clips[0] ?? null;
 };
 
 export const resolveVisibleCharacterMeshNames = (
@@ -269,15 +310,19 @@ const createStatus = (
   errorMessage?: string,
 ): PlayerVisualStatus => {
   const asset = getAssetDefinition(playerCharacterVisualSettings.assetId);
+  const animationAsset = getAssetDefinition(playerCharacterVisualSettings.animationAssetId);
 
   return {
     mode,
     assetId: playerCharacterVisualSettings.assetId,
     assetUrl: asset?.url ?? '',
+    animationAssetId: playerCharacterVisualSettings.animationAssetId,
+    animationAssetUrl: animationAsset?.url ?? '',
     errorMessage,
     totalMeshCount: 0,
     visibleMeshCount: 0,
     animationNames: [],
+    activeAnimationName: undefined,
     boundingBoxSize: [...emptyTuple],
     boundingBoxMin: [...emptyTuple],
     boundingBoxMax: [...emptyTuple],
@@ -312,7 +357,70 @@ export const createPlayerVisual = (
   let alignmentResult: CharacterAlignmentResult | null = null;
   let meshFilterWarningShown = false;
   let availableMeshNamesLogged = false;
+  let animationMixer: THREE.AnimationMixer | null = null;
+  let activeAnimationAction: THREE.AnimationAction | null = null;
+  let animationNames: readonly string[] = [];
+  let activeAnimationName: string | undefined;
   let status = createStatus(loadMode, true);
+
+  const stopCharacterAnimation = (): void => {
+    activeAnimationAction?.stop();
+
+    if (animationMixer && characterObject) {
+      animationMixer.uncacheRoot(characterObject);
+    }
+
+    animationMixer = null;
+    activeAnimationAction = null;
+    activeAnimationName = undefined;
+  };
+
+  const startCharacterAnimation = (clips: readonly THREE.AnimationClip[]): void => {
+    if (!characterObject || clips.length === 0) {
+      activeAnimationName = undefined;
+      return;
+    }
+
+    const clip = selectPlayerIdleAnimationClip(clips);
+    if (!clip) {
+      activeAnimationName = undefined;
+      return;
+    }
+
+    stopCharacterAnimation();
+    animationMixer = new THREE.AnimationMixer(characterObject);
+    activeAnimationAction = animationMixer.clipAction(clip);
+    activeAnimationAction.reset();
+    activeAnimationAction.setLoop(THREE.LoopRepeat, Infinity);
+    activeAnimationAction.play();
+    activeAnimationName = clip.name || 'unnamed';
+    log.info(`[player] Playing character animation: ${activeAnimationName}.`);
+  };
+
+  const loadCharacterAnimations = (): void => {
+    void loadGltfAssetEntry(playerCharacterVisualSettings.animationAssetId)
+      .then((entry) => {
+        if (disposed || !characterObject) {
+          return;
+        }
+
+        animationNames = entry.animationNames;
+        if (animationNames.length > 0) {
+          log.info(`[player] Character animation source ${entry.asset.id}: ${animationNames.join(', ')}.`);
+        } else {
+          log.warn(`[player] Character animation source ${entry.asset.id} has no animation clips.`);
+        }
+
+        startCharacterAnimation(entry.animations);
+        refreshStatus();
+      })
+      .catch((error: unknown) => {
+        if (!disposed) {
+          log.warn(`[player] Character animations unavailable; keeping static visual. ${getErrorMessage(error)}`);
+          refreshStatus();
+        }
+      });
+  };
 
   const refreshStatus = (): void => {
     const fallbackVisible = fallback.visible;
@@ -328,7 +436,10 @@ export const createPlayerVisual = (
 
       nextStatus.totalMeshCount = meshes.length;
       nextStatus.visibleMeshCount = meshes.filter((mesh) => mesh.visible).length;
-      nextStatus.animationNames = getAnimationNames(characterObject);
+      nextStatus.animationNames = animationNames.length > 0
+        ? animationNames
+        : getAnimationNames(characterObject);
+      nextStatus.activeAnimationName = activeAnimationName;
       nextStatus.boundingBoxSize = bounds ? toVector3Tuple(size) : alignmentResult?.boundingBoxSize ?? [...emptyTuple];
       nextStatus.boundingBoxMin = bounds ? toVector3Tuple(bounds.min) : alignmentResult?.boundingBoxMin ?? [...emptyTuple];
       nextStatus.boundingBoxMax = bounds ? toVector3Tuple(bounds.max) : alignmentResult?.boundingBoxMax ?? [...emptyTuple];
@@ -418,12 +529,16 @@ export const createPlayerVisual = (
         loadMode = 'loaded';
         errorMessage = undefined;
 
-        const animationNames = getAnimationNames(instance.object);
+        animationNames = instance.animationNames.length > 0
+          ? instance.animationNames
+          : getAnimationNames(instance.object);
         if (animationNames.length > 0) {
-          log.info(`[player] Character animations available: ${animationNames.join(', ')}.`);
+          log.info(`[player] Character visual asset animations available: ${animationNames.join(', ')}.`);
+          startCharacterAnimation(instance.animations);
         }
 
         applyDisplayMode();
+        loadCharacterAnimations();
       })
       .catch((error: unknown) => {
         if (!disposed) {
@@ -441,6 +556,9 @@ export const createPlayerVisual = (
   return {
     object,
     fallback,
+    update(deltaSeconds) {
+      animationMixer?.update(deltaSeconds);
+    },
     getStatus() {
       refreshStatus();
       return {
@@ -475,6 +593,7 @@ export const createPlayerVisual = (
     },
     dispose() {
       disposed = true;
+      stopCharacterAnimation();
       characterInstance?.dispose();
       characterInstance = null;
       characterObject = null;

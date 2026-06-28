@@ -557,7 +557,7 @@ const addCentralPlazaSurface = (group: THREE.Group): void => {
   addGroundDisk(
     group,
     'village:central-plaza-surface',
-    villageLayoutConfig.spacing.plazaOpenRadius - 0.45,
+    villageLayoutConfig.spacing.centralGreenOpenRadius - 0.45,
     [0, 0.018, 0],
     materials.plaza,
   );

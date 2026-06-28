@@ -1,85 +1,113 @@
 # World Layout
 
-This document defines the intended first-village layout rules before any broad asset repositioning pass.
-The current village can drift toward clutter as more GLB props arrive, so future world edits should keep this page and `src/world/villageLayoutConfig.ts` aligned.
+This document defines the intended first-town plan for The Last Delivery. The current playable content can remain small while the layout contract expands toward a larger handcrafted town with districts, broad paths, and room for 45 to 90 minutes of future delivery gameplay.
+
+Keep this document and `src/world/villageLayoutConfig.ts` aligned.
 
 ## Coordinate System
 
-- `X` is left/right across the village.
+- `X` is left/right across town.
 - `Y` is height.
-- `Z` is forward/back through the village.
+- `Z` is forward/back through town.
 
-The intended first village bounds are:
+## Bounds
 
-- `x`: `-14` to `14`
-- `z`: `-12` to `14`
+- Playable town bounds: `x -45` to `45`, `z -45` to `45`.
+- Scenic outer bounds: `x -65` to `65`, `z -65` to `65`.
 
-These bounds describe the target readable village square. They are a planning contract for the next layout pass, not a request to expand gameplay systems.
+The playable bounds are the authored movement and collision planning area. The scenic bounds are for background framing, orchards, forest edges, hills, and other non-critical visual composition later.
 
-## Major Zones
+## Districts
 
-- Spawn/start path: the player starts on a readable approach path with a clear view toward the post office and delivery board.
-- Post office / delivery board: the board remains the first action, placed near the post office with open space in front of the prompt.
-- Central plaza / well: the well anchors the middle of the square and keeps a clean circular walking area around it.
-- Blue house delivery target: a distinct blue-house destination with its mailbox in front and at least one clear approach lane.
-- Red house delivery target: a distinct red-house destination with a readable mailbox and sign, separated from the blue route.
-- North house delivery target: a third delivery target near the north side, readable from the plaza and not hidden behind trees.
-- Forest edge / decorative boundary: trees, rocks, and bushes frame the playable area while staying out of primary paths.
-- Market/cart dressing corner: crates, barrels, sacks, and the cart cluster together as a dressing corner instead of being scattered everywhere.
+- South entry / spawn: suggested center `[0, 0, 38]`.
+  Arrival road with enough space to see the town shape before the first task.
+- Post office plaza: suggested center `[-10, 0, 24]`.
+  First hub with the post office and delivery board; it should be readable from the spawn route.
+- Delivery board: suggested center `[-4, 0, 26]`.
+  Keep clear access in front of the board and avoid props between spawn and the prompt.
+- Market lane: suggested center `[14, 0, 20]`.
+  Future shop/stall corridor with clustered dressing, not scattered props.
+- Central green / well: suggested center `[0, 0, 4]`.
+  Large landmark green with the well and open circulation around it.
+- West homes: suggested center `[-28, 0, -4]`.
+  Perimeter homes with mailboxes facing paths, not hidden behind houses.
+- East river row: suggested center `[28, 0, 0]`.
+  Future river-facing residential row with clear long sightlines.
+- North hill / old trail gate: suggested center `[0, 0, -36]`.
+  Future progression edge and north-route destination.
+- Forest/orchard boundary:
+  Scenic boundary around the playable town. Trees frame districts and paths without blocking the camera.
 
-## Spacing Rules
+## Route Plan
 
-- Keep the main path `3.0` to `4.0` units wide.
-- Keep a `4.0` unit open plaza radius around the well.
-- Keep at least `2.0` units clear around interactables.
-- Keep trees outside primary paths.
-- Keep decorative props in clusters, not scattered everywhere.
-- Keep each decorative cluster to `3` to `5` props.
+- South Road: broad south entry route from spawn toward the central green.
+- Post Office Walk: early branch from South Road to the post office plaza and delivery board.
+- Market Lane: side corridor toward market dressing and future vendors.
+- Green Loop: circulation route around the central green and well.
+- West Home Path: residential side path toward west-home delivery targets.
+- River Row: east-side route for future river homes and mailbox targets.
+- North Hill Road: main northern route toward the old trail gate.
 
-## Density Budget
+## Path Rules
 
-- `70%` open walkable space.
-- `20%` landmark structures.
-- `10%` decorative clutter.
+- Main paths should be `4` to `6` units wide.
+- Side paths should be `3` to `4` units wide.
+- The central green should keep at least a `10` unit open radius.
+- Every interactable should have at least `2.5` units of clear access.
+- Houses belong on district edges, not in path centers.
+- Trees frame districts and boundaries; they should not block primary camera views or walking lanes.
+- Decorative props should be grouped into intentional clusters instead of scattered.
 
-When a prop does not improve navigation, destination identity, or boundary readability, it should probably be removed or moved into a small cluster.
+## Density Rules
+
+- Keep at least `60%` of the playable town as open movement/path space.
+- Use no more than `8` to `10` houses in the first town for now.
+- Use no more than `5` to `6` active mailbox targets for now.
+- Use no more than `3` decorative clusters per district.
+- Use no more than `4` small props per cluster.
+
+If a prop does not improve navigation, destination identity, boundary readability, or a district silhouette, move it into a cluster or remove it.
 
 ## Top-Down Plan
 
 Approximate top-down map, with north at the top and `Z` increasing downward in this diagram.
 
 ```text
-                 x -14                         x 0                         x 14
-z -12  +-----------------------------------------------------------------------+
-       |   Forest edge / rocks          North House Target          Forest edge |
-       |        T   R   B                 H3 + mailbox                T   B     |
-       |                                                                       |
-       |              Post Office / Delivery Board                              |
-       |                 PO + BOARD + return box                                |
-       |                         |                                             |
-z  -2  |  Blue House Target ---- main path ---- Central Plaza / Well ---- Red   |
-       |      H1 + mailbox                    O                    H2 + mailbox|
-       |                         |                                             |
-       |                    spawn/start path                                    |
-z   6  |                         |                 Market / cart dressing       |
-       |                    side path                 cart + crates + barrels   |
-       |                                                                       |
-z  14  +-----------------------------------------------------------------------+
+                         SCENIC OUTER BOUNDS x -65..65 / z -65..65
+
+        x -45                 x -28            x 0             x 28                 x 45
+z -45  +--------------------------------------------------------------------------------+
+       | Forest / orchard edge             North Hill Road                Forest edge   |
+       |                                      Old Trail Gate                             |
+       |                                           N                                    |
+z -36  |                                  North Hill / Old Trail Gate                   |
+       |                                                                                |
+       |                       West Home Path        |        River Row                  |
+       |                                                                                |
+z  -4  |      West Homes district            Central Green / Well        East River Row  |
+       |       houses on edge                  Green Loop                 homes on edge  |
+       |                                           O                                    |
+z   4  |                         <--------- open 10 unit green --------->               |
+       |                                                                                |
+       |                           Post Office Walk        Market Lane                   |
+z  20  |        Post Office Plaza / Board             Market stalls later               |
+       |             PO + BOARD                         clustered props                 |
+z  26  |                                                                                |
+       |                                  South Road                                    |
+z  38  |                              South Entry / Spawn                               |
+       +--------------------------------------------------------------------------------+
 
 Legend:
 PO = post office
 BOARD = delivery board
-O = well / plaza landmark
-H1/H2/H3 = house delivery targets
-T = tree
-B = bush
-R = rock
+O = well / central green landmark
+N = north hill / old trail gate
 ```
 
-## Next Layout Pass Checklist
+## Next Implementation Checklist
 
-- Move objects only after checking the path width, plaza radius, and interactable clearance rules.
-- Treat houses, delivery board, mailbox targets, and the well as landmarks first.
-- Move decorative nature props to the edge or into small clusters.
-- Keep colliders simple and tied to blockers, not every decorative object.
-- Preserve the current delivery loop while changing positions.
+- Move world objects in district-sized passes, not all at once.
+- Expand path guide rendering before adding more delivery targets.
+- Keep collision proxies simple and independent from visual meshes.
+- Preserve the current delivery loop while moving the first board and mailbox targets.
+- Use screenshot QA after the first large-town object placement pass.

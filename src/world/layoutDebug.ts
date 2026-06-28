@@ -162,7 +162,7 @@ const createZoneOutlines = (): THREE.Object3D[] => (
   villageLayoutConfig.zones.map((zone) => (
     createLineLoop(
       `layout:zone:${zone.id}`,
-      createCirclePoints(zone.center[0], zone.center[1], zone.radius, layoutDebugConfig.helperY + 0.01),
+      createCirclePoints(zone.center[0], zone.center[2], zone.radius, layoutDebugConfig.helperY + 0.01),
       colors.zone,
     )
   ))

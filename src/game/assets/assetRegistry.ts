@@ -122,10 +122,19 @@ export const assetRegistry: readonly AssetDefinition[] = [
   {
     id: 'creative-courier-character',
     kind: 'gltf',
-    url: '/assets/models/characters/courier-creative-character.glb',
+    url: '/assets/models/characters/courier-creative-character_2.glb',
     sourcePack: 'creative-characters-free',
     defaultScale: 1,
     notes: 'Selected assembled low-poly character visual for the player courier. Movement and collision still use the existing player controller.',
+    maxRecommendedBytes: 2_500_000,
+  },
+  {
+    id: 'creative-courier-character-animations',
+    kind: 'gltf',
+    url: '/assets/models/characters/courier-creative-character.glb',
+    sourcePack: 'creative-characters-free',
+    defaultScale: 1,
+    notes: 'Animation-only Creative Characters GLB used to drive the selected courier visual mesh.',
     maxRecommendedBytes: 2_500_000,
   },
 ];
@@ -149,6 +158,7 @@ export const selectedFantasyAssetIds = [
 
 export const selectedCharacterAssetIds = [
   'creative-courier-character',
+  'creative-courier-character-animations',
 ] as const;
 
 export const getAssetDefinition = (assetId: string): AssetDefinition | undefined => (

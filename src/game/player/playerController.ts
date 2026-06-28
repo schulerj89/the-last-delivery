@@ -137,6 +137,7 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
         applyDeceleration(velocity, stepSeconds);
       }
 
+      visual.update(stepSeconds);
       object.position.addScaledVector(velocity, stepSeconds);
       object.position.y = groundedY;
 

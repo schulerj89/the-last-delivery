@@ -7,6 +7,7 @@ import { getAssetDefinition, type AssetDefinition } from './assetRegistry';
 export interface CachedGltfAsset {
   asset: AssetDefinition;
   source: THREE.Group;
+  animations: readonly THREE.AnimationClip[];
   animationNames: readonly string[];
 }
 
@@ -19,6 +20,8 @@ export interface AssetRuntimeStats {
 export interface AssetInstanceHandle {
   assetId: string;
   object: THREE.Object3D;
+  animations: readonly THREE.AnimationClip[];
+  animationNames: readonly string[];
   isDisposed(): boolean;
   dispose(): void;
 }
@@ -63,15 +66,21 @@ const getSceneAnimationNames = (scene: THREE.Object3D): readonly string[] => (
   Array.isArray(scene.userData.animationNames) ? scene.userData.animationNames : []
 );
 
+const getSceneAnimationClips = (scene: THREE.Object3D): readonly THREE.AnimationClip[] => (
+  Array.isArray(scene.userData.animationClips) ? scene.userData.animationClips : []
+);
+
 const configureAssetScene = (
   asset: AssetDefinition,
   scene: THREE.Group,
-  animationNames: readonly string[] = [],
+  animations: readonly THREE.AnimationClip[] = [],
 ): THREE.Group => {
   const root = scene;
+  const animationNames = getAnimationNames(animations);
   applyDefaultScale(asset, root);
   root.name = `asset:${asset.id}:source`;
   root.userData.assetId = asset.id;
+  root.userData.animationClips = [...animations];
   root.userData.animationNames = [...animationNames];
   root.traverse((object) => {
     object.userData.assetId = asset.id;
@@ -90,7 +99,7 @@ const loadGltfSource = (asset: AssetDefinition): Promise<THREE.Group> => (
     loader.load(
       asset.url,
       (gltf) => {
-        resolve(configureAssetScene(asset, gltf.scene, getAnimationNames(gltf.animations)));
+        resolve(configureAssetScene(asset, gltf.scene, gltf.animations));
       },
       undefined,
       reject,
@@ -204,8 +213,11 @@ export const createAssetCache = ({
           throw new Error(`GLB asset cache was disposed before ${asset.id} finished loading.`);
         }
 
-        const animationNames = getSceneAnimationNames(source);
-        const entry = { asset, source, animationNames };
+        const animations = getSceneAnimationClips(source);
+        const animationNames = animations.length > 0
+          ? getAnimationNames(animations)
+          : getSceneAnimationNames(source);
+        const entry = { asset, source, animations, animationNames };
         loadedEntries.set(asset.id, entry);
         failedAssets.delete(asset.id);
         log.info(`[assets] Loaded model ${asset.id}.`);
@@ -235,10 +247,14 @@ export const createAssetCache = ({
     incrementInstanceCount(instanceCounts, assetId);
     object.name = `asset-instance:${assetId}`;
     object.userData.assetId = assetId;
+    object.userData.animationClips = [...entry.animations];
+    object.userData.animationNames = [...entry.animationNames];
 
     const handle: AssetInstanceHandle = {
       assetId,
       object,
+      animations: entry.animations,
+      animationNames: entry.animationNames,
       isDisposed() {
         return disposed;
       },

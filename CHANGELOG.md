@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.38.0] - 2026-06-28
+
+### Added
+
+- Added a larger first-town district plan with playable/scenic bounds, district centers, route names, spacing rules, density budgets, and an ASCII layout map.
+- Added animation-clip retention to the GLB asset cache so selected character animation sources can drive player visuals.
+- Added player courier animation-source status, active animation reporting, and idle clip selection smoke coverage.
+
+### Changed
+
+- Split the courier setup so `courier-creative-character_2.glb` provides the visible skinned character mesh while `courier-creative-character.glb` provides the animation clips.
+- Updated the player visual to play a preferred idle animation clip through `AnimationMixer` while preserving the existing player root, movement, collision, camera, and primitive fallback.
+- Nudged the delivery board interact point to satisfy the stricter future-town clearance rule without changing the delivery loop.
+
 ## [0.37.0] - 2026-06-28
 
 ### Added

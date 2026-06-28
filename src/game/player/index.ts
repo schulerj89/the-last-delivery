@@ -4,9 +4,11 @@ export {
   fitAndAlignCharacterModel,
   createPlayerFallbackVisual,
   createPlayerVisual,
+  playerCharacterAnimationAssetId,
   playerCharacterAssetId,
   playerCharacterVisualSettings,
   resolveVisibleCharacterMeshNames,
+  selectPlayerIdleAnimationClip,
 } from './playerVisual';
 export type {
   CharacterAlignmentResult,

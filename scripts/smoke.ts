@@ -5,6 +5,7 @@ import {
   Float32BufferAttribute,
   Fog,
   Group,
+  AnimationClip,
   Mesh,
   MeshBasicMaterial,
   Object3D,
@@ -50,10 +51,12 @@ import {
   createPlayerFallbackVisual,
   createPlayerVisual,
   fitAndAlignCharacterModel,
+  playerCharacterAnimationAssetId,
   playerCharacterAssetId,
   playerCharacterVisualSettings,
   playerMovementSettings,
   resolveVisibleCharacterMeshNames,
+  selectPlayerIdleAnimationClip,
 } from '../src/game/player';
 import {
   clampFrameDelta,
@@ -269,7 +272,7 @@ const runAssetRegistrySmoke = (): void => {
     return totalBytes + stats.size;
   }, 0);
 
-  assert(selectedCharacterAssets.length === 1, 'Exactly one selected character asset should be registered for this pass.');
+  assert(selectedCharacterAssets.length === 2, 'Selected character assets should include one visual model and one animation source.');
   assert(selectedCharacterBytes > 0, 'Selected character runtime asset size should be measurable.');
   console.info(`Selected character runtime assets: ${selectedCharacterAssets.length} file, ${formatBytes(selectedCharacterBytes)}.`);
 };
@@ -287,6 +290,8 @@ const runAssetCacheSmoke = async (): Promise<void> => {
       loadCount += 1;
       const group = new Group();
       group.name = `test-source:${asset.id}`;
+      group.userData.animationClips = [new AnimationClip('Idle_Relaxed', -1, [])];
+      group.userData.animationNames = ['Idle_Relaxed'];
       return group;
     },
   });
@@ -300,12 +305,16 @@ const runAssetCacheSmoke = async (): Promise<void> => {
 
   assert(firstEntry === secondEntry, 'Repeated cache loads should resolve to the same cached asset entry.');
   assert(loadCount === 1, 'Repeated asset loads should not fetch or parse the same source twice.');
+  assert(firstEntry.animations.length === 1, 'Asset cache entries should retain animation clips from loaded GLB sources.');
+  assert(firstEntry.animationNames.includes('Idle_Relaxed'), 'Asset cache entries should expose animation names.');
   assert(cache.getRuntimeStats().loadedAssetIds.includes('crate-box-001'), 'Loaded asset ids should include the cached asset.');
 
   const firstInstance = await cache.createInstance('crate-box-001');
   const secondInstance = await cache.createInstance('crate-box-001');
 
   assert(firstInstance.object !== secondInstance.object, 'Asset cache should create separate world instance objects.');
+  assert(firstInstance.animations.length === 1, 'Asset instances should expose cached animation clips without cloning source assets.');
+  assert(firstInstance.animationNames.includes('Idle_Relaxed'), 'Asset instances should expose cached animation names.');
   assert(cache.getInstanceCount('crate-box-001') === 2, 'Asset instance count should track active scene instances.');
   assert(cache.getRuntimeStats().sceneInstanceCountsByAssetId['crate-box-001'] === 2, 'Runtime stats should expose scene instances by asset id.');
   assert(!cache.disposeCachedAsset('crate-box-001'), 'Cached source asset should not dispose while instances are active.');
@@ -836,9 +845,9 @@ const runWorldDefinitionSmoke = (): void => {
 };
 
 const runVillageLayoutConfigSmoke = (): void => {
-  const { bounds, densityBudget, objectBudgets, spacing, zones } = villageLayoutConfig;
+  const { bounds, densityBudget, objectBudgets, routes, scenicBounds, spacing, zones } = villageLayoutConfig;
   const densityTotal = (
-    densityBudget.openWalkableSpace
+    densityBudget.openMovementAndPaths
     + densityBudget.landmarkStructures
     + densityBudget.decorativeClutter
   );
@@ -846,35 +855,62 @@ const runVillageLayoutConfigSmoke = (): void => {
   assert(villageLayoutConfig.coordinateSystem.x === 'left/right', 'Village layout should document the X axis.');
   assert(villageLayoutConfig.coordinateSystem.y === 'height', 'Village layout should document the Y axis.');
   assert(villageLayoutConfig.coordinateSystem.z === 'forward/back', 'Village layout should document the Z axis.');
-  assert(bounds.minX === -14 && bounds.maxX === 14, 'Village layout should define intended X bounds.');
-  assert(bounds.minZ === -12 && bounds.maxZ === 14, 'Village layout should define intended Z bounds.');
-  assert(spacing.mainPathMinWidth === 3, 'Village layout should define the minimum main path width.');
-  assert(spacing.mainPathMaxWidth === 4, 'Village layout should define the maximum main path width.');
+  assert(bounds.minX === -45 && bounds.maxX === 45, 'First town layout should define playable X bounds.');
+  assert(bounds.minZ === -45 && bounds.maxZ === 45, 'First town layout should define playable Z bounds.');
+  assert(scenicBounds.minX === -65 && scenicBounds.maxX === 65, 'First town layout should define scenic X bounds.');
+  assert(scenicBounds.minZ === -65 && scenicBounds.maxZ === 65, 'First town layout should define scenic Z bounds.');
+  assert(spacing.mainPathMinWidth === 4, 'First town layout should define the minimum main path width.');
+  assert(spacing.mainPathMaxWidth === 6, 'First town layout should define the maximum main path width.');
   assert(spacing.mainPathMinWidth < spacing.mainPathMaxWidth, 'Village layout main path width range should be ordered.');
-  assert(spacing.plazaOpenRadius === 4, 'Village layout should define the open plaza radius.');
-  assert(spacing.interactableClearanceRadius === 2, 'Village layout should define interactable clearance.');
-  assert(spacing.decorativeClusterMinProps === 3, 'Village layout should define minimum decorative cluster size.');
-  assert(spacing.decorativeClusterMaxProps === 5, 'Village layout should define maximum decorative cluster size.');
-  assert(spacing.decorativeClusterMinProps < spacing.decorativeClusterMaxProps, 'Decorative cluster range should be ordered.');
+  assert(spacing.sidePathMinWidth === 3, 'First town layout should define the minimum side path width.');
+  assert(spacing.sidePathMaxWidth === 4, 'First town layout should define the maximum side path width.');
+  assert(spacing.sidePathMinWidth < spacing.sidePathMaxWidth, 'Side path width range should be ordered.');
+  assert(spacing.centralGreenOpenRadius === 10, 'First town layout should define the central green open radius.');
+  assert(spacing.interactableClearanceRadius === 2.5, 'First town layout should define interactable clearance.');
+  assert(spacing.decorativeClusterMaxCountPerDistrict === 3, 'First town layout should limit decorative clusters per district.');
+  assert(spacing.decorativeClusterMaxProps === 4, 'First town layout should limit props per decorative cluster.');
   assert(objectBudgets.decorativePropMaxCount > 0, 'Village layout should define a positive decorative prop budget.');
-  assert(objectBudgets.crateBarrelClusterMaxCount === 2, 'Village layout should limit crate/barrel dressing to two clusters.');
-  assert(objectBudgets.crateBarrelClusterMaxObjects === 3, 'Village layout should limit crate/barrel cluster size.');
+  assert(objectBudgets.houseMaxCount === 10, 'First town layout should limit houses for now.');
+  assert(objectBudgets.activeMailboxMaxCount === 6, 'First town layout should limit active mailbox targets for now.');
+  assert(objectBudgets.decorativeClusterMaxCountPerDistrict === 3, 'First town layout should define decorative clusters per district.');
+  assert(objectBudgets.smallPropsMaxPerCluster === 4, 'First town layout should define small props per cluster.');
+  assert(objectBudgets.crateBarrelClusterMaxObjects === 4, 'Village layout should limit crate/barrel cluster size.');
   assert(Math.abs(densityTotal - 1) < 0.001, 'Village layout density budget should total 100%.');
+  assert(densityBudget.openMovementAndPaths >= 0.6, 'First town should keep most playable space open.');
+  assert(villageLayoutConfig.keyPositions.spawn[0] === 0 && villageLayoutConfig.keyPositions.spawn[2] === 38, 'First town should define the south entry spawn center.');
+  assert(villageLayoutConfig.keyPositions.deliveryBoard[0] === -4 && villageLayoutConfig.keyPositions.deliveryBoard[2] === 26, 'First town should define the delivery board center.');
+  assert(villageLayoutConfig.keyPositions.northHillOldTrailGate[2] === -36, 'First town should define the north hill gate center.');
 
   const zoneIds = new Set(zones.map((zone) => zone.id));
-  assert(zones.length === 8, 'Village layout should define all intended major zones.');
+  assert(zones.length === 8, 'First town layout should define all intended districts.');
   zones.forEach((zone) => {
-    assert(zone.center.length === 2 && zone.center.every((component) => Number.isFinite(component)), `Layout zone should have a valid center: ${zone.id}`);
+    assert(zone.center.length === 3 && zone.center.every((component) => Number.isFinite(component)), `Layout district should have a valid center: ${zone.id}`);
+    assert(zone.center[1] === 0, `Layout district should keep Y as height: ${zone.id}`);
     assert(zone.radius > 0, `Layout zone should have a positive radius: ${zone.id}`);
   });
-  assert(zoneIds.has('spawn-start-path'), 'Village layout should include the spawn/start path zone.');
-  assert(zoneIds.has('post-office-delivery-board'), 'Village layout should include the post office and delivery board zone.');
-  assert(zoneIds.has('central-plaza-well'), 'Village layout should include the central plaza and well zone.');
-  assert(zoneIds.has('blue-house-target'), 'Village layout should include the blue house target zone.');
-  assert(zoneIds.has('red-house-target'), 'Village layout should include the red house target zone.');
-  assert(zoneIds.has('north-house-target'), 'Village layout should include the north house target zone.');
-  assert(zoneIds.has('forest-edge-boundary'), 'Village layout should include the forest edge boundary zone.');
-  assert(zoneIds.has('market-cart-dressing'), 'Village layout should include the market cart dressing zone.');
+  assert(zoneIds.has('south-entry-spawn'), 'First town layout should include the south entry district.');
+  assert(zoneIds.has('post-office-plaza'), 'First town layout should include the post office plaza district.');
+  assert(zoneIds.has('market-lane'), 'First town layout should include the market lane district.');
+  assert(zoneIds.has('central-green-well'), 'First town layout should include the central green district.');
+  assert(zoneIds.has('west-homes'), 'First town layout should include the west homes district.');
+  assert(zoneIds.has('east-river-row'), 'First town layout should include the east river row district.');
+  assert(zoneIds.has('north-hill-old-trail-gate'), 'First town layout should include the north hill district.');
+  assert(zoneIds.has('forest-orchard-boundary'), 'First town layout should include the forest/orchard boundary district.');
+
+  const routeLabels = new Set(routes.map((route) => route.label));
+  assert(routes.length === 7, 'First town layout should define all intended route names.');
+  routes.forEach((route) => {
+    assert(route.start.length === 3 && route.end.length === 3, `Town route should use 3D start/end tuples: ${route.id}`);
+    assert(route.start[1] === 0 && route.end[1] === 0, `Town route should keep Y as height: ${route.id}`);
+    assert(route.minWidth > 0 && route.maxWidth > route.minWidth, `Town route widths should be valid: ${route.id}`);
+  });
+  assert(routeLabels.has('South Road'), 'First town routes should include South Road.');
+  assert(routeLabels.has('Post Office Walk'), 'First town routes should include Post Office Walk.');
+  assert(routeLabels.has('Market Lane'), 'First town routes should include Market Lane.');
+  assert(routeLabels.has('Green Loop'), 'First town routes should include Green Loop.');
+  assert(routeLabels.has('West Home Path'), 'First town routes should include West Home Path.');
+  assert(routeLabels.has('River Row'), 'First town routes should include River Row.');
+  assert(routeLabels.has('North Hill Road'), 'First town routes should include North Hill Road.');
 };
 
 const runLayoutDebugSmoke = (): void => {
@@ -903,7 +939,7 @@ const runLayoutDebugSmoke = (): void => {
   assert(layoutDebugView.camera.isOrthographicCamera, 'Layout debug mode should use an orthographic top-down camera.');
   assert(!layoutDebugView.isActive(), 'Layout debug view should start inactive.');
   assert(layoutDebugView.object.getObjectByName('layout:bounds') !== undefined, 'Layout debug view should include village bounds.');
-  assert(layoutDebugView.object.getObjectByName('layout:zone:central-plaza-well') !== undefined, 'Layout debug view should include zone outlines.');
+  assert(layoutDebugView.object.getObjectByName('layout:zone:central-green-well') !== undefined, 'Layout debug view should include zone outlines.');
   assert(layoutDebugView.object.getObjectByName('layout:path:village:main-path-spawn-to-plaza') !== undefined, 'Layout debug view should include path lane guides.');
   assert(layoutDebugView.object.getObjectByName('layout:interactable:delivery-board') !== undefined, 'Layout debug view should include interactable radius helpers.');
   assert(layoutDebugView.object.getObjectByName('layout:collider:delivery-board') !== undefined, 'Layout debug view should include collider outlines.');
@@ -1264,8 +1300,11 @@ const runModuleSmoke = (): void => {
   assert(playerMovementSettings.maxSpeed > 0, 'Player max speed should be positive.');
   assert(playerMovementSettings.radius > 0, 'Player collision radius should be positive.');
   assert(playerCharacterAssetId === 'creative-courier-character', 'Player character asset id should point to the selected courier asset.');
+  assert(playerCharacterAnimationAssetId === 'creative-courier-character-animations', 'Player character animation asset id should point to the selected courier animation source.');
   assert(selectedCharacterAssetIdSet.has(playerCharacterAssetId), 'Player character asset id should be part of selected character assets.');
+  assert(selectedCharacterAssetIdSet.has(playerCharacterAnimationAssetId), 'Player character animation asset id should be part of selected character assets.');
   assert(isKnownAssetId(playerCharacterVisualSettings.assetId), 'Player character visual asset should be registered.');
+  assert(isKnownAssetId(playerCharacterVisualSettings.animationAssetId), 'Player character animation asset should be registered.');
   assert(playerCharacterVisualSettings.scale > 0, 'Player character visual scale should be positive.');
   assert(Number.isFinite(playerCharacterVisualSettings.rotationY), 'Player character visual rotation should be finite.');
   assert(isFiniteVector3Tuple(playerCharacterVisualSettings.offset), 'Player character visual offset should be a valid vector.');
@@ -1279,6 +1318,18 @@ const runModuleSmoke = (): void => {
   const filterConfigured = resolveVisibleCharacterMeshNames(['Body_010', 'Outerwear_036'], ['Body_010'], 'configured');
   assert(!filterConfigured.usedFallbackAll, 'Player mesh filtering should not fall back when at least one mesh matches.');
   assert(filterConfigured.visibleMeshCount === 1, 'Player mesh filtering should respect configured visible mesh names.');
+
+  const idleClip = new AnimationClip('Idle_Relaxed', -1, []);
+  const aPoseClip = new AnimationClip('A-pose', -1, []);
+  const walkClip = new AnimationClip('Walk_Forward', -1, []);
+  assert(
+    selectPlayerIdleAnimationClip([aPoseClip, walkClip, idleClip]) === idleClip,
+    'Player animation selection should prefer configured idle clips.',
+  );
+  assert(
+    selectPlayerIdleAnimationClip([aPoseClip, walkClip]) === walkClip,
+    'Player animation selection should avoid A-pose when a runtime clip is available.',
+  );
 
   const emptyAlignment = fitAndAlignCharacterModel(new Group(), playerMovementSettings.radius);
   assert(!emptyAlignment.validBounds, 'Player character alignment should handle empty bounds safely.');
@@ -1307,7 +1358,9 @@ const runModuleSmoke = (): void => {
   const initialVisualStatus = playerVisual.getStatus();
   assert(initialVisualStatus.mode === 'fallback' || initialVisualStatus.mode === 'loading', 'Player visual status should initialize safely.');
   assert(initialVisualStatus.assetId === playerCharacterAssetId, 'Player visual status should expose the selected asset id.');
+  assert(initialVisualStatus.animationAssetId === playerCharacterAnimationAssetId, 'Player visual status should expose the selected animation asset id.');
   assert(initialVisualStatus.assetUrl.endsWith('.glb'), 'Player visual status should expose the selected asset URL.');
+  assert(initialVisualStatus.animationAssetUrl.endsWith('.glb'), 'Player visual status should expose the selected animation asset URL.');
   assert(initialVisualStatus.fallbackVisible, 'Player fallback should remain available if the GLB cannot load.');
   assert(initialVisualStatus.totalMeshCount >= initialVisualStatus.visibleMeshCount, 'Player visual mesh counts should be ordered.');
   playerVisual.forceFallbackVisual();
