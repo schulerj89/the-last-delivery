@@ -144,6 +144,7 @@ import {
   isMassSelectablePlacementObject,
   isPlacementEditorHudVariant,
   isPlacementDraftInsideSelectionBounds,
+  isSelectablePlacementDraft,
   isPrimitivePlacementPreviewKind,
   markPlacementDraftDeleted,
   placementEditorConfig,
@@ -842,6 +843,10 @@ const runTownEditorRouteSmoke = (): void => {
   assert(townEditorScript.includes('maxInitialWaitMs'), 'Town editor loading should include a bounded initial wait.');
   assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load runtime models through the existing asset loader.');
   assert(townEditorScript.includes('group.scale.setScalar'), 'Town editor thumbnails should scale the centered wrapper, not push model pivots off-center.');
+  assert(townEditorScript.includes('townEditorPaletteDragMimeType'), 'Town editor drops should use a dedicated palette drag MIME type.');
+  assert(townEditorScript.includes('isTownEditorPaletteDrag'), 'Town editor should ignore non-palette drag/drop events.');
+  assert(townEditorScript.includes('event.stopPropagation()'), 'Town editor drops should stop propagation after a valid placement.');
+  assert(townEditorScript.includes('markerGrid.replaceChildren()'), 'Town editor palette filtering should clear stale marker cards.');
   assert(townEditorScript.includes('F1 help'), 'Town editor toolbar should advertise the help overlay shortcut.');
   assert(townEditorScript.includes('Ctrl+D duplicate'), 'Town editor toolbar should advertise selected-object duplication.');
   assert(townEditorScript.includes('Click empty deselect'), 'Town editor toolbar should advertise empty-space deselection.');
@@ -1672,6 +1677,7 @@ const runPlacementEditorSmoke = (): void => {
   });
   assert(!deletedDraft.active, 'Placement editor delete should mark a draft inactive.');
   assert(deletedDraft.assetId === null, 'Placement editor delete should clear asset previews from a draft.');
+  assert(!isSelectablePlacementDraft(deletedDraft), 'Placement editor hit tests should ignore deleted drafts.');
   const pavementDraft = createPlacementTransformDraft(pavementTile.worldObject);
   pavementDraft.active = true;
   pavementDraft.scaleMultiplier = 2.5;

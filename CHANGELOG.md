@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.55.1] - 2026-06-28
+
+### Fixed
+
+- Prevented deleted/inactive town-editor objects from being hit-selected after they are removed from the active layout.
+- Tightened town-editor drag/drop placement so only valid palette payloads can create objects on the canvas.
+- Cleared stale world-marker palette cards during palette filtering and added smoke coverage for the editor guards.
+
 ## [0.55.0] - 2026-06-28
 
 ### Added

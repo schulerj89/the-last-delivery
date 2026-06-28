@@ -356,6 +356,10 @@ export const isPlacementDraftInsideSelectionBounds = (
   && draft.position[2] <= bounds.maxZ
 );
 
+export const isSelectablePlacementDraft = (draft: PlacementTransformDraft): boolean => (
+  draft.active
+);
+
 export const getMassSelectablePlacementObjectIdsInBounds = (
   editableObjects: readonly EditablePlacementObject[],
   draftProvider: (object: EditablePlacementObject) => PlacementTransformDraft,
@@ -2337,6 +2341,11 @@ export const createPlacementEditor = ({
 
     editableObjects.forEach((object, index) => {
       const draft = draftsByObjectId.get(object.id) ?? createPlacementTransformDraft(object.worldObject);
+
+      if (!isSelectablePlacementDraft(draft)) {
+        return;
+      }
+
       const dimensions = object.worldObject.dimensions ?? [1, 1, 1];
       const radius = Math.max(dimensions[0], dimensions[2], 1) / 2 + placementEditorConfig.selectionRadiusPadding;
       const distanceSq = (draft.position[0] - point.x) ** 2 + (draft.position[2] - point.z) ** 2;

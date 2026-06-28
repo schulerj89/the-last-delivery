@@ -162,6 +162,7 @@ const paletteItems = [
   ...getTownEditorAssetPaletteItems(),
 ];
 const paletteItemsByKey = new Map(paletteItems.map((item) => [`${item.type}:${item.id}`, item]));
+const townEditorPaletteDragMimeType = 'application/x-town-editor-item';
 
 const setStatus = (message: string): void => {
   statusText.textContent = message;
@@ -358,7 +359,7 @@ const createPaletteCard = (item: TownEditorPaletteItem): HTMLButtonElement => {
     }
 
     event.dataTransfer.effectAllowed = 'copy';
-    event.dataTransfer.setData('application/x-town-editor-item', getPaletteDragPayload(item));
+    event.dataTransfer.setData(townEditorPaletteDragMimeType, getPaletteDragPayload(item));
     event.dataTransfer.setData('text/plain', item.id);
     setStatus(`Dragging ${item.label}. Drop it on the grass.`);
   });
@@ -375,6 +376,7 @@ const createPaletteCard = (item: TownEditorPaletteItem): HTMLButtonElement => {
 const renderPalette = (): void => {
   const filter = searchInput.value.trim().toLowerCase();
   generatedGrid.replaceChildren();
+  markerGrid.replaceChildren();
   assetGrid.replaceChildren();
 
   paletteItems.forEach((item) => {
@@ -428,8 +430,16 @@ const updateDropPointFromEvent = (event: DragEvent): boolean => {
   return raycaster.ray.intersectPlane(groundPlane, dropPoint) !== null;
 };
 
+const isTownEditorPaletteDrag = (event: DragEvent): boolean => (
+  Array.from(event.dataTransfer?.types ?? []).includes(townEditorPaletteDragMimeType)
+);
+
 const parseDraggedPaletteItem = (event: DragEvent): TownEditorPaletteItem | null => {
-  const rawPayload = event.dataTransfer?.getData('application/x-town-editor-item');
+  if (!isTownEditorPaletteDrag(event)) {
+    return null;
+  }
+
+  const rawPayload = event.dataTransfer?.getData(townEditorPaletteDragMimeType);
 
   if (!rawPayload) {
     return null;
@@ -437,7 +447,8 @@ const parseDraggedPaletteItem = (event: DragEvent): TownEditorPaletteItem | null
 
   try {
     const parsed = JSON.parse(rawPayload) as { type?: string; id?: string };
-    return paletteItemsByKey.get(`${parsed.type}:${parsed.id}`) ?? null;
+    const item = paletteItemsByKey.get(`${parsed.type}:${parsed.id}`) ?? null;
+    return item?.placeable ? item : null;
   } catch {
     return null;
   }
@@ -472,7 +483,7 @@ const placePaletteItem = (item: TownEditorPaletteItem): void => {
 };
 
 const handleDragOver = (event: DragEvent): void => {
-  if (!event.dataTransfer || !updateDropPointFromEvent(event)) {
+  if (!event.dataTransfer || !isTownEditorPaletteDrag(event) || !updateDropPointFromEvent(event)) {
     return;
   }
 
@@ -489,6 +500,7 @@ const handleDrop = (event: DragEvent): void => {
   }
 
   event.preventDefault();
+  event.stopPropagation();
   placePaletteItem(item);
 };
 
