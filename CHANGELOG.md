@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.5.0] - 2026-06-28
+
+### Added
+
+- Added iteration 004 simple playground collision.
+- Added render-independent collision data for playground bounds, crates, mailbox, and delivery board blockers.
+- Added simple player collision resolution without a physics engine.
+- Added a `C` key debug visualization toggle for playground collision boxes.
+
 ## [0.4.0] - 2026-06-28
 
 ### Added

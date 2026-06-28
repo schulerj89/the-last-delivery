@@ -20,6 +20,7 @@ export const createPlayerDebugOverlay = (parent: HTMLElement): PlayerDebugOverla
         `Position ${formatNumber(state.position.x)}, ${formatNumber(state.position.y)}, ${formatNumber(state.position.z)}`,
         `Speed ${formatNumber(state.speed)}`,
         `Grounded ${state.grounded ? 'yes' : 'no'}`,
+        `Collision ${state.hitBounds ? 'bounds' : state.collisionHits.join(', ') || 'none'}`,
       ].join('\n');
     },
     dispose() {

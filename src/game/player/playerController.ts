@@ -1,12 +1,18 @@
 import * as THREE from 'three';
-import type { PlayerController, PlayerState } from './types';
+import { resolvePlayerCollision } from '../collision';
+import type { PlayerController, PlayerControllerOptions, PlayerMovementSettings, PlayerState } from './types';
 
 const spawnPosition = new THREE.Vector3(0, 0, 2.5);
-const maxSpeed = 3.5;
-const acceleration = 9;
-const deceleration = 11;
-const rotationSnapSpeed = 14;
 const groundedY = 0;
+
+export const playerMovementSettings: PlayerMovementSettings = {
+  radius: 0.38,
+  maxSpeed: 3.5,
+  acceleration: 9,
+  deceleration: 11,
+  rotationSnapSpeed: 14,
+  maxDeltaSeconds: 0.05,
+};
 
 const playerMaterial = new THREE.MeshStandardMaterial({ color: 0xf2d16b, roughness: 0.55 });
 const facingMaterial = new THREE.MeshStandardMaterial({ color: 0x2f5f8f, roughness: 0.55 });
@@ -49,7 +55,7 @@ const applyDeceleration = (velocity: THREE.Vector3, deltaSeconds: number): void 
     return;
   }
 
-  const nextSpeed = Math.max(0, speed - deceleration * deltaSeconds);
+  const nextSpeed = Math.max(0, speed - playerMovementSettings.deceleration * deltaSeconds);
   velocity.multiplyScalar(nextSpeed / speed);
 };
 
@@ -84,19 +90,23 @@ const getYawForDirection = (direction: THREE.Vector3): number => Math.atan2(dire
 const rotateToward = (object: THREE.Object3D, targetYaw: number, deltaSeconds: number): void => {
   const currentYaw = object.rotation.y;
   const deltaYaw = Math.atan2(Math.sin(targetYaw - currentYaw), Math.cos(targetYaw - currentYaw));
-  object.rotation.y = currentYaw + deltaYaw * Math.min(1, rotationSnapSpeed * deltaSeconds);
+  object.rotation.y = currentYaw + deltaYaw * Math.min(1, playerMovementSettings.rotationSnapSpeed * deltaSeconds);
 };
 
-export const createPlayerController = (): PlayerController => {
+export const createPlayerController = ({ collisionWorld }: PlayerControllerOptions = {}): PlayerController => {
   const object = createPlayerMesh();
   const pressedKeys = new Set<string>();
   const velocity = new THREE.Vector3();
   const inputDirection = new THREE.Vector3();
+  let lastCollisionHits: string[] = [];
+  let hitBoundsLastFrame = false;
 
   const resetToSpawn = (): void => {
     object.position.copy(spawnPosition);
     object.rotation.set(0, 0, 0);
     velocity.set(0, 0, 0);
+    lastCollisionHits = [];
+    hitBoundsLastFrame = false;
   };
 
   const handleKeyDown = (event: KeyboardEvent): void => {
@@ -122,23 +132,44 @@ export const createPlayerController = (): PlayerController => {
   return {
     object,
     update(deltaSeconds) {
+      const stepSeconds = Math.min(deltaSeconds, playerMovementSettings.maxDeltaSeconds);
       getInputDirection(pressedKeys, inputDirection);
 
       if (inputDirection.lengthSq() > 0) {
-        velocity.addScaledVector(inputDirection, acceleration * deltaSeconds);
+        velocity.addScaledVector(inputDirection, playerMovementSettings.acceleration * stepSeconds);
 
-        if (velocity.length() > maxSpeed) {
-          velocity.setLength(maxSpeed);
+        if (velocity.length() > playerMovementSettings.maxSpeed) {
+          velocity.setLength(playerMovementSettings.maxSpeed);
         }
       } else {
-        applyDeceleration(velocity, deltaSeconds);
+        applyDeceleration(velocity, stepSeconds);
       }
 
-      object.position.addScaledVector(velocity, deltaSeconds);
+      object.position.addScaledVector(velocity, stepSeconds);
       object.position.y = groundedY;
 
+      if (collisionWorld) {
+        const resolution = resolvePlayerCollision(
+          object.position,
+          collisionWorld,
+          playerMovementSettings.radius,
+        );
+
+        object.position.copy(resolution.position);
+        lastCollisionHits = resolution.hitIds;
+        hitBoundsLastFrame = resolution.hitBounds;
+
+        if (Math.abs(resolution.correction.x) > 0) {
+          velocity.x = 0;
+        }
+
+        if (Math.abs(resolution.correction.z) > 0) {
+          velocity.z = 0;
+        }
+      }
+
       if (velocity.lengthSq() > 0.001) {
-        rotateToward(object, getYawForDirection(velocity), deltaSeconds);
+        rotateToward(object, getYawForDirection(velocity), stepSeconds);
       }
     },
     resetToSpawn,
@@ -147,6 +178,8 @@ export const createPlayerController = (): PlayerController => {
         position: object.position.clone(),
         speed: velocity.length(),
         grounded: object.position.y === groundedY,
+        hitBounds: hitBoundsLastFrame,
+        collisionHits: [...lastCollisionHits],
       };
     },
     dispose() {

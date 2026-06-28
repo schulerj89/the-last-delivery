@@ -3,6 +3,8 @@ import './style.css';
 import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
 import { createPlayerController, createPlayerDebugOverlay } from './game/player';
 import { createPlayground } from './world/playground';
+import { playgroundCollisionWorld } from './world/playgroundCollision';
+import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -23,7 +25,10 @@ app.append(renderer.domElement);
 
 scene.add(createPlayground());
 
-const player = createPlayerController();
+const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisionWorld);
+scene.add(collisionDebugView.object);
+
+const player = createPlayerController({ collisionWorld: playgroundCollisionWorld });
 scene.add(player.object);
 
 const playerDebugOverlay = createPlayerDebugOverlay(app);
@@ -50,6 +55,11 @@ const handleResize = () => {
 };
 
 window.addEventListener('resize', handleResize);
+window.addEventListener('keydown', (event) => {
+  if (!event.repeat && event.key.toLowerCase() === 'c') {
+    collisionDebugView.toggle();
+  }
+});
 
 const clock = new THREE.Clock();
 

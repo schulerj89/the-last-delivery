@@ -1,9 +1,25 @@
 import type * as THREE from 'three';
+import type { CollisionWorld } from '../collision';
 
 export interface PlayerState {
   position: THREE.Vector3;
   speed: number;
   grounded: boolean;
+  hitBounds: boolean;
+  collisionHits: string[];
+}
+
+export interface PlayerMovementSettings {
+  radius: number;
+  maxSpeed: number;
+  acceleration: number;
+  deceleration: number;
+  rotationSnapSpeed: number;
+  maxDeltaSeconds: number;
+}
+
+export interface PlayerControllerOptions {
+  collisionWorld?: CollisionWorld;
 }
 
 export interface PlayerController {
