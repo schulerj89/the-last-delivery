@@ -3,12 +3,15 @@ import type * as THREE from 'three';
 export type WorldObjectKind =
   | 'barrel'
   | 'bush'
+  | 'cart'
   | 'cottage'
   | 'crate'
   | 'delivery-board'
   | 'mailbox'
   | 'post-office'
   | 'rock'
+  | 'sack'
+  | 'signpost'
   | 'tree'
   | 'well';
 

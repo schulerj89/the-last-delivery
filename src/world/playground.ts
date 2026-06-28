@@ -131,6 +131,11 @@ const fitAssetInstanceToObject = (
 ): THREE.Object3D => {
   const dimensions = new THREE.Vector3(...getDimensions(object));
   const targetCenter = new THREE.Vector3(...object.position);
+
+  if (object.rotation) {
+    asset.rotation.set(...object.rotation);
+  }
+
   const sourceBox = new THREE.Box3().setFromObject(asset);
   const sourceSize = new THREE.Vector3();
   sourceBox.getSize(sourceSize);
@@ -453,15 +458,18 @@ const addHouse = (
   position: THREE.Vector2,
   size: THREE.Vector3Tuple,
   materialSet: HouseMaterialSet,
-): void => {
+): readonly THREE.Object3D[] => {
   const [width, height, depth] = size;
+  const fallbackObjects: THREE.Object3D[] = [];
 
-  addBox(
-    group,
-    `${name}:body`,
-    size,
-    [position.x, height / 2, position.y],
-    materialSet.wall,
+  fallbackObjects.push(
+    addBox(
+      group,
+      `${name}:body`,
+      size,
+      [position.x, height / 2, position.y],
+      materialSet.wall,
+    ),
   );
 
   const roof = new THREE.Mesh(
@@ -475,39 +483,45 @@ const addHouse = (
   roof.castShadow = true;
   roof.receiveShadow = true;
   group.add(roof);
+  fallbackObjects.push(roof);
 
-  addBox(
-    group,
-    `${name}:door`,
-    [0.38, 0.72, 0.06],
-    [position.x, 0.36, position.y + depth / 2 + 0.04],
-    materials.houseDoor,
+  fallbackObjects.push(
+    addBox(
+      group,
+      `${name}:door`,
+      [0.38, 0.72, 0.06],
+      [position.x, 0.36, position.y + depth / 2 + 0.04],
+      materials.houseDoor,
+    ),
+    addBox(
+      group,
+      `${name}:window-left`,
+      [0.38, 0.34, 0.06],
+      [position.x - width * 0.28, height * 0.66, position.y + depth / 2 + 0.05],
+      materials.houseWindow,
+    ),
+    addBox(
+      group,
+      `${name}:window-right`,
+      [0.38, 0.34, 0.06],
+      [position.x + width * 0.28, height * 0.66, position.y + depth / 2 + 0.05],
+      materials.houseWindow,
+    ),
   );
-  addBox(
-    group,
-    `${name}:window-left`,
-    [0.38, 0.34, 0.06],
-    [position.x - width * 0.28, height * 0.66, position.y + depth / 2 + 0.05],
-    materials.houseWindow,
-  );
-  addBox(
-    group,
-    `${name}:window-right`,
-    [0.38, 0.34, 0.06],
-    [position.x + width * 0.28, height * 0.66, position.y + depth / 2 + 0.05],
-    materials.houseWindow,
-  );
+
+  return fallbackObjects;
 };
 
 const addHouses = (group: THREE.Group): void => {
   getWorldObjectsByKind('cottage').forEach((cottage) => {
-    addHouse(
+    const fallbackObjects = addHouse(
       group,
       `village:${cottage.id}`,
       new THREE.Vector2(cottage.position[0], cottage.position[2]),
       getDimensions(cottage),
       getHouseMaterials(cottage.id),
     );
+    tryApplyAssetRender(group, cottage, fallbackObjects);
   });
 };
 
@@ -549,13 +563,16 @@ const addPostOffice = (group: THREE.Group): void => {
   const postOffice = getWorldObjectsByKind('post-office')[0];
   const [x, , z] = postOffice.position;
   const [width, height, depth] = getDimensions(postOffice);
+  const fallbackObjects: THREE.Object3D[] = [];
 
-  addBox(
-    group,
-    'village:post-office:body',
-    [width, height, depth],
-    [x, height / 2, z],
-    materials.houseWall,
+  fallbackObjects.push(
+    addBox(
+      group,
+      'village:post-office:body',
+      [width, height, depth],
+      [x, height / 2, z],
+      materials.houseWall,
+    ),
   );
 
   const roof = new THREE.Mesh(
@@ -569,11 +586,15 @@ const addPostOffice = (group: THREE.Group): void => {
   roof.castShadow = true;
   roof.receiveShadow = true;
   group.add(roof);
+  fallbackObjects.push(roof);
 
-  addBox(group, 'village:post-office:door', [0.5, 0.8, 0.06], [x - 0.55, 0.4, z + depth / 2 + 0.04], materials.houseDoor);
-  addBox(group, 'village:post-office:window', [0.5, 0.38, 0.06], [x + 0.45, height * 0.66, z + depth / 2 + 0.05], materials.houseWindow);
-  addBox(group, 'village:post-office:sign', [1.15, 0.28, 0.08], [x, height + 0.05, z + depth / 2 + 0.08], materials.boardFrame);
-  addBox(group, 'village:post-office:mail-slot', [0.42, 0.1, 0.08], [x - 0.55, 0.78, z + depth / 2 + 0.09], materials.board);
+  fallbackObjects.push(
+    addBox(group, 'village:post-office:door', [0.5, 0.8, 0.06], [x - 0.55, 0.4, z + depth / 2 + 0.04], materials.houseDoor),
+    addBox(group, 'village:post-office:window', [0.5, 0.38, 0.06], [x + 0.45, height * 0.66, z + depth / 2 + 0.05], materials.houseWindow),
+    addBox(group, 'village:post-office:sign', [1.15, 0.28, 0.08], [x, height + 0.05, z + depth / 2 + 0.08], materials.boardFrame),
+    addBox(group, 'village:post-office:mail-slot', [0.42, 0.1, 0.08], [x - 0.55, 0.78, z + depth / 2 + 0.09], materials.board),
+  );
+  tryApplyAssetRender(group, postOffice, fallbackObjects);
 };
 
 const addCrates = (group: THREE.Group): void => {
@@ -647,7 +668,10 @@ const addBushFallback = (
 const addVillageProps = (group: THREE.Group): void => {
   getWorldObjectsByKind('barrel').forEach((barrel) => {
     const [diameter, height] = getDimensions(barrel);
-    addCylinder(group, `village:${barrel.id}`, diameter / 2, height, barrel.position, materials.barrel);
+    const fallbackObjects = [
+      addCylinder(group, `village:${barrel.id}`, diameter / 2, height, barrel.position, materials.barrel),
+    ];
+    tryApplyAssetRender(group, barrel, fallbackObjects);
   });
 
   getWorldObjectsByKind('rock').forEach((rock) => {
@@ -655,6 +679,78 @@ const addVillageProps = (group: THREE.Group): void => {
       addRock(group, `village:${rock.id}`, rock.position, getDimensions(rock)),
     ];
     tryApplyAssetRender(group, rock, fallbackObjects);
+  });
+};
+
+const addSignpostFallback = (
+  group: THREE.Group,
+  signpost: WorldObjectDefinition,
+): readonly THREE.Object3D[] => {
+  const [width, height, depth] = getDimensions(signpost);
+  const [x, y, z] = signpost.position;
+  const baseY = y - height / 2;
+
+  return [
+    addBox(
+      group,
+      `village:${signpost.id}:post`,
+      [Math.max(width * 0.12, 0.08), height * 0.78, Math.max(depth * 0.12, 0.08)],
+      [x, baseY + height * 0.39, z],
+      materials.signPost,
+    ),
+    addBox(
+      group,
+      `village:${signpost.id}:pointer`,
+      [width, height * 0.24, Math.max(depth * 0.12, 0.08)],
+      [x, baseY + height * 0.78, z],
+      materials.signPanel,
+    ),
+  ];
+};
+
+const addCartFallback = (
+  group: THREE.Group,
+  cart: WorldObjectDefinition,
+): readonly THREE.Object3D[] => {
+  const [width, height, depth] = getDimensions(cart);
+  const [x, y, z] = cart.position;
+  const baseY = y - height / 2;
+  const wheelSize: THREE.Vector3Tuple = [width * 0.18, height * 0.28, depth * 0.12];
+
+  return [
+    addBox(group, `village:${cart.id}:bed`, [width, height * 0.28, depth], [x, baseY + height * 0.48, z], materials.crate),
+    addBox(group, `village:${cart.id}:handle`, [width * 0.5, height * 0.08, depth * 0.12], [x - width * 0.72, baseY + height * 0.55, z], materials.fence),
+    addBox(group, `village:${cart.id}:wheel-left`, wheelSize, [x + width * 0.25, baseY + height * 0.22, z - depth * 0.48], materials.barrel),
+    addBox(group, `village:${cart.id}:wheel-right`, wheelSize, [x + width * 0.25, baseY + height * 0.22, z + depth * 0.48], materials.barrel),
+  ];
+};
+
+const addSackFallback = (
+  group: THREE.Group,
+  sack: WorldObjectDefinition,
+): readonly THREE.Object3D[] => {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), materials.crate);
+  mesh.name = `village:${sack.id}`;
+  mesh.userData.label = mesh.name;
+  mesh.position.set(...sack.position);
+  mesh.scale.set(...getDimensions(sack));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return [mesh];
+};
+
+const addFantasyDressing = (group: THREE.Group): void => {
+  getWorldObjectsByKind('signpost').forEach((signpost) => {
+    tryApplyAssetRender(group, signpost, addSignpostFallback(group, signpost));
+  });
+
+  getWorldObjectsByKind('cart').forEach((cart) => {
+    tryApplyAssetRender(group, cart, addCartFallback(group, cart));
+  });
+
+  getWorldObjectsByKind('sack').forEach((sack) => {
+    tryApplyAssetRender(group, sack, addSackFallback(group, sack));
   });
 };
 
@@ -768,6 +864,7 @@ export const createPlayground = (): THREE.Group => {
   addWell(playground);
   addCrates(playground);
   addVillageProps(playground);
+  addFantasyDressing(playground);
   addNatureProps(playground);
   addMailboxes(playground);
   addDeliveryBoard(playground);

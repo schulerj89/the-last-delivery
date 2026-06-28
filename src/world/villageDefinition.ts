@@ -7,8 +7,12 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
   {
     id: 'post-office',
     kind: 'post-office',
-    position: [5.75, 0, -5],
+    position: [5.75, 0.93, -5],
     dimensions: [2.8, 1.85, 2.2],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-house-001',
+    },
     collider: {
       position: [5.75, 0.93, -5],
       size: [2.8, 1.85, 2.2],
@@ -34,8 +38,12 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
   {
     id: 'cottage-west',
     kind: 'cottage',
-    position: [-6.4, 0, 3.8],
+    position: [-6.4, 0.8, 3.8],
     dimensions: [2.3, 1.6, 2.1],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-house-002',
+    },
     collider: {
       position: [-6.4, 0.8, 3.8],
       size: [2.3, 1.6, 2.1],
@@ -44,8 +52,12 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
   {
     id: 'cottage-north',
     kind: 'cottage',
-    position: [-1.8, 0, -5.15],
+    position: [-1.8, 0.8, -5.15],
     dimensions: [2.8, 1.6, 1.9],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-house-003',
+    },
     collider: {
       position: [-1.8, 0.8, -5.15],
       size: [2.8, 1.6, 1.9],
@@ -54,8 +66,12 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
   {
     id: 'cottage-east',
     kind: 'cottage',
-    position: [6.65, 0, 2.75],
+    position: [6.65, 0.8, 2.75],
     dimensions: [2.2, 1.6, 2.4],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-house-001',
+    },
     collider: {
       position: [6.65, 0.8, 2.75],
       size: [2.2, 1.6, 2.4],
@@ -232,7 +248,7 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     dimensions: [1, 1, 1],
     render: {
       mode: 'asset',
-      assetId: 'crate-box-001',
+      assetId: 'fantasy-box-001',
     },
     collider: {
       position: [2.35, 0.5, 1.65],
@@ -244,6 +260,10 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     kind: 'crate',
     position: [3.15, 0.35, 0.8],
     dimensions: [0.7, 0.7, 0.7],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-box-001',
+    },
     collider: {
       position: [3.15, 0.35, 0.8],
       size: [0.7, 0.7, 0.7],
@@ -254,6 +274,10 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     kind: 'crate',
     position: [2.75, 1.05, 1.55],
     dimensions: [0.7, 0.7, 0.7],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-box-001',
+    },
     collider: {
       position: [2.75, 1.05, 1.55],
       size: [0.7, 0.7, 0.7],
@@ -264,6 +288,10 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     kind: 'barrel',
     position: [1.6, 0.32, -4.4],
     dimensions: [0.52, 0.64, 0.52],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-barrel-001',
+    },
     collider: {
       position: [1.6, 0.32, -4.4],
       size: [0.55, 0.64, 0.55],
@@ -274,6 +302,10 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     kind: 'barrel',
     position: [2.12, 0.29, -4.15],
     dimensions: [0.48, 0.58, 0.48],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-barrel-001',
+    },
     collider: {
       position: [2.12, 0.29, -4.15],
       size: [0.52, 0.58, 0.52],
@@ -337,6 +369,80 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     collider: {
       position: [5.8, 0.18, 5.35],
       size: [0.65, 0.36, 0.6],
+    },
+  },
+  {
+    id: 'signpost-post-office',
+    kind: 'signpost',
+    position: [4.55, 0.7, -4.25],
+    dimensions: [0.85, 1.4, 0.85],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-pointer-001',
+    },
+  },
+  {
+    id: 'signpost-blue-house',
+    kind: 'signpost',
+    position: [-4.95, 0.65, 2.25],
+    dimensions: [0.8, 1.3, 0.8],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-pointer-001',
+    },
+  },
+  {
+    id: 'signpost-red-house',
+    kind: 'signpost',
+    position: [5.6, 0.65, 1],
+    dimensions: [0.8, 1.3, 0.8],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-pointer-001',
+    },
+  },
+  {
+    id: 'signpost-side-path',
+    kind: 'signpost',
+    position: [0.9, 0.65, -1.05],
+    dimensions: [0.8, 1.3, 0.8],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-pointer-001',
+    },
+  },
+  {
+    id: 'cart-south-path',
+    kind: 'cart',
+    position: [-2.75, 0.45, 4.95],
+    dimensions: [1.7, 0.9, 1.05],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-cart-001',
+    },
+    collider: {
+      position: [-2.75, 0.45, 4.95],
+      size: [1.4, 0.75, 0.85],
+    },
+  },
+  {
+    id: 'sack-post-office-a',
+    kind: 'sack',
+    position: [3.8, 0.32, -4.75],
+    dimensions: [0.55, 0.64, 0.55],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-bag-001',
+    },
+  },
+  {
+    id: 'sack-cart-a',
+    kind: 'sack',
+    position: [-3.5, 0.3, 4.35],
+    dimensions: [0.52, 0.6, 0.52],
+    render: {
+      mode: 'asset',
+      assetId: 'fantasy-bag-001',
     },
   },
 ];

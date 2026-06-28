@@ -47,12 +47,95 @@ export const assetRegistry: readonly AssetDefinition[] = [
     notes: 'Converted from simple_bush.fbx for low-cost foliage clusters.',
     maxRecommendedBytes: 50_000,
   },
+  {
+    id: 'fantasy-house-001',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/house_001.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy house prop for the post office blockout.',
+    maxRecommendedBytes: 1_200_000,
+  },
+  {
+    id: 'fantasy-house-002',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/house_002.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy house prop for a village cottage.',
+    maxRecommendedBytes: 1_200_000,
+  },
+  {
+    id: 'fantasy-house-003',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/house_003.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy house prop for a village cottage.',
+    maxRecommendedBytes: 1_200_000,
+  },
+  {
+    id: 'fantasy-barrel-001',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/barrel_001.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy barrel prop for village dressing.',
+    maxRecommendedBytes: 900_000,
+  },
+  {
+    id: 'fantasy-box-001',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/box_001.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy box prop for crate blockers and dressing.',
+    maxRecommendedBytes: 900_000,
+  },
+  {
+    id: 'fantasy-pointer-001',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/pointer_001.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy pointer sign used near readable village labels.',
+    maxRecommendedBytes: 900_000,
+  },
+  {
+    id: 'fantasy-cart-001',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/cart_001.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy cart prop for one large village blocker.',
+    maxRecommendedBytes: 900_000,
+  },
+  {
+    id: 'fantasy-bag-001',
+    kind: 'gltf',
+    url: '/assets/models/fantasy/bag_001.glb',
+    sourcePack: 'fantasy-free-low-poly',
+    defaultScale: 1,
+    notes: 'Selected low-poly fantasy bag prop for non-blocking dressing.',
+    maxRecommendedBytes: 900_000,
+  },
 ];
 
 export const selectedNatureAssetIds = [
   'nature-tree01',
   'nature-rock',
   'nature-simple-bush',
+] as const;
+
+export const selectedFantasyAssetIds = [
+  'fantasy-house-001',
+  'fantasy-house-002',
+  'fantasy-house-003',
+  'fantasy-barrel-001',
+  'fantasy-box-001',
+  'fantasy-pointer-001',
+  'fantasy-cart-001',
+  'fantasy-bag-001',
 ] as const;
 
 export const getAssetDefinition = (assetId: string): AssetDefinition | undefined => (
@@ -67,6 +150,18 @@ export const getSelectedNatureAssets = (): readonly AssetDefinition[] => (
 
     if (!asset) {
       throw new Error(`Missing selected nature asset: ${assetId}`);
+    }
+
+    return asset;
+  })
+);
+
+export const getSelectedFantasyAssets = (): readonly AssetDefinition[] => (
+  selectedFantasyAssetIds.map((assetId) => {
+    const asset = getAssetDefinition(assetId);
+
+    if (!asset) {
+      throw new Error(`Missing selected fantasy asset: ${assetId}`);
     }
 
     return asset;

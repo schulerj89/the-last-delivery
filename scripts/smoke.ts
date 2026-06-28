@@ -10,8 +10,10 @@ import {
 import {
   assetRegistry,
   createAssetCache,
+  getSelectedFantasyAssets,
   getSelectedNatureAssets,
   isKnownAssetId,
+  selectedFantasyAssetIds,
   selectedNatureAssetIds,
 } from '../src/game/assets';
 import { thirdPersonCameraSettings } from '../src/game/camera';
@@ -60,6 +62,7 @@ const importNodeModule = async <T>(specifier: string): Promise<T> => (
 );
 const nodeFileSystem = await importNodeModule<NodeFileSystem>('node:fs');
 const selectedNatureAssetIdSet = new Set<string>(selectedNatureAssetIds);
+const selectedFantasyAssetIdSet = new Set<string>(selectedFantasyAssetIds);
 
 const isFiniteVector3Tuple = (value: readonly number[]): boolean => (
   value.length === 3 && value.every((component) => Number.isFinite(component))
@@ -116,6 +119,26 @@ const runAssetRegistrySmoke = (): void => {
   assert(selectedNatureAssets.length === 3, 'Exactly three selected nature assets should be registered for this pass.');
   assert(selectedNatureBytes > 0, 'Selected nature runtime asset size should be measurable.');
   console.info(`Selected nature runtime assets: ${selectedNatureAssets.length} files, ${formatBytes(selectedNatureBytes)}.`);
+
+  const selectedFantasyAssets = getSelectedFantasyAssets();
+  const selectedFantasyBytes = selectedFantasyAssets.reduce((totalBytes, asset) => {
+    const assetFileUrl = getRuntimeAssetFileUrl(asset.url);
+
+    assert(asset.sourcePack === 'fantasy-free-low-poly', `Selected fantasy asset should identify the fantasy source pack: ${asset.id}`);
+    assert(asset.url.startsWith('/assets/models/fantasy/'), `Selected fantasy asset should live in the runtime fantasy folder: ${asset.id}`);
+    assert(nodeFileSystem.existsSync(assetFileUrl), `Selected fantasy asset file should exist: ${asset.url}`);
+
+    const stats = nodeFileSystem.statSync(assetFileUrl);
+    assert(stats.isFile(), `Selected fantasy asset should be a file: ${asset.url}`);
+    assert(stats.size > 0, `Selected fantasy asset should not be empty: ${asset.url}`);
+    assert(stats.size <= asset.maxRecommendedBytes, `Selected fantasy asset should stay within its size budget: ${asset.id}`);
+
+    return totalBytes + stats.size;
+  }, 0);
+
+  assert(selectedFantasyAssets.length === 8, 'Exactly eight selected fantasy assets should be registered for this pass.');
+  assert(selectedFantasyBytes > 0, 'Selected fantasy runtime asset size should be measurable.');
+  console.info(`Selected fantasy runtime assets: ${selectedFantasyAssets.length} files, ${formatBytes(selectedFantasyBytes)}.`);
 };
 
 const runAssetCacheSmoke = async (): Promise<void> => {
@@ -234,9 +257,15 @@ const runWorldDefinitionSmoke = (): void => {
   const cottageObjects = villageWorldObjects.filter((object) => object.kind === 'cottage');
   const treeObjects = villageWorldObjects.filter((object) => object.kind === 'tree');
   const bushObjects = villageWorldObjects.filter((object) => object.kind === 'bush');
+  const signpostObjects = villageWorldObjects.filter((object) => object.kind === 'signpost');
+  const cartObjects = villageWorldObjects.filter((object) => object.kind === 'cart');
+  const sackObjects = villageWorldObjects.filter((object) => object.kind === 'sack');
   const assetRenderedObjects = villageWorldObjects.filter((object) => object.render?.mode === 'asset');
   const selectedNatureObjects = assetRenderedObjects.filter((object) => (
     object.render?.mode === 'asset' && selectedNatureAssetIdSet.has(object.render.assetId)
+  ));
+  const selectedFantasyObjects = assetRenderedObjects.filter((object) => (
+    object.render?.mode === 'asset' && selectedFantasyAssetIdSet.has(object.render.assetId)
   ));
   const decorativeNatureObjects = villageWorldObjects.filter((object) => (
     object.kind === 'tree'
@@ -246,6 +275,7 @@ const runWorldDefinitionSmoke = (): void => {
   const deliveryBoard = villageWorldObjects.find((object) => object.id === 'delivery-board');
   const postOffice = villageWorldObjects.find((object) => object.id === 'post-office');
   const well = villageWorldObjects.find((object) => object.id === 'town-well');
+  const deliveryTarget = villageWorldObjects.find((object) => object.id === deliveryJobs[0].targetWorldObjectId);
 
   deliveryJobs.forEach((job) => {
     const target = villageWorldObjects.find((object) => object.id === job.targetWorldObjectId);
@@ -262,19 +292,30 @@ const runWorldDefinitionSmoke = (): void => {
   });
 
   assert(deliveryJobs.length >= 3, 'Village should define at least three delivery jobs.');
-  assert(assetRenderedObjects.some((object) => object.id === 'crate-large'), 'The large crate should still use the optional GLB prop path.');
+  assert(assetRenderedObjects.some((object) => object.id === 'crate-large' && object.render?.mode === 'asset' && object.render.assetId === 'fantasy-box-001'), 'The large crate should use the selected fantasy box prop.');
   assert(selectedNatureObjects.length >= 10, 'Village should place selected nature assets through world definitions.');
+  assert(selectedFantasyObjects.length >= 12, 'Village should place selected fantasy assets through world definitions.');
   assert(decorativeNatureObjects.every((object) => object.render?.mode === 'asset'), 'Decorative nature objects should use asset-backed render definitions.');
   assert(decorativeNatureObjects.every((object) => object.collider === undefined), 'Decorative forest and path-framing nature props should not add collision.');
   assert(treeObjects.length >= 6, 'Village should include a small forest edge of tree props.');
   assert(bushObjects.length >= 4, 'Village should include foliage props around paths and boundaries.');
+  assert(cottageObjects.every((object) => object.render?.mode === 'asset'), 'Every cottage should use a selected fantasy house render with primitive fallback.');
+  assert(signpostObjects.length >= 4, 'Village should define fantasy pointer signpost props.');
+  assert(cartObjects.length === 1, 'Village should define one fantasy cart dressing prop.');
+  assert(cartObjects.every((object) => object.collider), 'Large cart dressing should keep a simple collider.');
+  assert(sackObjects.length >= 2, 'Village should define fantasy sack dressing props.');
+  assert(sackObjects.every((object) => object.collider === undefined), 'Small sack dressing should stay non-collidable.');
   assert(mailboxObjects.length === 2, 'Village should define exactly two mailbox placeholders.');
   assert(mailboxObjects.every((object) => object.interactable), 'Every village mailbox should be interactable.');
   assert(mailboxObjects.every((object) => object.objectiveAnchor), 'Every village mailbox should have an objective anchor.');
   assert(cottageObjects.length === 3, 'Village should define exactly three cottage placeholders.');
   assert(deliveryBoard !== undefined, 'Delivery board world object should exist.');
+  assert(deliveryBoard.interactable !== undefined, 'Delivery board interactable should still exist.');
   assert(postOffice !== undefined, 'Post office world object should exist.');
+  assert(postOffice.render?.mode === 'asset', 'Post office should use selected fantasy house render with primitive fallback.');
   assert(well !== undefined, 'Town-square well world object should exist.');
+  assert(deliveryTarget !== undefined, 'First delivery target should resolve to a world object.');
+  assert(deliveryTarget.objectiveAnchor !== undefined, 'First delivery target should still expose an objective anchor.');
 
   const boardToPostOfficeDistanceSq = (
     (deliveryBoard.position[0] - postOffice.position[0]) ** 2
@@ -518,11 +559,18 @@ const runModuleSmoke = (): void => {
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'post-office'), 'Post office collision box should initialize.');
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'cottage-west'), 'Village cottage collision should initialize.');
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'town-well'), 'Town well collision should initialize.');
+  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'cart-south-path'), 'Large fantasy cart collision should initialize.');
 
   const playground = createPlayground();
   assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');
   assert(playground.children.length > 20, 'Village square should include primitive blockout children.');
   assert(playground.getObjectByName('village:crate-large') !== undefined, 'Asset-targeted crate fallback should initialize.');
+  assert(playground.getObjectByName('village:cottage-west:body') !== undefined, 'Fantasy cottage primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:post-office:body') !== undefined, 'Fantasy post office primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:barrel-north-a') !== undefined, 'Fantasy barrel primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:signpost-post-office:post') !== undefined, 'Fantasy pointer primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:cart-south-path:bed') !== undefined, 'Fantasy cart primitive fallback should initialize.');
+  assert(playground.getObjectByName('village:sack-post-office-a') !== undefined, 'Fantasy sack primitive fallback should initialize.');
   assert(playground.getObjectByName('village:tree-northwest:trunk') !== undefined, 'Tree primitive fallback should initialize.');
   assert(playground.getObjectByName('village:tree-northwest:canopy') !== undefined, 'Tree canopy primitive fallback should initialize.');
   assert(playground.getObjectByName('village:bush-side-path-a') !== undefined, 'Bush primitive fallback should initialize.');

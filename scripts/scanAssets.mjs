@@ -143,6 +143,11 @@ const selectedNatureRuntimeFiles = runtimeFiles.filter((file) => (
   && (file.extension === '.glb' || file.extension === '.gltf')
 ));
 const selectedNatureRuntimeBytes = selectedNatureRuntimeFiles.reduce((sum, file) => sum + file.bytes, 0);
+const selectedFantasyRuntimeFiles = runtimeFiles.filter((file) => (
+  file.relativePath.startsWith('fantasy/')
+  && (file.extension === '.glb' || file.extension === '.gltf')
+));
+const selectedFantasyRuntimeBytes = selectedFantasyRuntimeFiles.reduce((sum, file) => sum + file.bytes, 0);
 
 console.info('Asset scan');
 console.info(`Raw asset root: ${path.relative(repoRoot, rawAssetRoot)}`);
@@ -182,6 +187,7 @@ console.info('');
 console.info('Runtime asset budget:');
 console.info(`- public/assets/models total size: ${formatBytes(runtimeModelBytes)}`);
 console.info(`- selected nature runtime assets: ${selectedNatureRuntimeFiles.length} files, ${formatBytes(selectedNatureRuntimeBytes)}`);
+console.info(`- selected fantasy runtime assets: ${selectedFantasyRuntimeFiles.length} files, ${formatBytes(selectedFantasyRuntimeBytes)}`);
 
 console.info('');
 console.info('Files:');

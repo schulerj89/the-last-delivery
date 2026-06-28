@@ -35,3 +35,16 @@ The Low Poly Nature Pack Lite source folder is source-only. The current village 
 - `nature-simple-bush.glb` from `simple_bush.fbx`
 
 These are decorative visuals with primitive fallbacks. Collision remains authored separately in world definitions, and the new forest-edge trees and path foliage intentionally do not add colliders.
+
+## Current Runtime Fantasy Selection
+
+The Fantasy Free Low Poly source folder remains source-only. The current village uses selected individual GLBs under `public/assets/models/fantasy/`:
+
+- `house_001.glb`, `house_002.glb`, and `house_003.glb` for the post office and cottages
+- `barrel_001.glb` for barrel props
+- `box_001.glb` for crates and boxes
+- `pointer_001.glb` for signpost props
+- `cart_001.glb` for one large dressing blocker
+- `bag_001.glb` for small non-blocking sack dressing
+
+These assets are optional visuals with primitive fallbacks. Major blockers still use simple world-definition colliders; small dressing props stay non-collidable unless explicitly marked otherwise.

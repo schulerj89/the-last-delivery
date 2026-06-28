@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.23.0] - 2026-06-28
+
+### Added
+
+- Added selected Fantasy Free Low Poly runtime GLBs for houses, barrels, boxes, pointer signs, a cart, and sacks.
+- Added fantasy asset registry entries and selected-fantasy asset smoke checks.
+- Added fantasy-backed world definitions for cottages, post office, crates, barrels, signposts, cart dressing, and sack dressing.
+- Added runtime fantasy asset budget reporting to `npm run assets:scan`.
+
+### Changed
+
+- Updated village rendering so selected fantasy props replace primitive blockout visuals when available while keeping primitive fallbacks.
+- Kept delivery board, mailbox interactions, delivery targets, and simple render-independent colliders intact.
+
 ## [0.22.1] - 2026-06-28
 
 ### Fixed
