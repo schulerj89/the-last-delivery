@@ -12,6 +12,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Drag an asset square onto the grass to create a new editable world object from a safe template.
 - Use the search box to filter the asset shelf.
 - Use the compact right save panel to save, load, copy, import, or export the active layout JSON.
+- Click `Help / Controls` or press `F1` to show the town editor control instructions.
 - The standalone builder starts in the close 3D view. Press `V` to switch to overview when needed.
 - Layout debug circles and labels are hidden in the standalone builder; spawn, board, mailbox, and district concepts come from the editor panels/catalog instead of appearing pre-drawn in the canvas.
 - Click a placed object or use `Tab` to select it, then use the keyboard controls to fine tune position, rotation, scale, and Y offset.
@@ -40,6 +41,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - The Asset panel lists registered runtime model assets that are safe to preview.
 - The Gameplay panel assigns the selected object a role/action such as spawn, post office, delivery board, mailbox target, or decorative.
 - The Button Instructions panel explains the editor buttons inside the HUD.
+- In the standalone town builder, the compact HUD uses `Help / Controls` instead of the full Button Instructions panel.
 - Generated pavement pieces are available in the Object panel as inactive editable ground objects.
 
 ## Editor Camera

@@ -56,6 +56,7 @@ root.innerHTML = `
   <main class="town-editor__stage">
     <div class="town-editor__toolbar">
       <span>Drop assets on grass</span>
+      <span>F1 help</span>
       <span>V view</span>
       <span>Wheel zoom</span>
       <span>Right-drag orbit</span>

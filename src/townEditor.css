@@ -327,6 +327,17 @@
   min-height: 86px;
 }
 
+#town-editor .placement-editor-help {
+  z-index: 22;
+  left: 332px;
+  bottom: 12px;
+  width: min(430px, calc(100vw - 704px));
+  max-height: min(54vh, calc(100vh - 96px));
+  overflow: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+}
+
 @media (max-width: 860px) {
   #town-editor {
     grid-template-columns: 1fr;
@@ -345,7 +356,9 @@
 
   .town-editor__toolbar,
   .town-editor__status,
-  #town-editor .placement-editor-hud {
+  #town-editor .placement-editor-hud,
+  #town-editor .placement-editor-help {
+    left: 12px;
     width: calc(100vw - 24px);
     max-width: calc(100vw - 24px);
   }

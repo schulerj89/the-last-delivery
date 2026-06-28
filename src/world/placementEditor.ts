@@ -816,6 +816,7 @@ export const createPlacementEditor = ({
   const openJsonFileButton = document.createElement('button');
   const saveJsonFileButton = document.createElement('button');
   const importJsonButton = document.createElement('button');
+  const toggleHelpButton = document.createElement('button');
   const importTextArea = document.createElement('textarea');
   const helpOverlay = document.createElement('div');
   const heldKeys = new Set<string>();
@@ -898,6 +899,8 @@ export const createPlacementEditor = ({
   saveJsonFileButton.textContent = 'Save JSON File';
   importJsonButton.type = 'button';
   importJsonButton.textContent = 'Import JSON';
+  toggleHelpButton.type = 'button';
+  toggleHelpButton.textContent = 'Help / Controls';
   importTextArea.className = 'placement-editor-hud__import';
   importTextArea.placeholder = 'Paste active town editor JSON or layout override JSON here.';
   importTextArea.spellcheck = false;
@@ -999,6 +1002,7 @@ export const createPlacementEditor = ({
       saveJsonFileButton,
       importJsonButton,
       clearDraftButton,
+      toggleHelpButton,
       duplicateSelectedButton,
       deleteSelectedButton,
     );
@@ -1024,6 +1028,7 @@ export const createPlacementEditor = ({
       openJsonFileButton,
       saveJsonFileButton,
       importJsonButton,
+      toggleHelpButton,
     );
     overlay.append(summary, instructionsPanel, objectPanel, assetPanel, gameplayPanel, controls, importTextArea);
   }
@@ -1946,11 +1951,16 @@ export const createPlacementEditor = ({
           `RotationY ${formatNumber(THREE.MathUtils.radToDeg(draft.rotationY))}deg`,
           `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
           `Render ${draft.assetId ?? getObjectAssetId(selectedObject.worldObject) ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
+          'Help / Controls or F1 shows editor instructions.',
           'Ctrl+D or Duplicate Selected creates another copy.',
           'Delete key or Delete Selected removes this object from active JSON.',
         );
       } else {
-        lines.push('Selected: none', 'Drag an asset tile into the world or click a placed object.');
+        lines.push(
+          'Selected: none',
+          'Drag an asset tile into the world or click a placed object.',
+          'Help / Controls or F1 shows editor instructions.',
+        );
       }
 
       lines.push(status);
@@ -1982,8 +1992,16 @@ export const createPlacementEditor = ({
       `Render ${draft.assetId ?? renderSettings?.assetId ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
       `Snap ${snap}  Edited ${isChangedDraft(selectedObject.worldObject, draft) ? 'yes' : 'no'}`,
       'Ctrl+D duplicate  Ctrl+S save active  Ctrl+O reload active  Shift+C copy JSON',
+      'Help / Controls or F1 toggles instructions.',
       status,
     ].join('\n');
+  };
+
+  const toggleHelp = (): void => {
+    helpVisible = !helpVisible;
+    helpOverlay.hidden = !(active && helpVisible);
+    status = helpVisible ? 'Editor help shown.' : 'Editor help hidden.';
+    updateHud();
   };
 
   const clearSelection = (nextStatus = 'Selection cleared.'): void => {
@@ -2615,6 +2633,7 @@ export const createPlacementEditor = ({
   openJsonFileButton.addEventListener('click', handleOpenJsonFileClick);
   saveJsonFileButton.addEventListener('click', handleSaveJsonFileClick);
   importJsonButton.addEventListener('click', importDraftFromPanel);
+  toggleHelpButton.addEventListener('click', toggleHelp);
   domElement.addEventListener('pointerdown', handlePointerDown);
   domElement.addEventListener('pointermove', updateDragFromPointer);
   domElement.addEventListener('pointerup', stopDragging);
@@ -2719,10 +2738,7 @@ export const createPlacementEditor = ({
       const snap = placementEditorConfig.snapValues[snapIndex] ?? placementEditorConfig.snapValues[0];
 
       if (key === 'F1') {
-        helpVisible = !helpVisible;
-        helpOverlay.hidden = !helpVisible;
-        status = helpVisible ? 'Editor help shown.' : 'Editor help hidden.';
-        updateHud();
+        toggleHelp();
         event.preventDefault();
         return true;
       }
@@ -2843,6 +2859,7 @@ export const createPlacementEditor = ({
       openJsonFileButton.removeEventListener('click', handleOpenJsonFileClick);
       saveJsonFileButton.removeEventListener('click', handleSaveJsonFileClick);
       importJsonButton.removeEventListener('click', importDraftFromPanel);
+      toggleHelpButton.removeEventListener('click', toggleHelp);
       domElement.removeEventListener('pointerdown', handlePointerDown);
       domElement.removeEventListener('pointermove', updateDragFromPointer);
       domElement.removeEventListener('pointerup', stopDragging);

@@ -710,11 +710,13 @@ const runTownEditorRouteSmoke = (): void => {
   assert(townEditorScript.includes('maxInitialWaitMs'), 'Town editor loading should include a bounded initial wait.');
   assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load runtime models through the existing asset loader.');
   assert(townEditorScript.includes('group.scale.setScalar'), 'Town editor thumbnails should scale the centered wrapper, not push model pivots off-center.');
+  assert(townEditorScript.includes('F1 help'), 'Town editor toolbar should advertise the help overlay shortcut.');
   assert(townEditorScript.includes('Ctrl+D duplicate'), 'Town editor toolbar should advertise selected-object duplication.');
   assert(townEditorScript.includes('Click empty deselect'), 'Town editor toolbar should advertise empty-space deselection.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
   assert(townEditorCss.includes('.town-editor-loading'), 'Town editor CSS should style the loading screen.');
   assert(townEditorCss.includes('.town-editor--loading'), 'Town editor CSS should hide editor UI while loading.');
+  assert(townEditorCss.includes('#town-editor .placement-editor-help'), 'Town editor CSS should keep the help overlay visible above the editor canvas.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
   assert(markerItems.length >= 3, 'Town editor marker palette should initialize important world markers.');
   assert(assetItems.length > 0, 'Town editor asset palette should initialize.');
@@ -913,16 +915,22 @@ const runLayoutOverrideSmoke = (): void => {
   const overriddenCrate = overriddenMerged.find((object) => object.id === 'crate-large');
   const overriddenMailbox = overriddenMerged.find((object) => object.id === 'mailbox');
   const generatedCrate = generatedObjectMerged.find((object) => object.id === 'editor-fantasy-box-001-1');
+  const generatedOverrideNewObjectCount = generatedVillageLayoutOverrides.overrides
+    .filter((override) => !knownObjectIds.includes(override.id))
+    .length;
   const boardDeltaX = (validDocument.overrides[0].position?.[0] ?? 0) - (baseBoard?.position[0] ?? 0);
 
   assert(generatedValidation.ok, 'Generated village layout overrides should validate against known object ids.');
   assert(generatedVillageLayoutOverrides.overrides.length > 0, 'Generated village layout overrides should include authored placements.');
   assert(
-    generatedVillageLayoutOverrides.overrides.some((override) => override.fitMode === 'contain'),
-    'Generated village layout overrides should include asset fit tuning.',
+    generatedVillageLayoutOverrides.overrides.every((override) => override.fitMode === undefined || isAssetFitMode(override.fitMode)),
+    'Generated village layout overrides should only include valid asset fit tuning when present.',
   );
   assert(emptyMerged.length === baseVillageWorldObjects.length, 'Empty generated overrides should not change object count.');
-  assert(generatedMerged.length === baseVillageWorldObjects.length, 'Generated overrides should merge without changing object count.');
+  assert(
+    generatedMerged.length === baseVillageWorldObjects.length + generatedOverrideNewObjectCount,
+    'Generated overrides should preserve base objects and append generated editor objects.',
+  );
   assert(overriddenMerged.length === baseVillageWorldObjects.length, 'Layout overrides should merge without changing object count.');
   assert(generatedObjectMerged.length === baseVillageWorldObjects.length + 1, 'Generated layout object overrides should append new objects.');
   assert(generatedCrate?.kind === 'crate', 'Generated layout object should preserve its world object kind.');
@@ -1100,8 +1108,7 @@ const runWorldDefinitionSmoke = (): void => {
   });
 
   const mailboxObjects = villageWorldObjects.filter((object) => object.kind === 'mailbox');
-  const authoredPavementObjects = authoredVillageWorldObjects.filter((object) => object.kind === 'pavement');
-  const activePavementObjects = villageWorldObjects.filter((object) => object.kind === 'pavement');
+  const authoredPavementObjects = baseVillageWorldObjects.filter((object) => object.kind === 'pavement');
   const spawnObjects = getWorldObjectsByGameplayRole('player-spawn');
   const deliveryBoardActionObjects = getWorldObjectsByInteractionAction('open-delivery-board');
   const deliveryTargetActionObjects = getWorldObjectsByInteractionAction('complete-delivery');
@@ -1140,7 +1147,7 @@ const runWorldDefinitionSmoke = (): void => {
   assert(getDefaultActionForRole('mailbox') === 'complete-delivery', 'Mailbox roles should default to complete-delivery.');
   assert(getDefaultActionForRole('delivery-board') === 'open-delivery-board', 'Delivery board roles should default to open-delivery-board.');
   assert(authoredPavementObjects.length >= 3, 'World should include generated pavement pieces in the editable authored object list.');
-  assert(activePavementObjects.length === 0, 'Generated pavement pieces should start inactive so the clean canvas stays clear.');
+  assert(authoredPavementObjects.every((object) => object.active === false), 'Authored generated pavement templates should start inactive so the clean canvas stays clear.');
   assert(authoredPavementObjects.every((object) => object.collider === undefined), 'Generated pavement pieces should not add collision by default.');
   assert(spawnObjects.length === 1, 'World should define exactly one player spawn role.');
   assert(deliveryBoardActionObjects.length >= 1, 'World should define a delivery board action object.');
@@ -1260,12 +1267,6 @@ const runWorldDefinitionSmoke = (): void => {
   assert(well !== undefined, 'Town-square well world object should exist.');
   assert(deliveryTarget !== undefined, 'First delivery target should resolve to a world object.');
   assert(deliveryTarget.objectiveAnchor !== undefined, 'First delivery target should still expose an objective anchor.');
-
-  const boardToPostOfficeDistanceSq = (
-    (deliveryBoard.position[0] - postOffice.position[0]) ** 2
-    + (deliveryBoard.position[2] - postOffice.position[2]) ** 2
-  );
-  assert(boardToPostOfficeDistanceSq < 12, 'Delivery board should stay near the post office placeholder.');
 };
 
 const runVillageLayoutConfigSmoke = (): void => {
@@ -1398,6 +1399,8 @@ const runLayoutDebugSmoke = (): void => {
 };
 
 const runPlacementEditorSmoke = (): void => {
+  const placementEditorSourceUrl = new URL('../src/world/placementEditor.ts', import.meta.url);
+  const placementEditorSource = nodeFileSystem.readFileSync(placementEditorSourceUrl, 'utf8');
   const editableObjects = createEditablePlacementObjects();
   const snapValues = getPlacementEditorSnapValues();
   const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
@@ -1422,6 +1425,7 @@ const runPlacementEditorSmoke = (): void => {
   assert(placementEditorHudVariants.includes('builder'), 'Placement editor should expose a standalone builder HUD variant.');
   assert(isPlacementEditorHudVariant('builder'), 'Placement editor builder HUD variant should validate.');
   assert(!isPlacementEditorHudVariant('dropdown-heavy'), 'Placement editor HUD variant validation should reject unknown values.');
+  assert(placementEditorSource.includes('Help / Controls'), 'Placement editor should expose a visible help/control button.');
   assert(primitivePlacementPreviewKinds.includes('pavement'), 'Placement editor primitive previews should support generated pavement.');
   assert(primitivePlacementPreviewKinds.includes('spawn-point'), 'Placement editor primitive previews should support draggable spawn markers.');
   assert(primitivePlacementPreviewKinds.includes('delivery-board'), 'Placement editor primitive previews should support draggable delivery board markers.');

@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.2] - 2026-06-28
+
+### Fixed
+
+- Restored visible town editor help access with a `Help / Controls` button in the compact builder HUD.
+- Repositioned the standalone town editor help overlay so it appears above the editor canvas instead of being covered by the asset shelf.
+- Added toolbar/docs/smoke coverage for the `F1` help path.
+- Relaxed stale smoke assumptions so promoted editor layouts can include generated pavement and separated district placements.
+
 ## [0.53.1] - 2026-06-28
 
 ### Added
