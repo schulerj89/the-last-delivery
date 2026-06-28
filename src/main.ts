@@ -68,23 +68,56 @@ keyLight.position.set(3, 5, 4);
 keyLight.castShadow = true;
 scene.add(keyLight);
 
-const handleResize = () => {
+let animationFrameId: number | null = null;
+let isDisposed = false;
+
+const handleResize = (): void => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
-window.addEventListener('resize', handleResize);
-window.addEventListener('keydown', (event) => {
+const handleCollisionDebugKeyDown = (event: KeyboardEvent): void => {
   if (!event.repeat && event.key.toLowerCase() === 'c') {
     collisionDebugView.toggle();
   }
-});
+};
+
+const dispose = (): void => {
+  if (isDisposed) {
+    return;
+  }
+
+  isDisposed = true;
+
+  if (animationFrameId !== null) {
+    window.cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+
+  window.removeEventListener('resize', handleResize);
+  window.removeEventListener('keydown', handleCollisionDebugKeyDown);
+  player.dispose();
+  followCamera.dispose();
+  interaction.dispose();
+  playerDebugOverlay.dispose();
+  cameraDebugOverlay.dispose();
+  deliveryDebugOverlay.dispose();
+  renderer.dispose();
+  renderer.domElement.remove();
+};
+
+window.addEventListener('resize', handleResize);
+window.addEventListener('keydown', handleCollisionDebugKeyDown);
 
 const clock = new THREE.Clock();
 
-const animate = () => {
+const animate = (): void => {
+  if (isDisposed) {
+    return;
+  }
+
   const deltaSeconds = clock.getDelta();
   const elapsedSeconds = clock.elapsedTime;
 
@@ -100,7 +133,9 @@ const animate = () => {
   cameraDebugOverlay.update(followCamera.getState());
   deliveryDebugOverlay.update(deliveryState);
   renderer.render(scene, camera);
-  window.requestAnimationFrame(animate);
+  animationFrameId = window.requestAnimationFrame(animate);
 };
 
 animate();
+
+import.meta.hot?.dispose(dispose);

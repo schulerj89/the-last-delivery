@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.10.1] - 2026-06-28
+
+### Fixed
+
+- Added root lifecycle cleanup for Vite HMR, event listeners, animation frames, controller disposal, canvas removal, and renderer disposal.
+- Added a clearer delivery objective line that directs the player to the delivery board before a delivery is accepted.
+
 ## [0.10.0] - 2026-06-28
 
 ### Added
