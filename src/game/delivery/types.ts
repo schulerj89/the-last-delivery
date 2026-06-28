@@ -3,6 +3,7 @@ export type DeliveryStatus = 'idle' | 'delivery-accepted' | 'delivery-completed'
 export interface DeliveryJob {
   id: string;
   title: string;
+  destinationName: string;
   description: string;
   targetInteractableId: string;
   targetWorldObjectId: string;
@@ -20,7 +21,8 @@ export interface DeliveryState {
 }
 
 export interface DeliveryController {
-  acceptDelivery(): string;
+  acceptDelivery(deliveryId?: string): string;
   completeDelivery(targetInteractableId: string): string;
+  getAvailableDeliveries(): readonly DeliveryJob[];
   getState(): DeliveryState;
 }

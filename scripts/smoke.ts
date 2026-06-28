@@ -68,6 +68,8 @@ const runWorldDefinitionSmoke = (): void => {
     assert(target.id === job.targetInteractableId, `Delivery job target ids should match current mailbox interactables: ${job.id}`);
     assert(target.interactable !== undefined, `Delivery job target should be interactable: ${job.id}`);
     assert(target.objectiveAnchor !== undefined, `Delivery job target should have an objective anchor: ${job.id}`);
+    assert(job.destinationName.trim().length > 0, `Delivery job should have a destination name: ${job.id}`);
+    assert(job.description.trim().length > 0, `Delivery job should have a description: ${job.id}`);
     assert(Number.isFinite(job.reward) && job.reward > 0, `Delivery job reward should be positive: ${job.id}`);
   });
 
@@ -97,8 +99,11 @@ const runDeliveryStateSmoke = (): void => {
   assert(delivery.getState().status === 'idle', 'Delivery should start idle.');
   assert(delivery.getState().activeDeliveryId === null, 'Delivery should start without an active delivery.');
   assert(delivery.getState().completedCount === 0, 'Completed count should start at 0.');
+  assert(delivery.getAvailableDeliveries().length === deliveryJobs.length, 'Available delivery list should initialize.');
+  assert(delivery.acceptDelivery('missing-delivery') === 'Delivery job unavailable.', 'Invalid delivery ids should be handled safely.');
+  assert(delivery.getState().activeDeliveryId === null, 'Invalid delivery ids should not set an active delivery.');
 
-  assert(delivery.acceptDelivery().includes(firstDelivery.title), 'Accepting delivery should return the active delivery title.');
+  assert(delivery.acceptDelivery(firstDelivery.id).includes(firstDelivery.title), 'Accepting delivery by id should return the active delivery title.');
   assert(delivery.getState().status === 'delivery-accepted', 'Accepted delivery should update status.');
   assert(delivery.getState().activeDeliveryId === firstDelivery.id, 'Accepting delivery should set the active delivery id.');
   assert(delivery.getState().activeTargetId === firstDelivery.targetInteractableId, 'Accepting delivery should set the active target id.');
@@ -117,15 +122,25 @@ const runDeliveryStateSmoke = (): void => {
   assert(delivery.getState().status === 'delivery-completed', 'Completed delivery should update state.');
   assert(delivery.getState().completedCount === 1, 'Completing delivery should increment count.');
   assert(delivery.getState().completedDeliveryIds.includes(firstDelivery.id), 'Completing delivery should track completed ids.');
+  assert(
+    !delivery.getAvailableDeliveries().some((job) => job.id === firstDelivery.id),
+    'Completed jobs should not stay available.',
+  );
 
   const secondDelivery = deliveryJobs[1];
-  assert(delivery.acceptDelivery().includes(secondDelivery.title), 'Board should accept the next available delivery.');
-  assert(delivery.getState().activeDeliveryId === secondDelivery.id, 'Next available delivery should become active.');
+  assert(delivery.acceptDelivery(secondDelivery.id).includes(secondDelivery.title), 'Board should accept a selected available delivery.');
+  assert(delivery.getState().activeDeliveryId === secondDelivery.id, 'Selected available delivery should become active.');
 };
 
 const runInteractionSmoke = (): void => {
   const delivery = createDeliveryController();
-  const interactables = createPlaygroundInteractables(delivery);
+  let boardOpened = false;
+  const interactables = createPlaygroundInteractables(delivery, {
+    openDeliveryBoard: () => {
+      boardOpened = true;
+      return 'Delivery board opened.';
+    },
+  });
   const mailbox = interactables.find((interactable) => interactable.id === 'mailbox');
   const eastMailbox = interactables.find((interactable) => interactable.id === 'mailbox-east');
   const board = interactables.find((interactable) => interactable.id === 'delivery-board');
@@ -134,8 +149,13 @@ const runInteractionSmoke = (): void => {
   assert(eastMailbox !== undefined, 'East mailbox interactable should initialize.');
   assert(board !== undefined, 'Delivery board interactable should initialize.');
 
-  assert(typeof board.prompt === 'function' && board.prompt() === 'Accept delivery', 'Board should prompt for delivery acceptance.');
-  assert(board.interact().includes(deliveryJobs[0].title), 'Board interaction should accept the first delivery.');
+  assert(typeof board.prompt === 'function' && board.prompt() === 'Open delivery board', 'Board should prompt for opening the delivery board.');
+  assert(board.interact() === 'Delivery board opened.', 'Board interaction should open the delivery board.');
+  assert(boardOpened, 'Board interaction should call the delivery board overlay opener.');
+  assert(delivery.getState().activeDeliveryId === null, 'Opening the board should not auto-accept a delivery.');
+
+  assert(delivery.acceptDelivery(deliveryJobs[0].id).includes(deliveryJobs[0].title), 'Selected delivery should be accepted by id.');
+  assert(typeof board.prompt === 'function' && board.prompt().includes('in progress'), 'Board should report an active delivery.');
 
   assert(typeof mailbox.prompt === 'function' && mailbox.prompt() === 'Complete delivery', 'Mailbox should prompt for completion after acceptance.');
   assert(typeof eastMailbox.prompt === 'function' && eastMailbox.prompt() === 'Wrong mailbox', 'Wrong mailbox should prompt clearly.');

@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.15.0] - 2026-06-28
+
+### Added
+
+- Added a simple delivery board overlay for choosing from available delivery jobs.
+- Added number-key, Escape, and click controls for delivery board job selection.
+- Added accept-by-id delivery controller behavior and available-job filtering for completed jobs.
+- Updated smoke validation for job list initialization, selected job acceptance, completed job tracking, and invalid job ids.
+
 ## [0.14.0] - 2026-06-28
 
 ### Added

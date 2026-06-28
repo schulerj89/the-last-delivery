@@ -8,6 +8,13 @@ const getNextAvailableDelivery = (
   jobs.find((job) => !completedDeliveryIds.includes(job.id)) ?? null
 );
 
+const getAvailableDeliveries = (
+  jobs: readonly DeliveryJob[],
+  completedDeliveryIds: readonly string[],
+): readonly DeliveryJob[] => (
+  jobs.filter((job) => !completedDeliveryIds.includes(job.id))
+);
+
 export const createDeliveryController = (
   jobs: readonly DeliveryJob[] = deliveryJobs,
 ): DeliveryController => {
@@ -16,17 +23,20 @@ export const createDeliveryController = (
   const completedDeliveryIds: string[] = [];
 
   return {
-    acceptDelivery() {
+    acceptDelivery(deliveryId) {
       if (status === 'delivery-accepted') {
         return activeDelivery
           ? `Delivery already accepted: ${activeDelivery.title}.`
           : 'Delivery already accepted.';
       }
 
-      const nextDelivery = getNextAvailableDelivery(jobs, completedDeliveryIds);
+      const availableDeliveries = getAvailableDeliveries(jobs, completedDeliveryIds);
+      const nextDelivery = deliveryId
+        ? availableDeliveries.find((job) => job.id === deliveryId) ?? null
+        : getNextAvailableDelivery(jobs, completedDeliveryIds);
 
       if (!nextDelivery) {
-        return 'All deliveries complete.';
+        return deliveryId ? 'Delivery job unavailable.' : 'All deliveries complete.';
       }
 
       activeDelivery = nextDelivery;
@@ -50,6 +60,9 @@ export const createDeliveryController = (
       activeDelivery = null;
       status = 'delivery-completed';
       return `Delivery completed: ${completedDelivery.title}.`;
+    },
+    getAvailableDeliveries() {
+      return getAvailableDeliveries(jobs, completedDeliveryIds);
     },
     getState(): DeliveryState {
       return {

@@ -4,6 +4,10 @@ import type { Interactable } from '../game/interaction';
 import type { WorldObjectDefinition } from './types';
 import { deliveryBoardObject, getWorldObjectsByKind } from './villageDefinition';
 
+interface PlaygroundInteractableOptions {
+  openDeliveryBoard?: () => string;
+}
+
 const createInteractablePosition = (object: WorldObjectDefinition): THREE.Vector3 => {
   if (!object.interactable) {
     throw new Error(`Missing interactable data for world object: ${object.id}`);
@@ -20,7 +24,10 @@ const getInteractableRadius = (object: WorldObjectDefinition): number => {
   return object.interactable.radius;
 };
 
-export const createPlaygroundInteractables = (delivery: DeliveryController): readonly Interactable[] => [
+export const createPlaygroundInteractables = (
+  delivery: DeliveryController,
+  { openDeliveryBoard }: PlaygroundInteractableOptions = {},
+): readonly Interactable[] => [
   ...getWorldObjectsByKind('mailbox')
     .filter((mailbox) => mailbox.interactable)
     .map((mailbox): Interactable => ({
@@ -53,8 +60,8 @@ export const createPlaygroundInteractables = (delivery: DeliveryController): rea
 
       return state.status === 'delivery-accepted'
         ? `${state.activeDelivery?.title ?? 'Delivery'} in progress`
-        : 'Accept delivery';
+        : 'Open delivery board';
     },
-    interact: () => delivery.acceptDelivery(),
+    interact: () => (openDeliveryBoard ? openDeliveryBoard() : delivery.acceptDelivery()),
   },
 ];

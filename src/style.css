@@ -71,3 +71,131 @@ canvas {
 .interaction-message[hidden] {
   display: none;
 }
+
+.delivery-board-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 64px));
+  overflow: auto;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  padding: 16px;
+  color: #f8f2dc;
+  background: rgb(18 24 27 / 94%);
+  border: 1px solid rgb(240 202 114 / 64%);
+  border-radius: 6px;
+  box-shadow: 0 18px 44px rgb(0 0 0 / 42%);
+  font: 14px/1.4 Arial, sans-serif;
+  pointer-events: auto;
+}
+
+.delivery-board-overlay[hidden] {
+  display: none;
+}
+
+.delivery-board-overlay__header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.delivery-board-overlay__title {
+  margin: 0;
+  color: #f0ca72;
+  font: 700 20px/1.15 Arial, sans-serif;
+}
+
+.delivery-board-overlay__hint,
+.delivery-board-overlay__copy,
+.delivery-board-overlay__status {
+  margin: 0;
+}
+
+.delivery-board-overlay__hint,
+.delivery-board-overlay__copy {
+  color: rgb(248 242 220 / 72%);
+}
+
+.delivery-board-overlay__close,
+.delivery-board-job {
+  font: inherit;
+}
+
+.delivery-board-overlay__close {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  padding: 6px 10px;
+  color: #f8f2dc;
+  background: rgb(248 242 220 / 10%);
+  border: 1px solid rgb(248 242 220 / 34%);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.delivery-board-overlay__body {
+  display: grid;
+  gap: 8px;
+}
+
+.delivery-board-job {
+  display: grid;
+  grid-template-columns: 32px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  color: #f8f2dc;
+  background: rgb(58 174 163 / 12%);
+  border: 1px solid rgb(124 242 207 / 34%);
+  border-radius: 5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.delivery-board-job:hover,
+.delivery-board-job:focus-visible,
+.delivery-board-overlay__close:hover,
+.delivery-board-overlay__close:focus-visible {
+  border-color: rgb(240 202 114 / 86%);
+  outline: none;
+}
+
+.delivery-board-job__number {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: #16191f;
+  background: #f0ca72;
+  border-radius: 50%;
+  font-weight: 700;
+}
+
+.delivery-board-job__content {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.delivery-board-job__title {
+  font-weight: 700;
+}
+
+.delivery-board-job__destination,
+.delivery-board-job__description {
+  color: rgb(248 242 220 / 74%);
+}
+
+.delivery-board-job__description {
+  overflow-wrap: anywhere;
+}
+
+.delivery-board-job__reward {
+  color: #f0ca72;
+  font-weight: 700;
+  white-space: nowrap;
+}

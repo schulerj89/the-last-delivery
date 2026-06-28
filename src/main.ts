@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import './style.css';
 import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
-import { createDeliveryController, createDeliveryDebugOverlay } from './game/delivery';
+import { createDeliveryBoardOverlay, createDeliveryController, createDeliveryDebugOverlay } from './game/delivery';
 import { createInteractionController } from './game/interaction';
 import { createPlayerController, createPlayerDebugOverlay } from './game/player';
 import { createPlayground } from './world/playground';
@@ -55,9 +55,15 @@ const followCamera = createThirdPersonCameraController({
 });
 const cameraDebugOverlay = createCameraDebugOverlay(app);
 const deliveryDebugOverlay = createDeliveryDebugOverlay(app);
+const deliveryBoardOverlay = createDeliveryBoardOverlay({
+  delivery,
+  parent: app,
+});
 const interaction = createInteractionController({
   player: player.object,
-  interactables: createPlaygroundInteractables(delivery),
+  interactables: createPlaygroundInteractables(delivery, {
+    openDeliveryBoard: deliveryBoardOverlay.open,
+  }),
   parent: app,
 });
 
@@ -102,6 +108,7 @@ const dispose = (): void => {
   player.dispose();
   followCamera.dispose();
   interaction.dispose();
+  deliveryBoardOverlay.dispose();
   playerDebugOverlay.dispose();
   cameraDebugOverlay.dispose();
   deliveryDebugOverlay.dispose();
@@ -134,6 +141,7 @@ const animate = (): void => {
   playerDebugOverlay.update(player.getState());
   cameraDebugOverlay.update(followCamera.getState());
   deliveryDebugOverlay.update(deliveryState);
+  deliveryBoardOverlay.update(deliveryState);
   renderer.render(scene, camera);
   animationFrameId = window.requestAnimationFrame(animate);
 };
