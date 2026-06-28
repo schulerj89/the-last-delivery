@@ -1,25 +1,28 @@
 {
   "name": "the-last-delivery",
-  "version": "0.53.17",
+  "version": "0.54.0",
   "private": true,
   "type": "module",
   "description": "A tiny browser Three.js game.",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "assets:scan": "node scripts/scanAssets.mjs",
+    "assets:convert:nature": "node scripts/convertNatureFbxToGlb.mjs",
+    "assets:convert:nature:check": "node scripts/convertNatureFbxToGlb.mjs --check",
     "layout:apply": "node scripts/applyLayoutOverrides.mjs",
     "layout:check": "node scripts/applyLayoutOverrides.mjs --check",
     "layout:check:test": "node scripts/applyLayoutOverrides.mjs --check --input layout-edits/village-layout-test.json",
     "typecheck": "tsc --noEmit",
     "smoke": "tsx scripts/smoke.ts",
     "build": "vite build",
-    "validate": "npm run typecheck && npm run smoke && npm run layout:check:test && npm run build"
+    "validate": "npm run typecheck && npm run smoke && npm run assets:convert:nature:check && npm run layout:check:test && npm run build"
   },
   "dependencies": {
     "three": "^0.185.0"
   },
   "devDependencies": {
     "@types/three": "^0.185.0",
+    "fbx2gltf": "^0.9.7-p1",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vite": "^8.1.0"

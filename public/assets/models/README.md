@@ -5,10 +5,7 @@ Place small optional runtime model props in this folder.
 Current registry entry:
 
 - `crate-box-001.glb` - optional crate prop for `crate-large`.
-- `nature/nature-tree01.glb` - decorative forest-edge tree prop.
-- `nature/nature-rock.glb` - decorative path and boundary rock prop.
-- `nature/nature-simple-bush.glb` - decorative bush/plant prop.
-- `nature/source-fbx/*.fbx` - complete Low Poly Nature Pack Lite FBX prop set for the town editor palette.
+- `nature/converted-glb/*.glb` - converted Low Poly Nature Pack Lite prop set for the town editor palette.
 - `fantasy/house_001.glb` - selected fantasy house prop.
 - `fantasy/house_002.glb` - selected fantasy cottage prop.
 - `fantasy/house_003.glb` - selected fantasy cottage prop.

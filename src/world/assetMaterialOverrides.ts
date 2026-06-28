@@ -25,6 +25,14 @@ interface AssetMaterialOverridePalette {
   metalness: number;
 }
 
+interface AssetMaterialOverrideOptions {
+  assetId?: string | null;
+}
+
+interface MaterialToneOptions {
+  forceSolidColor?: boolean;
+}
+
 type ColorMaterial = THREE.Material & {
   color: THREE.Color;
   emissive?: THREE.Color;
@@ -361,6 +369,18 @@ const getWorldObjectAssetId = (worldObject: WorldObjectDefinition): string | nul
   worldObject.render?.mode === 'asset' ? worldObject.render.assetId : null
 );
 
+const countMeshes = (object: THREE.Object3D): number => {
+  let meshCount = 0;
+
+  object.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      meshCount += 1;
+    }
+  });
+
+  return meshCount;
+};
+
 const getRootHeightData = (
   object: THREE.Object3D,
   mesh: THREE.Mesh,
@@ -462,6 +482,10 @@ const pickNatureAssetMaterialColor = (
   }
 
   if (isRockNatureAsset(assetId)) {
+    if (countMeshes(object) <= 1) {
+      return palette.primaryColor;
+    }
+
     return lowerIncludesAny(label, ['top', 'snow', 'cap'])
       ? palette.accentColor ?? palette.primaryColor
       : normalizedHeight > 0.62
@@ -512,11 +536,43 @@ const pickNatureAssetMaterialColor = (
   return palette.primaryColor;
 };
 
+const clearMaterialTextureSlots = (material: THREE.Material): void => {
+  const materialWithTextures = material as unknown as Record<string, unknown>;
+
+  [
+    'map',
+    'alphaMap',
+    'aoMap',
+    'bumpMap',
+    'displacementMap',
+    'emissiveMap',
+    'lightMap',
+    'metalnessMap',
+    'normalMap',
+    'roughnessMap',
+    'specularMap',
+  ].forEach((key) => {
+    if (materialWithTextures[key] instanceof THREE.Texture) {
+      materialWithTextures[key] = null;
+    }
+  });
+
+  const maybeVertexColors = (material as { vertexColors?: unknown }).vertexColors;
+  if (typeof maybeVertexColors === 'boolean') {
+    (material as unknown as { vertexColors: boolean }).vertexColors = false;
+  }
+};
+
 const applyMaterialTone = (
   material: THREE.Material,
   color: number,
   palette: AssetMaterialOverridePalette,
+  options: MaterialToneOptions = {},
 ): void => {
+  if (options.forceSolidColor) {
+    clearMaterialTextureSlots(material);
+  }
+
   if (hasColor(material)) {
     material.color.setHex(color);
   }
@@ -543,8 +599,9 @@ const applyMaterialTone = (
 export const applyAssetMaterialOverrides = (
   object: THREE.Object3D,
   worldObject: WorldObjectDefinition,
+  options: AssetMaterialOverrideOptions = {},
 ): (() => void) => {
-  const assetId = getWorldObjectAssetId(worldObject);
+  const assetId = options.assetId ?? getWorldObjectAssetId(worldObject);
   const natureAssetId = assetId && isAssetMaterialOverrideAssetId(assetId) ? assetId : null;
   const kind = isAssetMaterialOverrideKind(worldObject.kind) ? worldObject.kind : null;
 
@@ -569,7 +626,7 @@ export const applyAssetMaterialOverrides = (
         ? pickNatureAssetMaterialColor(object, child, clonedMaterial, natureAssetId, palette)
         : pickMaterialColor(object, child, clonedMaterial, kind as AssetMaterialOverrideKind, palette);
 
-      applyMaterialTone(clonedMaterial, color, palette);
+      applyMaterialTone(clonedMaterial, color, palette, { forceSolidColor: natureAssetId !== null });
       clonedMaterials.add(clonedMaterial);
       return clonedMaterial;
     });

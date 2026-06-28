@@ -2,6 +2,20 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.54.0] - 2026-06-28
+
+### Added
+
+- Added a dev-only `assets:convert:nature` pipeline using the open-source FBX2glTF wrapper to convert Low Poly Nature Pack Lite FBX source files into runtime GLBs.
+- Added converted GLB runtime assets for the full lightweight nature editor catalog under `public/assets/models/nature/converted-glb/`.
+- Added validation coverage to keep selected nature assets on the converted GLB runtime path.
+
+### Changed
+
+- Pointed all selected nature asset registry entries at converted GLBs while preserving existing asset ids and primitive fallbacks.
+- Removed legacy public FBX source copies and duplicate root-level nature GLBs from runtime assets.
+- Applied nature material normalization by asset id in editor previews so dragged nature props keep consistent colors.
+
 ## [0.53.17] - 2026-06-28
 
 ### Fixed

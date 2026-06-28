@@ -18,23 +18,26 @@ Expected local source folders:
 1. Place or copy downloaded packs into `raw-assets/` using the expected folder names.
 2. Run `npm run assets:scan` to inspect available source models and sizes.
 3. Pick a small candidate or approved small pack subset for specific world/editor use.
-4. Copy only selected runtime models into `public/assets/models/`.
-5. Register the runtime model in `src/game/assets/assetRegistry.ts`.
-6. Keep colliders, interactables, and delivery logic in world data. Do not derive gameplay collision from GLB meshes.
+4. Convert selected source formats into runtime GLB when needed. For Low Poly Nature Pack Lite, run `npm run assets:convert:nature`.
+5. Copy or generate only selected runtime models into `public/assets/models/`.
+6. Register the runtime model in `src/game/assets/assetRegistry.ts`.
+7. Keep colliders, interactables, and delivery logic in world data. Do not derive gameplay collision from GLB meshes.
 
 Registry entries should include `id`, `url`, `sourcePack`, `defaultScale`, and optional `notes`. The asset loader builds primitive fallbacks first and treats GLB/FBX models as optional visuals.
 
-Prefer GLB when available. FBX is allowed for the Low Poly Nature Pack Lite because the full source-FBX model set is small enough for the editor catalog. Avoid full larger packs, animation sets, DRACO, KTX2, and meshopt until the runtime path is intentionally expanded.
+Prefer GLB for runtime assets. FBX source files belong in `raw-assets/`, not under `public/`, so Vite does not serve source pack files. Avoid full larger packs, animation sets, DRACO, KTX2, and meshopt until the runtime path is intentionally expanded.
 
 ## Current Runtime Nature Selection
 
-The Low Poly Nature Pack Lite source folder is source-only. The current village still uses three converted GLBs under `public/assets/models/nature/`:
+The Low Poly Nature Pack Lite source folder is source-only. Runtime nature props are converted from `raw-assets/low-poly-nature-pack-lite/models/*.fbx` into GLB files under `public/assets/models/nature/converted-glb/`.
 
-- `nature-tree01.glb` from `tree01.fbx`
-- `nature-rock.glb` from `rock.fbx`
-- `nature-simple-bush.glb` from `simple_bush.fbx`
+Run:
 
-The standalone town editor also exposes the full small nature FBX set copied under `public/assets/models/nature/source-fbx/`, including grass, flowers, pine, logs, rocks, bushes, mushrooms, tents, and other small nature props. These are decorative visuals with primitive fallbacks. Collision remains authored separately in world definitions, and nature dressing intentionally does not add colliders unless explicitly marked.
+```sh
+npm run assets:convert:nature
+```
+
+The script uses the dev-only `fbx2gltf` wrapper around the open-source FBX2glTF converter and writes one GLB per source FBX. The town editor uses those converted GLBs for the full lightweight nature prop catalog, including grass, flowers, pine, logs, rocks, bushes, mushrooms, tents, and other small nature props. These are decorative visuals with primitive fallbacks. Collision remains authored separately in world definitions, and nature dressing intentionally does not add colliders unless explicitly marked.
 
 ## Current Runtime Fantasy Selection
 

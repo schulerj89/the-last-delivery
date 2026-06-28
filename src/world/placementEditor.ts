@@ -1345,7 +1345,11 @@ export const createPlacementEditor = ({
         instance.object.name = `placement-editor:asset-preview:${editableObject.id}`;
         instance.object.userData.label = instance.object.name;
         fitAssetPreviewToDraft(instance.object, editableObject, currentDraft);
-        const disposeMaterialOverrides = applyAssetMaterialOverrides(instance.object, editableObject.worldObject);
+        const disposeMaterialOverrides = applyAssetMaterialOverrides(
+          instance.object,
+          editableObject.worldObject,
+          { assetId },
+        );
         assetPreviewsByObjectId.set(editableObject.id, {
           assetId,
           instance,

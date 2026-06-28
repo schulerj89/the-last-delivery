@@ -9,6 +9,7 @@ import {
   AnimationClip,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   Object3D,
   Scene,
   Skeleton,
@@ -107,6 +108,7 @@ import {
   assetMaterialOverrideAssetIds,
   assetMaterialOverrideConfig,
   assetMaterialOverrideKinds,
+  applyAssetMaterialOverrides,
   isAssetMaterialOverrideKind,
   isAssetMaterialOverrideAssetId,
   isValidMaterialOverrideColor,
@@ -189,6 +191,7 @@ import {
   isWorldGameplayRole,
   isWorldInteractionAction,
 } from '../src/world/worldObjectGameplay';
+import type { WorldObjectDefinition } from '../src/world/types';
 import {
   getTownEditorAssetPaletteItems,
   getTownEditorGeneratedPaletteItems,
@@ -296,11 +299,16 @@ const runAssetRegistrySmoke = (): void => {
   });
 
   const selectedNatureAssets = getSelectedNatureAssets();
-  const selectedNatureBytes = selectedNatureAssets.reduce((totalBytes, asset) => {
+  const selectedNatureAssetUrls = new Set<string>();
+  let selectedNatureBytes = 0;
+
+  selectedNatureAssets.forEach((asset) => {
     const assetFileUrl = getRuntimeAssetFileUrl(asset.url);
 
     assert(asset.sourcePack === 'low-poly-nature-pack-lite', `Selected nature asset should identify the nature source pack: ${asset.id}`);
-    assert(asset.url.startsWith('/assets/models/nature/'), `Selected nature asset should live in the runtime nature folder: ${asset.id}`);
+    assert(asset.kind === 'gltf', `Selected nature asset should use the GLB runtime path: ${asset.id}`);
+    assert(asset.url.startsWith('/assets/models/nature/converted-glb/'), `Selected nature asset should live in the converted runtime nature folder: ${asset.id}`);
+    assert(asset.url.endsWith('.glb'), `Selected nature asset should point at a converted GLB: ${asset.id}`);
     assert(nodeFileSystem.existsSync(assetFileUrl), `Selected nature asset file should exist: ${asset.url}`);
 
     const stats = nodeFileSystem.statSync(assetFileUrl);
@@ -308,16 +316,23 @@ const runAssetRegistrySmoke = (): void => {
     assert(stats.size > 0, `Selected nature asset should not be empty: ${asset.url}`);
     assert(stats.size <= asset.maxRecommendedBytes, `Selected nature asset should stay within its size budget: ${asset.id}`);
 
-    return totalBytes + stats.size;
-  }, 0);
+    if (!selectedNatureAssetUrls.has(asset.url)) {
+      selectedNatureAssetUrls.add(asset.url);
+      selectedNatureBytes += stats.size;
+    }
+  });
 
   assert(selectedNatureAssets.length >= 30, 'The lightweight nature runtime set should expose the full nature prop catalog.');
+  assert(selectedNatureAssetUrls.size >= 30, 'The lightweight nature runtime set should include converted GLB files for the full source catalog.');
   assert(selectedNatureAssetIdSet.has('nature-grass01'), 'Selected nature assets should include grass clumps.');
   assert(selectedNatureAssetIdSet.has('nature-grass-array'), 'Selected nature assets should include larger grass patches.');
   assert(selectedNatureAssetIdSet.has('nature-pine01'), 'Selected nature assets should include pine trees.');
   assert(selectedNatureAssetIdSet.has('nature-flower-yellow'), 'Selected nature assets should include flower props.');
   assert(selectedNatureBytes > 0, 'Selected nature runtime asset size should be measurable.');
-  console.info(`Selected nature runtime assets: ${selectedNatureAssets.length} files, ${formatBytes(selectedNatureBytes)}.`);
+  console.info(
+    `Selected nature runtime assets: ${selectedNatureAssetUrls.size} files, `
+    + `${selectedNatureAssets.length} registry ids, ${formatBytes(selectedNatureBytes)}.`,
+  );
 
   const selectedFantasyAssets = getSelectedFantasyAssets();
   const selectedFantasyBytes = selectedFantasyAssets.reduce((totalBytes, asset) => {
@@ -666,6 +681,68 @@ const runVisualPolishSmoke = (): void => {
       !== Number(natureAssetMaterialOverrideConfig['nature-grass01'].primaryColor),
     'Rock and grass assets should not share the same material palette.',
   );
+
+  const pineWorldObject: WorldObjectDefinition = {
+    id: 'smoke-pine',
+    kind: 'tree',
+    position: [0, 0, 0],
+    dimensions: [1, 2, 1],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-tree01',
+    },
+  };
+  const pineGroup = new Group();
+  const pineTexture = new Texture();
+  const pineTrunkMaterial = new MeshStandardMaterial({ color: 0xb8b8b8, map: pineTexture });
+  const pineLeavesMaterial = new MeshStandardMaterial({ color: 0xb8b8b8, map: pineTexture });
+  const pineTrunk = new Mesh(new BoxGeometry(0.2, 0.6, 0.2), pineTrunkMaterial);
+  const pineLeaves = new Mesh(new BoxGeometry(1, 1, 1), pineLeavesMaterial);
+  pineTrunk.name = 'generic-low-piece';
+  pineLeaves.name = 'generic-high-piece';
+  pineTrunk.position.y = 0.3;
+  pineLeaves.position.y = 1.25;
+  pineGroup.add(pineTrunk, pineLeaves);
+
+  const disposePineOverrides = applyAssetMaterialOverrides(pineGroup, pineWorldObject, { assetId: 'nature-pine01' });
+  const tintedPineTrunkMaterial = pineTrunk.material as MeshStandardMaterial;
+  const tintedPineLeavesMaterial = pineLeaves.material as MeshStandardMaterial;
+  assert(tintedPineTrunkMaterial.map === null, 'Nature material overrides should clear source texture maps on tinted pine trunks.');
+  assert(tintedPineLeavesMaterial.map === null, 'Nature material overrides should clear source texture maps on tinted pine leaves.');
+  assert(tintedPineTrunkMaterial.color.getHex() === natureAssetMaterialOverrideConfig['nature-pine01'].secondaryColor, 'Pine trunk override should use the pine bark color.');
+  assert(tintedPineLeavesMaterial.color.getHex() === natureAssetMaterialOverrideConfig['nature-pine01'].primaryColor, 'Pine leaves override should use the pine canopy color.');
+  disposePineOverrides();
+  pineTrunkMaterial.dispose();
+  pineLeavesMaterial.dispose();
+  pineTexture.dispose();
+  pineTrunk.geometry.dispose();
+  pineLeaves.geometry.dispose();
+
+  const rockWorldObject: WorldObjectDefinition = {
+    id: 'smoke-rock-big',
+    kind: 'rock',
+    position: [0, 0, 0],
+    dimensions: [1, 1, 1],
+    render: {
+      mode: 'asset',
+      assetId: 'nature-rock',
+    },
+  };
+  const rockTexture = new Texture();
+  const rockMaterial = new MeshStandardMaterial({ color: 0xb8b8b8, map: rockTexture });
+  const rockMesh = new Mesh(new BoxGeometry(1, 1, 1), rockMaterial);
+  const rockGroup = new Group();
+  rockMesh.name = 'single-generic-rock-piece';
+  rockGroup.add(rockMesh);
+
+  const disposeRockOverrides = applyAssetMaterialOverrides(rockGroup, rockWorldObject, { assetId: 'nature-rock-big01' });
+  const tintedRockMaterial = rockMesh.material as MeshStandardMaterial;
+  assert(tintedRockMaterial.map === null, 'Nature material overrides should clear source texture maps on tinted rocks.');
+  assert(tintedRockMaterial.color.getHex() === natureAssetMaterialOverrideConfig['nature-rock-big01'].primaryColor, 'Rock big override should use the rock palette instead of dull source color.');
+  disposeRockOverrides();
+  rockMaterial.dispose();
+  rockTexture.dispose();
+  rockMesh.geometry.dispose();
 };
 
 const runAnimationHarnessSmoke = (): void => {
