@@ -131,7 +131,13 @@ interface EditorAssetPreview {
   requestId: number;
 }
 
-export const primitivePlacementPreviewKinds = ['pavement'] as const satisfies readonly WorldObjectKind[];
+export const primitivePlacementPreviewKinds = [
+  'delivery-board',
+  'mailbox',
+  'pavement',
+  'post-office',
+  'spawn-point',
+] as const satisfies readonly WorldObjectKind[];
 
 export const isPrimitivePlacementPreviewKind = (kind: WorldObjectKind): boolean => (
   primitivePlacementPreviewKinds.includes(kind as (typeof primitivePlacementPreviewKinds)[number])
@@ -442,6 +448,38 @@ const createPrimitivePreviewMaterial = (object: WorldObjectDefinition): THREE.Ma
     return new THREE.MeshStandardMaterial({
       color: 0x8f8a7a,
       roughness: 0.92,
+      metalness: 0,
+    });
+  }
+
+  if (object.kind === 'spawn-point') {
+    return new THREE.MeshStandardMaterial({
+      color: 0xf0ca72,
+      roughness: 0.76,
+      metalness: 0,
+    });
+  }
+
+  if (object.kind === 'delivery-board') {
+    return new THREE.MeshStandardMaterial({
+      color: 0x164338,
+      roughness: 0.7,
+      metalness: 0,
+    });
+  }
+
+  if (object.kind === 'mailbox') {
+    return new THREE.MeshStandardMaterial({
+      color: 0x3baea3,
+      roughness: 0.72,
+      metalness: 0,
+    });
+  }
+
+  if (object.kind === 'post-office') {
+    return new THREE.MeshStandardMaterial({
+      color: 0xb9a178,
+      roughness: 0.82,
       metalness: 0,
     });
   }

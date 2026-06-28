@@ -3,8 +3,9 @@ import {
   createEditablePlacementObjects,
   type EditablePlacementObject,
 } from './placementEditor';
+import { getWorldObjectGameplay, getWorldObjectMailbox } from './worldObjectGameplay';
 
-export type TownEditorPaletteItemType = 'asset' | 'generated';
+export type TownEditorPaletteItemType = 'asset' | 'generated' | 'marker';
 
 export interface TownEditorPaletteItem {
   type: TownEditorPaletteItemType;
@@ -36,6 +37,37 @@ const formatAssetLabel = (assetId: string): string => (
     .replace(/^nature-/, '')
     .replaceAll('-', ' ')
 );
+
+const markerObjectIds = [
+  'player-spawn',
+  'post-office',
+  'delivery-board',
+  'mailbox',
+  'mailbox-east',
+  'mailbox-post-office-return',
+] as const;
+
+const formatMarkerLabel = (object: EditablePlacementObject): string => {
+  const mailbox = getWorldObjectMailbox(object.worldObject);
+
+  if (mailbox) {
+    return mailbox.destinationName;
+  }
+
+  if (getWorldObjectGameplay(object.worldObject).role === 'player-spawn') {
+    return 'Player Spawn';
+  }
+
+  if (object.id === 'delivery-board') {
+    return 'Delivery Board';
+  }
+
+  if (object.id === 'post-office') {
+    return 'Post Office';
+  }
+
+  return object.id.replaceAll('-', ' ');
+};
 
 const getAssetCandidateObjectIds = (
   asset: AssetDefinition,
@@ -88,6 +120,23 @@ export const getTownEditorGeneratedPaletteItems = (
       label: object.id.replaceAll('-', ' '),
       detail: 'generated ground',
       source: 'primitive',
+      candidateObjectIds: [object.id],
+      placeable: true,
+    }))
+);
+
+export const getTownEditorMarkerPaletteItems = (
+  editableObjects: readonly EditablePlacementObject[] = createEditablePlacementObjects(),
+): readonly TownEditorPaletteItem[] => (
+  markerObjectIds
+    .map((objectId) => editableObjects.find((object) => object.id === objectId))
+    .filter((object): object is EditablePlacementObject => object !== undefined)
+    .map((object) => ({
+      type: 'marker',
+      id: object.id,
+      label: formatMarkerLabel(object),
+      detail: `${object.kind} marker`,
+      source: 'world marker',
       candidateObjectIds: [object.id],
       placeable: true,
     }))

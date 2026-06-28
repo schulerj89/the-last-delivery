@@ -175,6 +175,7 @@ import {
 import {
   getTownEditorAssetPaletteItems,
   getTownEditorGeneratedPaletteItems,
+  getTownEditorMarkerPaletteItems,
   resolveTownEditorPlacementCandidate,
 } from '../src/world/townEditorCatalog';
 
@@ -669,21 +670,34 @@ const runTownEditorRouteSmoke = (): void => {
   const viteConfig = nodeFileSystem.readFileSync(viteConfigUrl, 'utf8');
   const editableObjects = createEditablePlacementObjects();
   const generatedItems = getTownEditorGeneratedPaletteItems(editableObjects);
+  const markerItems = getTownEditorMarkerPaletteItems(editableObjects);
   const assetItems = getTownEditorAssetPaletteItems(editableObjects);
   const pavementItem = generatedItems.find((item) => item.id === 'pavement-tile-square');
+  const spawnMarkerItem = markerItems.find((item) => item.id === 'player-spawn');
+  const boardMarkerItem = markerItems.find((item) => item.id === 'delivery-board');
   const crateItem = assetItems.find((item) => item.id === 'fantasy-box-001');
 
   assert(townEditorHtml.includes('/src/townEditor.ts'), 'Town editor route should load the isolated editor entry.');
   assert(townEditorScript.includes('createPlacementEditor'), 'Town editor should reuse the placement editor workflow.');
   assert(townEditorScript.includes('renderAuthoredWorldObjects: false'), 'Town editor should open on the clean playground canvas.');
+  assert(townEditorScript.includes('data-palette-section="marker"'), 'Town editor should include a world marker palette section.');
+  assert(townEditorScript.includes('getTownEditorMarkerPaletteItems'), 'Town editor should source draggable world markers from the catalog.');
+  assert(townEditorScript.includes("layoutDebugView.setCameraMode('close')"), 'Town editor should default to the close 3D camera.');
+  assert(
+    !townEditorScript.includes('scene.add(layoutDebugView.object)'),
+    'Town editor should not render layout debug circles or labels in the builder canvas.',
+  );
   assert(townEditorScript.includes("hudVariant: 'builder'"), 'Town editor should use the save-focused builder HUD variant.');
   assert(townEditorScript.includes('getAssetThumbnailDataUrl'), 'Town editor should render asset thumbnails for palette cards.');
   assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load GLB assets through the existing asset loader.');
   assert(townEditorScript.includes('group.scale.setScalar'), 'Town editor thumbnails should scale the centered wrapper, not push model pivots off-center.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
+  assert(markerItems.length >= 3, 'Town editor marker palette should initialize important world markers.');
   assert(assetItems.length > 0, 'Town editor asset palette should initialize.');
   assert(pavementItem !== undefined && pavementItem.placeable, 'Town editor should expose draggable pavement squares.');
+  assert(spawnMarkerItem !== undefined && spawnMarkerItem.placeable, 'Town editor should expose a draggable player spawn marker.');
+  assert(boardMarkerItem !== undefined && boardMarkerItem.placeable, 'Town editor should expose a draggable delivery board marker.');
   assert(crateItem !== undefined && crateItem.placeable, 'Town editor should expose draggable fantasy crate assets.');
   assert(crateItem.candidateObjectIds.includes('crate-large'), 'Fantasy crate asset should map to an editable crate slot.');
   assert(
@@ -1283,7 +1297,11 @@ const runPlacementEditorSmoke = (): void => {
   assert(isPlacementEditorHudVariant('builder'), 'Placement editor builder HUD variant should validate.');
   assert(!isPlacementEditorHudVariant('dropdown-heavy'), 'Placement editor HUD variant validation should reject unknown values.');
   assert(primitivePlacementPreviewKinds.includes('pavement'), 'Placement editor primitive previews should support generated pavement.');
+  assert(primitivePlacementPreviewKinds.includes('spawn-point'), 'Placement editor primitive previews should support draggable spawn markers.');
+  assert(primitivePlacementPreviewKinds.includes('delivery-board'), 'Placement editor primitive previews should support draggable delivery board markers.');
+  assert(primitivePlacementPreviewKinds.includes('mailbox'), 'Placement editor primitive previews should support draggable mailbox markers.');
   assert(isPrimitivePlacementPreviewKind('pavement'), 'Pavement should be a primitive preview kind.');
+  assert(isPrimitivePlacementPreviewKind('spawn-point'), 'Spawn should be a primitive preview kind.');
 
   const baseMoveSpeed = getPlacementEditorMoveSpeed(0.25);
   const fastMoveSpeed = getPlacementEditorMoveSpeed(0.25, { shiftKey: true });
@@ -1306,6 +1324,10 @@ const runPlacementEditorSmoke = (): void => {
     throw new Error('Missing pavement editable object.');
   }
 
+  if (!playerSpawn) {
+    throw new Error('Missing player spawn editable object.');
+  }
+
   const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
   const deletedDraft = markPlacementDraftDeleted({
     ...clonePlacementDraft(draft),
@@ -1317,6 +1339,20 @@ const runPlacementEditorSmoke = (): void => {
   const pavementDraft = createPlacementTransformDraft(pavementTile.worldObject);
   pavementDraft.active = true;
   pavementDraft.scaleMultiplier = 2.5;
+  const spawnPreview = createPrimitivePlacementPreviewObject(playerSpawn.worldObject);
+  assert(spawnPreview !== null, 'Player spawn marker should create an editor primitive preview.');
+  if (spawnPreview) {
+    spawnPreview.traverse((object) => {
+      if (object instanceof Mesh) {
+        object.geometry.dispose();
+        if (Array.isArray(object.material)) {
+          object.material.forEach((material) => material.dispose());
+        } else {
+          object.material.dispose();
+        }
+      }
+    });
+  }
   const pavementPreview = createPrimitivePlacementPreviewObject(pavementTile.worldObject);
   assert(pavementPreview !== null, 'Generated pavement should create an editor primitive preview.');
   if (pavementPreview) {

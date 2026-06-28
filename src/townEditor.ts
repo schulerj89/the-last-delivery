@@ -11,6 +11,7 @@ import { createVillageLayoutDebugView } from './world/layoutDebug';
 import {
   getTownEditorAssetPaletteItems,
   getTownEditorGeneratedPaletteItems,
+  getTownEditorMarkerPaletteItems,
   resolveTownEditorPlacementCandidate,
   type TownEditorPaletteItem,
 } from './world/townEditorCatalog';
@@ -34,6 +35,10 @@ root.innerHTML = `
       <div class="town-editor__grid" data-palette-section="generated"></div>
     </div>
     <div class="town-editor__section">
+      <h2>World Markers</h2>
+      <div class="town-editor__grid" data-palette-section="marker"></div>
+    </div>
+    <div class="town-editor__section">
       <h2>Runtime Assets</h2>
       <div class="town-editor__grid" data-palette-section="asset"></div>
     </div>
@@ -54,11 +59,12 @@ root.innerHTML = `
 
 const viewport = root.querySelector<HTMLDivElement>('.town-editor__viewport');
 const generatedGrid = root.querySelector<HTMLDivElement>('[data-palette-section="generated"]');
+const markerGrid = root.querySelector<HTMLDivElement>('[data-palette-section="marker"]');
 const assetGrid = root.querySelector<HTMLDivElement>('[data-palette-section="asset"]');
 const searchInput = root.querySelector<HTMLInputElement>('.town-editor__search');
 const statusText = root.querySelector<HTMLDivElement>('.town-editor__status');
 
-if (!viewport || !generatedGrid || !assetGrid || !searchInput || !statusText) {
+if (!viewport || !generatedGrid || !markerGrid || !assetGrid || !searchInput || !statusText) {
   throw new Error('Missing town editor UI element.');
 }
 
@@ -77,8 +83,8 @@ scene.add(playground);
 const layoutDebugView = createVillageLayoutDebugView(viewport.clientWidth, viewport.clientHeight, {
   domElement: renderer.domElement,
 });
+layoutDebugView.setCameraMode('close');
 layoutDebugView.setActive(true);
-scene.add(layoutDebugView.object);
 
 const placementEditor = createPlacementEditor({
   sceneRoot: playground,
@@ -128,6 +134,7 @@ let disposed = false;
 
 const paletteItems = [
   ...getTownEditorGeneratedPaletteItems(),
+  ...getTownEditorMarkerPaletteItems(),
   ...getTownEditorAssetPaletteItems(),
 ];
 const paletteItemsByKey = new Map(paletteItems.map((item) => [`${item.type}:${item.id}`, item]));
@@ -301,7 +308,11 @@ const renderPalette = (): void => {
     }
 
     const card = createPaletteCard(item);
-    const target = item.type === 'generated' ? generatedGrid : assetGrid;
+    const target = item.type === 'generated'
+      ? generatedGrid
+      : item.type === 'marker'
+        ? markerGrid
+        : assetGrid;
     target.append(card);
   });
 };

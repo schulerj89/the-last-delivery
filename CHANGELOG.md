@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.50.0] - 2026-06-28
+
+### Added
+
+- Added a World Markers section to the standalone town editor shelf for dragging player spawn, post office, delivery board, and mailbox targets into the editor.
+- Added primitive placement previews for draggable marker objects so marker cards appear visibly when placed.
+
+### Changed
+
+- Made the standalone town editor default to the close 3D camera view.
+- Hid layout debug circles, route outlines, and object labels from the standalone builder canvas so spawn, board, mailbox, and district concepts can be introduced from editor panels instead.
+- Added smoke coverage for the standalone editor camera/default-helper behavior, marker palette, and marker primitive previews.
+
 ## [0.49.1] - 2026-06-28
 
 ### Fixed
