@@ -206,6 +206,12 @@ const handleDebugKeyDown = (event: KeyboardEvent): void => {
   }
 };
 
+const handleDebugKeyUp = (event: KeyboardEvent): void => {
+  if (layoutDebugView.isActive()) {
+    placementEditor.handleKeyUp(event);
+  }
+};
+
 const dispose = (): void => {
   if (isDisposed) {
     return;
@@ -220,6 +226,7 @@ const dispose = (): void => {
 
   window.removeEventListener('resize', handleResize);
   window.removeEventListener('keydown', handleDebugKeyDown);
+  window.removeEventListener('keyup', handleDebugKeyUp);
   player.dispose();
   followCamera.dispose();
   interaction.dispose();
@@ -243,6 +250,7 @@ const dispose = (): void => {
 
 window.addEventListener('resize', handleResize);
 window.addEventListener('keydown', handleDebugKeyDown);
+window.addEventListener('keyup', handleDebugKeyUp);
 
 const clock = new THREE.Clock();
 
@@ -257,6 +265,7 @@ const animate = (): void => {
 
   player.update(deltaSeconds);
   interaction.update(deltaSeconds);
+  placementEditor.update(deltaSeconds);
   const deliveryState = delivery.getState();
   deliveryBoardObjectiveMarker.visible = deliveryState.status !== 'delivery-accepted';
   deliveryTargetObjectiveMarker.visible = deliveryState.status === 'delivery-accepted'

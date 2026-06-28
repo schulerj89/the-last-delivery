@@ -8,16 +8,23 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Open the game in the browser.
 - Press `F2` to enter layout mode.
 - The placement editor appears in the lower-right HUD.
+- Press `F1` while in layout mode to toggle the editor help overlay.
 
 ## Move Objects
 
 - `Tab` / `Shift+Tab`: cycle editable objects.
 - Click near an object in the top-down layout view to select it.
+- Click and drag a selected object or object handle to move it across the X/Z ground plane.
 - `WASD` or arrow keys: nudge on the X/Z plane.
+- Hold `WASD` or arrow keys: continuously move the selected object using frame delta time.
+- Hold `Shift` while moving: faster movement.
+- Hold `Alt` while moving: finer movement.
 - `Q` / `E`: rotate around Y.
 - `Z` / `X`: scale multiplier down/up.
 - `[` / `]`: adjust Y offset.
 - `1` / `2` / `3`: change snap size.
+- `Ctrl+Z`: undo the last editor operation.
+- `Ctrl+Shift+Z` or `Ctrl+Y`: redo the last undone editor operation.
 - `Escape`: clear selection.
 
 Browser edits are temporary until exported and promoted.
@@ -28,6 +35,15 @@ Browser edits are temporary until exported and promoted.
 - `Ctrl+O`: reload the saved local draft.
 - `Ctrl+Shift+Delete`: clear the saved local draft and in-memory edits.
 - The same actions are available as buttons in the placement HUD.
+
+## Drag Placement
+
+- Dragging preserves the object's current Y position.
+- Dragging snaps X/Z to the current snap size.
+- The selected outline follows the live position.
+- The placement HUD shows the live coordinate values while dragging.
+
+Y offset is still adjusted with `[` and `]`.
 
 Local drafts are loaded on page reload in dev mode. They are not source-controlled and do not affect production builds by themselves.
 

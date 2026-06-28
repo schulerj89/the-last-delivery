@@ -131,6 +131,27 @@ canvas {
   font: 12px/1.35 Consolas, 'Courier New', monospace;
 }
 
+.placement-editor-help {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  box-sizing: border-box;
+  width: min(430px, calc(100vw - 24px));
+  padding: 10px 12px;
+  color: #f8f2dc;
+  background: rgb(16 19 24 / 88%);
+  border: 1px solid rgb(240 202 114 / 50%);
+  border-radius: 4px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 28%);
+  font: 12px/1.45 Consolas, 'Courier New', monospace;
+  white-space: pre-wrap;
+  pointer-events: none;
+}
+
+.placement-editor-help[hidden] {
+  display: none;
+}
+
 .interaction-prompt,
 .interaction-message {
   position: absolute;

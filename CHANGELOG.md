@@ -2,6 +2,21 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.33.0] - 2026-06-28
+
+### Added
+
+- Added delta-time hold-to-move placement editing for WASD and arrow keys while F2 layout mode is active.
+- Added placement editor speed modifiers: `Shift` for faster movement and `Alt` for finer movement.
+- Added ground-plane mouse drag placement with snap-aware X/Z movement and live HUD coordinate feedback.
+- Added placement editor undo/redo with capped history via `Ctrl+Z`, `Ctrl+Shift+Z`, and `Ctrl+Y`.
+- Added an F1 in-game placement editor help overlay.
+- Added smoke checks for editor movement settings, modifier speeds, drag safety, stable serialization after drag/nudge edits, and undo history limits.
+
+### Changed
+
+- Updated placement editor docs with hold movement, drag placement, modifier speeds, undo/redo, and F1 help controls.
+
 ## [0.32.0] - 2026-06-28
 
 ### Added

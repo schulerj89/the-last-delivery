@@ -70,11 +70,14 @@ import {
   type LayoutOverrideDocument,
 } from '../src/world/layoutOverrides';
 import {
+  capPlacementHistoryLength,
   createLayoutOverrideDocumentFromPlacementDrafts,
+  createDraggedPlacementPosition,
   createEditablePlacementObjects,
   createPlacementTransformDraft,
   getEditablePlacementObjectById,
   getPlacementEditorSnapValues,
+  getPlacementEditorMoveSpeed,
   placementEditorConfig,
   serializePlacementTransform,
   serializePlacementTransforms,
@@ -816,18 +819,51 @@ const runPlacementEditorSmoke = (): void => {
   assert(snapValues.every((value) => value > 0), 'Placement editor snap values should be positive.');
   assert(placementEditorConfig.defaultSnapIndex >= 0, 'Placement editor default snap index should be valid.');
   assert(placementEditorConfig.defaultSnapIndex < snapValues.length, 'Placement editor default snap index should be in range.');
+  assert(placementEditorConfig.continuousMoveBaseSpeed > 0, 'Placement editor hold-move speed should be positive.');
+  assert(placementEditorConfig.snapSpeedReference > 0, 'Placement editor snap speed reference should be positive.');
+  assert(placementEditorConfig.fastMoveMultiplier > 1, 'Placement editor fast modifier should increase movement speed.');
+  assert(placementEditorConfig.fineMoveMultiplier > 0 && placementEditorConfig.fineMoveMultiplier < 1, 'Placement editor fine modifier should reduce movement speed.');
+  assert(placementEditorConfig.undoHistoryLimit >= 10, 'Placement editor undo history should keep a useful number of operations.');
+
+  const baseMoveSpeed = getPlacementEditorMoveSpeed(0.25);
+  const fastMoveSpeed = getPlacementEditorMoveSpeed(0.25, { shiftKey: true });
+  const fineMoveSpeed = getPlacementEditorMoveSpeed(0.25, { altKey: true });
+
+  assert(baseMoveSpeed > 0, 'Placement editor move speed should be positive.');
+  assert(fastMoveSpeed > baseMoveSpeed, 'Shift movement should be faster than base movement.');
+  assert(fineMoveSpeed < baseMoveSpeed, 'Alt movement should be finer than base movement.');
+  assert(
+    capPlacementHistoryLength(Array.from({ length: placementEditorConfig.undoHistoryLimit + 5 }, (_, index) => index)).length
+      === placementEditorConfig.undoHistoryLimit,
+    'Placement editor undo history should cap at the configured safe size.',
+  );
 
   if (!deliveryBoard) {
     throw new Error('Missing delivery board editable object.');
   }
 
   const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
-  draft.position = [draft.position[0] + 0.25, draft.position[1], draft.position[2] - 0.5];
+  assert(
+    createDraggedPlacementPosition(null, new Vector3(1, 0, 1), snapValues[0]) === null,
+    'Placement editor drag math should handle missing selection safely.',
+  );
+
+  const draggedPosition = createDraggedPlacementPosition(
+    draft,
+    new Vector3(draft.position[0] + 0.32, 0, draft.position[2] - 0.46),
+    0.25,
+  );
+
+  assert(draggedPosition !== null, 'Placement editor drag math should produce a position for selected drafts.');
+  draft.position = draggedPosition;
+  draft.position = [draft.position[0] + 0.25, draft.position[1], draft.position[2] - 0.25];
   draft.rotationY += Math.PI / 4;
   draft.scaleMultiplier = 1.1;
   draft.yOffset = 0.25;
 
   const serialized = serializePlacementTransform(deliveryBoard.worldObject, draft);
+  const serializedAgain = serializePlacementTransform(deliveryBoard.worldObject, draft);
+  assert(serialized === serializedAgain, 'Placement transform serialization should remain stable after drag and nudge edits.');
   assert(serialized.includes("id: 'delivery-board'"), 'Placement transform serialization should include the object id.');
   assert(serialized.includes('position:'), 'Placement transform serialization should include position.');
   assert(serialized.includes('rotation:'), 'Placement transform serialization should include rotation.');

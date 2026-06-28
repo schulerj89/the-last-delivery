@@ -16,6 +16,14 @@ export const placementEditorConfig = {
   rotationStepRadians: THREE.MathUtils.degToRad(15),
   scaleStep: 0.05,
   selectionRadiusPadding: 0.8,
+  continuousMoveBaseSpeed: 2.25,
+  snapSpeedReference: 0.25,
+  minSnapSpeedMultiplier: 0.35,
+  maxSnapSpeedMultiplier: 2.5,
+  fastMoveMultiplier: 3,
+  fineMoveMultiplier: 0.25,
+  dragSnapEnabled: true,
+  undoHistoryLimit: 30,
 } as const;
 
 export interface EditablePlacementObject {
@@ -36,7 +44,9 @@ export interface PlacementEditor {
   object: THREE.Group;
   isActive(): boolean;
   setActive(active: boolean): void;
+  update(deltaSeconds: number): void;
   handleKeyDown(event: KeyboardEvent): boolean;
+  handleKeyUp(event: KeyboardEvent): boolean;
   getSelectedObjectId(): string | null;
   dispose(): void;
 }
@@ -56,6 +66,18 @@ interface SceneObjectBaseline {
   rotation: THREE.Euler;
   scale: THREE.Vector3;
 }
+
+interface MoveModifiers {
+  shiftKey?: boolean;
+  altKey?: boolean;
+}
+
+interface DragOffset {
+  x: number;
+  z: number;
+}
+
+type PlacementDraftSnapshot = Array<[string, PlacementTransformDraft]>;
 
 const formatNumber = (value: number): string => (
   Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2)
@@ -88,6 +110,68 @@ export const getEditablePlacementObjectById = (
   editableObjects: readonly EditablePlacementObject[] = createEditablePlacementObjects(),
 ): EditablePlacementObject | null => (
   editableObjects.find((object) => object.id === objectId) ?? null
+);
+
+export const getPlacementEditorMoveSpeed = (
+  snapSize: number,
+  modifiers: MoveModifiers = {},
+): number => {
+  const safeSnapSize = Number.isFinite(snapSize) && snapSize > 0
+    ? snapSize
+    : placementEditorConfig.snapSpeedReference;
+  const snapMultiplier = THREE.MathUtils.clamp(
+    safeSnapSize / placementEditorConfig.snapSpeedReference,
+    placementEditorConfig.minSnapSpeedMultiplier,
+    placementEditorConfig.maxSnapSpeedMultiplier,
+  );
+  const modifierMultiplier = (modifiers.shiftKey ? placementEditorConfig.fastMoveMultiplier : 1)
+    * (modifiers.altKey ? placementEditorConfig.fineMoveMultiplier : 1);
+
+  return placementEditorConfig.continuousMoveBaseSpeed * snapMultiplier * modifierMultiplier;
+};
+
+export const snapPlacementCoordinate = (value: number, snapSize: number): number => {
+  if (!Number.isFinite(snapSize) || snapSize <= 0) {
+    return value;
+  }
+
+  return Math.round(value / snapSize) * snapSize;
+};
+
+export const createDraggedPlacementPosition = (
+  draft: PlacementTransformDraft | null,
+  groundPoint: THREE.Vector3,
+  snapSize: number,
+  dragOffset: DragOffset = { x: 0, z: 0 },
+  snapEnabled = placementEditorConfig.dragSnapEnabled,
+): THREE.Vector3Tuple | null => {
+  if (!draft) {
+    return null;
+  }
+
+  const x = groundPoint.x + dragOffset.x;
+  const z = groundPoint.z + dragOffset.z;
+
+  return [
+    snapEnabled ? snapPlacementCoordinate(x, snapSize) : x,
+    draft.position[1],
+    snapEnabled ? snapPlacementCoordinate(z, snapSize) : z,
+  ];
+};
+
+export const clonePlacementDraft = (draft: PlacementTransformDraft): PlacementTransformDraft => ({
+  id: draft.id,
+  position: [...draft.position],
+  rotationY: draft.rotationY,
+  scaleMultiplier: draft.scaleMultiplier,
+  yOffset: draft.yOffset,
+});
+
+export const capPlacementHistoryLength = <T>(
+  history: readonly T[],
+  limit = placementEditorConfig.undoHistoryLimit,
+): T[] => (
+  history.slice(Math.max(0, history.length - Math.max(0, limit)))
 );
 
 export const createPlacementTransformDraft = (
@@ -253,6 +337,30 @@ const copyText = async (text: string): Promise<boolean> => {
   return true;
 };
 
+const movementKeys = new Set(['w', 'a', 's', 'd', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+
+const isMovementKey = (key: string): boolean => movementKeys.has(key);
+
+const getMovementKeyVector = (key: string): THREE.Vector2 => {
+  if (key === 'w' || key === 'ArrowUp') {
+    return new THREE.Vector2(0, -1);
+  }
+
+  if (key === 's' || key === 'ArrowDown') {
+    return new THREE.Vector2(0, 1);
+  }
+
+  if (key === 'a' || key === 'ArrowLeft') {
+    return new THREE.Vector2(-1, 0);
+  }
+
+  if (key === 'd' || key === 'ArrowRight') {
+    return new THREE.Vector2(1, 0);
+  }
+
+  return new THREE.Vector2(0, 0);
+};
+
 const isChangedDraft = (
   object: WorldObjectDefinition,
   draft: PlacementTransformDraft,
@@ -328,6 +436,7 @@ export const createPlacementEditor = ({
   const pointer = new THREE.Vector2();
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const hitPoint = new THREE.Vector3();
+  const heldMoveVector = new THREE.Vector2();
   const overlay = document.createElement('div');
   const summary = document.createElement('pre');
   const controls = document.createElement('div');
@@ -337,8 +446,19 @@ export const createPlacementEditor = ({
   const copyJsonButton = document.createElement('button');
   const importJsonButton = document.createElement('button');
   const importTextArea = document.createElement('textarea');
+  const helpOverlay = document.createElement('div');
+  const heldKeys = new Set<string>();
+  const undoStack: PlacementDraftSnapshot[] = [];
+  const redoStack: PlacementDraftSnapshot[] = [];
+  let dragState: {
+    pointerId: number;
+    objectId: string;
+    offset: DragOffset;
+  } | null = null;
   let selectedIndex = -1;
   let active = false;
+  let helpVisible = false;
+  let continuousMoveHistoryPushed = false;
   let snapIndex = placementEditorConfig.defaultSnapIndex;
   let status = draftPersistenceEnabled
     ? 'Tab selects editable objects. Drafts can be saved locally or copied as JSON.'
@@ -361,9 +481,23 @@ export const createPlacementEditor = ({
   importTextArea.className = 'placement-editor-hud__import';
   importTextArea.placeholder = 'Paste layout override JSON here.';
   importTextArea.spellcheck = false;
+  helpOverlay.className = 'placement-editor-help';
+  helpOverlay.hidden = true;
+  helpOverlay.textContent = [
+    'Placement Editor Help',
+    'F2 layout mode  F1 help',
+    'Tab / Shift+Tab select  Click selects  Drag moves on ground',
+    'WASD / arrows hold to move  Shift faster  Alt finer',
+    'Q / E rotate  Z / X scale  [ / ] Y offset',
+    '1 / 2 / 3 snap size',
+    'Ctrl+Z undo  Ctrl+Shift+Z or Ctrl+Y redo',
+    'Ctrl+S save draft  Ctrl+O reload  Ctrl+Shift+Delete clear',
+    'C copy selected TS  Shift+C copy JSON  Paste JSON then Import JSON',
+  ].join('\n');
   controls.append(saveDraftButton, loadDraftButton, clearDraftButton, copyJsonButton, importJsonButton);
   overlay.append(summary, controls, importTextArea);
   parent.append(overlay);
+  parent.append(helpOverlay);
 
   const getSelectedObject = (): EditablePlacementObject | null => (
     selectedIndex >= 0 ? editableObjects[selectedIndex] ?? null : null
@@ -408,6 +542,74 @@ export const createPlacementEditor = ({
       baseline.object.rotation.copy(baseline.rotation);
       baseline.object.scale.copy(baseline.scale);
     });
+  };
+
+  const createDraftSnapshot = (): PlacementDraftSnapshot => (
+    [...draftsByObjectId.entries()].map(([objectId, draft]) => [objectId, clonePlacementDraft(draft)])
+  );
+
+  const getSnapshotKey = (snapshot: PlacementDraftSnapshot): string => JSON.stringify(snapshot);
+
+  const pushUndoSnapshot = (): void => {
+    const snapshot = createDraftSnapshot();
+    const lastSnapshot = undoStack[undoStack.length - 1];
+
+    if (lastSnapshot && getSnapshotKey(lastSnapshot) === getSnapshotKey(snapshot)) {
+      redoStack.length = 0;
+      return;
+    }
+
+    undoStack.push(snapshot);
+    const cappedUndoStack = capPlacementHistoryLength(undoStack);
+    undoStack.splice(0, undoStack.length, ...cappedUndoStack);
+    redoStack.length = 0;
+  };
+
+  const restoreDraftSnapshot = (
+    snapshot: PlacementDraftSnapshot,
+    nextStatus: string,
+  ): void => {
+    draftsByObjectId.clear();
+    snapshot.forEach(([objectId, draft]) => {
+      draftsByObjectId.set(objectId, clonePlacementDraft(draft));
+    });
+    resetSceneObjects();
+
+    if (active) {
+      applyAllDraftsToScene();
+    }
+
+    status = nextStatus;
+    updateMarker();
+    updateHud();
+  };
+
+  const undoLastEdit = (): void => {
+    const previousSnapshot = undoStack.pop();
+
+    if (!previousSnapshot) {
+      status = 'Nothing to undo.';
+      updateHud();
+      return;
+    }
+
+    redoStack.push(createDraftSnapshot());
+    restoreDraftSnapshot(previousSnapshot, 'Undid placement edit.');
+  };
+
+  const redoLastEdit = (): void => {
+    const nextSnapshot = redoStack.pop();
+
+    if (!nextSnapshot) {
+      status = 'Nothing to redo.';
+      updateHud();
+      return;
+    }
+
+    undoStack.push(createDraftSnapshot());
+    const cappedUndoStack = capPlacementHistoryLength(undoStack);
+    undoStack.splice(0, undoStack.length, ...cappedUndoStack);
+    restoreDraftSnapshot(nextSnapshot, 'Redid placement edit.');
   };
 
   const updateMarker = (): void => {
@@ -477,7 +679,12 @@ export const createPlacementEditor = ({
   const applyOverrideDocumentToDrafts = (
     document: LayoutOverrideDocument,
     nextStatus: string,
+    recordHistory = true,
   ): void => {
+    if (recordHistory) {
+      pushUndoSnapshot();
+    }
+
     draftsByObjectId.clear();
     resetSceneObjects();
 
@@ -578,7 +785,11 @@ export const createPlacementEditor = ({
     const document = parseEditorJson(storedDraft);
 
     if (document) {
-      applyOverrideDocumentToDrafts(document, `Loaded ${document.overrides.length} saved layout override(s).`);
+      applyOverrideDocumentToDrafts(
+        document,
+        `Loaded ${document.overrides.length} saved layout override(s).`,
+        !silentMissing,
+      );
     }
   };
 
@@ -587,6 +798,7 @@ export const createPlacementEditor = ({
       window.localStorage.removeItem(placementEditorConfig.draftStorageKey);
     }
 
+    pushUndoSnapshot();
     draftsByObjectId.clear();
     resetSceneObjects();
     status = 'Cleared local layout draft and temporary edits.';
@@ -610,10 +822,70 @@ export const createPlacementEditor = ({
     }
   };
 
+  const getCurrentSnap = (): number => (
+    placementEditorConfig.snapValues[snapIndex] ?? placementEditorConfig.snapValues[0]
+  );
+
+  const hasHeldMovementKeys = (): boolean => (
+    [...heldKeys].some((key) => isMovementKey(key))
+  );
+
+  const updateContinuousMovement = (deltaSeconds: number): void => {
+    if (!active || !isLayoutModeActive() || dragState) {
+      continuousMoveHistoryPushed = false;
+      return;
+    }
+
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (!selectedObject || !draft) {
+      continuousMoveHistoryPushed = false;
+      return;
+    }
+
+    heldMoveVector.set(0, 0);
+
+    heldKeys.forEach((key) => {
+      if (!isMovementKey(key)) {
+        return;
+      }
+
+      heldMoveVector.add(getMovementKeyVector(key));
+    });
+
+    if (heldMoveVector.lengthSq() === 0) {
+      continuousMoveHistoryPushed = false;
+      return;
+    }
+
+    if (!continuousMoveHistoryPushed) {
+      pushUndoSnapshot();
+      continuousMoveHistoryPushed = true;
+    }
+
+    heldMoveVector.normalize();
+    const snap = getCurrentSnap();
+    const speed = getPlacementEditorMoveSpeed(snap, {
+      shiftKey: heldKeys.has('Shift'),
+      altKey: heldKeys.has('Alt'),
+    });
+    const distance = speed * Math.max(0, deltaSeconds);
+
+    draft.position = [
+      draft.position[0] + heldMoveVector.x * distance,
+      draft.position[1],
+      draft.position[2] + heldMoveVector.y * distance,
+    ];
+    status = `Moving ${selectedObject.id}.`;
+    applyDraftToScene(selectedObject);
+    updateHud();
+  };
+
   const updateHud = (): void => {
     const selectedObject = getSelectedObject();
     const draft = getSelectedDraft();
-    const snap = placementEditorConfig.snapValues[snapIndex] ?? placementEditorConfig.snapValues[0];
+    const snap = getCurrentSnap();
 
     overlay.hidden = !active;
 
@@ -673,7 +945,7 @@ export const createPlacementEditor = ({
     updateHud();
   };
 
-  const selectNearestObject = (point: THREE.Vector3): void => {
+  const getNearestObjectIndex = (point: THREE.Vector3): number => {
     let nearestIndex = -1;
     let nearestDistanceSq = Number.POSITIVE_INFINITY;
 
@@ -689,12 +961,10 @@ export const createPlacementEditor = ({
       }
     });
 
-    if (nearestIndex >= 0) {
-      selectIndex(nearestIndex);
-    }
+    return nearestIndex;
   };
 
-  const nudgeSelected = (dx: number, dz: number): void => {
+  const nudgeSelected = (dx: number, dz: number, recordHistory = true): void => {
     const selectedObject = getSelectedObject();
     const draft = getSelectedDraft();
 
@@ -702,6 +972,10 @@ export const createPlacementEditor = ({
       status = 'No selected object.';
       updateHud();
       return;
+    }
+
+    if (recordHistory) {
+      pushUndoSnapshot();
     }
 
     draft.position = [draft.position[0] + dx, draft.position[1], draft.position[2] + dz];
@@ -720,6 +994,7 @@ export const createPlacementEditor = ({
       return;
     }
 
+    pushUndoSnapshot();
     draft.rotationY += delta;
     status = `Rotated ${selectedObject.id}.`;
     applyDraftToScene(selectedObject);
@@ -736,6 +1011,7 @@ export const createPlacementEditor = ({
       return;
     }
 
+    pushUndoSnapshot();
     draft.scaleMultiplier = Math.max(0.05, draft.scaleMultiplier + delta);
     status = `Scaled ${selectedObject.id}.`;
     applyDraftToScene(selectedObject);
@@ -752,6 +1028,7 @@ export const createPlacementEditor = ({
       return;
     }
 
+    pushUndoSnapshot();
     draft.yOffset += delta;
     status = `Adjusted Y offset for ${selectedObject.id}.`;
     applyDraftToScene(selectedObject);
@@ -791,20 +1068,98 @@ export const createPlacementEditor = ({
       });
   };
 
-  const handlePointerDown = (event: PointerEvent): void => {
-    if (!active || !isLayoutModeActive() || event.button !== 0) {
-      return;
-    }
-
+  const updateHitPointFromPointer = (event: PointerEvent): boolean => {
     const rect = domElement.getBoundingClientRect();
     pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
 
-    if (raycaster.ray.intersectPlane(groundPlane, hitPoint)) {
-      selectNearestObject(hitPoint);
-      event.preventDefault();
+    return raycaster.ray.intersectPlane(groundPlane, hitPoint) !== null;
+  };
+
+  const updateDragFromPointer = (event: PointerEvent): void => {
+    if (!dragState || event.pointerId !== dragState.pointerId || !updateHitPointFromPointer(event)) {
+      return;
     }
+
+    const editableObject = editableObjectsById.get(dragState.objectId);
+    const draft = draftsByObjectId.get(dragState.objectId);
+    const nextPosition = createDraggedPlacementPosition(
+      draft ?? null,
+      hitPoint,
+      getCurrentSnap(),
+      dragState.offset,
+    );
+
+    if (!editableObject || !draft || !nextPosition) {
+      status = 'Drag ignored: missing selected object.';
+      updateHud();
+      return;
+    }
+
+    draft.position = nextPosition;
+    status = `Dragging ${editableObject.id}.`;
+    applyDraftToScene(editableObject);
+    updateHud();
+    event.preventDefault();
+  };
+
+  const stopDragging = (event: PointerEvent): void => {
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+      return;
+    }
+
+    const objectId = dragState.objectId;
+    dragState = null;
+    continuousMoveHistoryPushed = false;
+
+    if (typeof domElement.releasePointerCapture === 'function') {
+      try {
+        domElement.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture can already be released by the browser.
+      }
+    }
+
+    status = `Dropped ${objectId}.`;
+    updateHud();
+    event.preventDefault();
+  };
+
+  const handlePointerDown = (event: PointerEvent): void => {
+    if (!active || !isLayoutModeActive() || event.button !== 0 || !updateHitPointFromPointer(event)) {
+      return;
+    }
+
+    const nearestIndex = getNearestObjectIndex(hitPoint);
+
+    if (nearestIndex < 0) {
+      return;
+    }
+
+    selectIndex(nearestIndex);
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (selectedObject && draft) {
+      pushUndoSnapshot();
+      dragState = {
+        pointerId: event.pointerId,
+        objectId: selectedObject.id,
+        offset: {
+          x: draft.position[0] - hitPoint.x,
+          z: draft.position[2] - hitPoint.z,
+        },
+      };
+      status = `Dragging ${selectedObject.id}.`;
+      updateHud();
+
+      if (typeof domElement.setPointerCapture === 'function') {
+        domElement.setPointerCapture(event.pointerId);
+      }
+    }
+
+    event.preventDefault();
   };
 
   const handleLoadDraftButtonClick = (): void => {
@@ -817,6 +1172,9 @@ export const createPlacementEditor = ({
   copyJsonButton.addEventListener('click', copyAll);
   importJsonButton.addEventListener('click', importDraftFromPanel);
   domElement.addEventListener('pointerdown', handlePointerDown);
+  domElement.addEventListener('pointermove', updateDragFromPointer);
+  domElement.addEventListener('pointerup', stopDragging);
+  domElement.addEventListener('pointercancel', stopDragging);
   if (draftPersistenceEnabled) {
     loadDraftFromStorage(true);
   }
@@ -834,6 +1192,10 @@ export const createPlacementEditor = ({
 
       active = nextActive;
       marker.visible = active && selectedIndex >= 0;
+      heldKeys.clear();
+      dragState = null;
+      continuousMoveHistoryPushed = false;
+      helpOverlay.hidden = !(active && helpVisible);
 
       if (active) {
         applyAllDraftsToScene();
@@ -843,6 +1205,9 @@ export const createPlacementEditor = ({
 
       updateMarker();
       updateHud();
+    },
+    update(deltaSeconds) {
+      updateContinuousMovement(deltaSeconds);
     },
     handleKeyDown(event) {
       if (!active || !isLayoutModeActive()) {
@@ -871,11 +1236,42 @@ export const createPlacementEditor = ({
         return true;
       }
 
+      if (isTextInputTarget && event.ctrlKey && (key === 'z' || key === 'y')) {
+        return false;
+      }
+
+      if (event.ctrlKey && key === 'z') {
+        if (event.shiftKey) {
+          redoLastEdit();
+        } else {
+          undoLastEdit();
+        }
+        event.preventDefault();
+        return true;
+      }
+
+      if (event.ctrlKey && key === 'y') {
+        redoLastEdit();
+        event.preventDefault();
+        return true;
+      }
+
       if (isTextInputTarget) {
         return false;
       }
 
+      heldKeys.add(key);
+
       const snap = placementEditorConfig.snapValues[snapIndex] ?? placementEditorConfig.snapValues[0];
+
+      if (key === 'F1') {
+        helpVisible = !helpVisible;
+        helpOverlay.hidden = !helpVisible;
+        status = helpVisible ? 'Editor help shown.' : 'Editor help hidden.';
+        updateHud();
+        event.preventDefault();
+        return true;
+      }
 
       if (key === 'Tab') {
         selectIndex(selectedIndex + (event.shiftKey ? -1 : 1));
@@ -900,6 +1296,18 @@ export const createPlacementEditor = ({
         return true;
       }
 
+      if (isMovementKey(key)) {
+        if (!continuousMoveHistoryPushed) {
+          pushUndoSnapshot();
+          continuousMoveHistoryPushed = true;
+        }
+
+        const direction = getMovementKeyVector(key);
+        nudgeSelected(direction.x * snap, direction.y * snap, false);
+        event.preventDefault();
+        return true;
+      }
+
       if (key === 'c') {
         if (event.shiftKey) {
           copyAll();
@@ -910,15 +1318,7 @@ export const createPlacementEditor = ({
         return true;
       }
 
-      if (key === 'ArrowUp' || key === 'w') {
-        nudgeSelected(0, -snap);
-      } else if (key === 'ArrowDown' || key === 's') {
-        nudgeSelected(0, snap);
-      } else if (key === 'ArrowLeft' || key === 'a') {
-        nudgeSelected(-snap, 0);
-      } else if (key === 'ArrowRight' || key === 'd') {
-        nudgeSelected(snap, 0);
-      } else if (key === 'q') {
+      if (key === 'q') {
         rotateSelected(-placementEditorConfig.rotationStepRadians);
       } else if (key === 'e') {
         rotateSelected(placementEditorConfig.rotationStepRadians);
@@ -937,6 +1337,20 @@ export const createPlacementEditor = ({
       event.preventDefault();
       return true;
     },
+    handleKeyUp(event) {
+      if (!active || !isLayoutModeActive()) {
+        return false;
+      }
+
+      const key = getDraftKey(event);
+      heldKeys.delete(key);
+
+      if (!hasHeldMovementKeys()) {
+        continuousMoveHistoryPushed = false;
+      }
+
+      return isMovementKey(key) || key === 'Shift' || key === 'Alt';
+    },
     getSelectedObjectId() {
       return getSelectedObject()?.id ?? null;
     },
@@ -948,7 +1362,11 @@ export const createPlacementEditor = ({
       copyJsonButton.removeEventListener('click', copyAll);
       importJsonButton.removeEventListener('click', importDraftFromPanel);
       domElement.removeEventListener('pointerdown', handlePointerDown);
+      domElement.removeEventListener('pointermove', updateDragFromPointer);
+      domElement.removeEventListener('pointerup', stopDragging);
+      domElement.removeEventListener('pointercancel', stopDragging);
       overlay.remove();
+      helpOverlay.remove();
       marker.parent?.remove(marker);
       disposeObjectResources(marker);
     },
