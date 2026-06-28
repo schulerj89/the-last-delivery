@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { canLoadGltfAssets, loadModelInstance } from '../game/assets';
+import { canLoadGltfAssets, createModelInstance } from '../game/assets';
 import type { WorldObjectDefinition } from './types';
 import {
   deliveryBoardObject,
@@ -165,13 +165,18 @@ const tryApplyAssetRender = (
     return;
   }
 
-  loadModelInstance(assetId)
-    .then((asset) => {
+  createModelInstance(assetId)
+    .then((assetInstance) => {
+      if (!group.parent) {
+        assetInstance.dispose();
+        return;
+      }
+
       fallbackObjects.forEach((fallbackObject) => {
         group.remove(fallbackObject);
         disposeGeometryOnly(fallbackObject);
       });
-      group.add(fitAssetInstanceToObject(asset, object));
+      group.add(fitAssetInstanceToObject(assetInstance.object, object));
     })
     .catch(() => undefined);
 };

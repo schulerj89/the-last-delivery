@@ -14,4 +14,5 @@ export type {
   PerformanceMonitorOptions,
   PerformanceSnapshot,
   RendererInfoProvider,
+  RuntimeAssetStats,
 } from './performanceMonitor';

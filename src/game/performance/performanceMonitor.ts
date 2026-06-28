@@ -25,6 +25,12 @@ export interface RendererInfoProvider {
   };
 }
 
+export interface RuntimeAssetStats {
+  loadedAssetIds: string[];
+  sceneInstanceCountsByAssetId: Record<string, number>;
+  totalSceneInstances: number;
+}
+
 export interface PerformanceSnapshot {
   currentFps: number;
   averageFps: number;
@@ -35,6 +41,9 @@ export interface PerformanceSnapshot {
   triangles: number;
   geometries: number;
   textures: number;
+  loadedAssetIds: string[];
+  sceneInstanceCountsByAssetId: Record<string, number>;
+  totalSceneInstances: number;
 }
 
 export interface PerformanceMonitorOptions {
@@ -42,7 +51,7 @@ export interface PerformanceMonitorOptions {
 }
 
 export interface PerformanceMonitor {
-  update(deltaSeconds: number, renderer: RendererInfoProvider): PerformanceSnapshot;
+  update(deltaSeconds: number, renderer: RendererInfoProvider, assetStats?: RuntimeAssetStats): PerformanceSnapshot;
   getSnapshot(): PerformanceSnapshot;
   dispose(): void;
 }
@@ -71,6 +80,9 @@ const emptySnapshot: PerformanceSnapshot = {
   triangles: 0,
   geometries: 0,
   textures: 0,
+  loadedAssetIds: [],
+  sceneInstanceCountsByAssetId: {},
+  totalSceneInstances: 0,
 };
 
 const sanitizePositiveNumber = (value: number, fallback: number): number => (
@@ -118,6 +130,7 @@ export const createPerformanceSnapshot = (
   renderer?: RendererInfoProvider,
   averageFrameTimeMs = frameTimeMs,
   worstFrameTimeMs = frameTimeMs,
+  assetStats?: RuntimeAssetStats,
 ): PerformanceSnapshot => {
   const safeFrameTimeMs = Math.max(0, Number.isFinite(frameTimeMs) ? frameTimeMs : 0);
   const safeAverageFrameTimeMs = Math.max(0, Number.isFinite(averageFrameTimeMs) ? averageFrameTimeMs : safeFrameTimeMs);
@@ -133,6 +146,11 @@ export const createPerformanceSnapshot = (
     triangles: renderer?.info.render.triangles ?? 0,
     geometries: renderer?.info.memory.geometries ?? 0,
     textures: renderer?.info.memory.textures ?? 0,
+    loadedAssetIds: [...(assetStats?.loadedAssetIds ?? [])],
+    sceneInstanceCountsByAssetId: {
+      ...(assetStats?.sceneInstanceCountsByAssetId ?? {}),
+    },
+    totalSceneInstances: assetStats?.totalSceneInstances ?? 0,
   };
 };
 
@@ -187,7 +205,7 @@ export const createPerformanceMonitor = ({
   let snapshot = { ...emptySnapshot };
 
   return {
-    update(deltaSeconds, renderer) {
+    update(deltaSeconds, renderer, assetStats) {
       const safeDeltaSeconds = Math.max(0, Number.isFinite(deltaSeconds) ? deltaSeconds : 0);
       const frameTimeMs = safeDeltaSeconds * 1_000;
       const previousFrameTimeMs = frameSamples[sampleIndex] ?? 0;
@@ -207,6 +225,7 @@ export const createPerformanceMonitor = ({
         renderer,
         frameTimeTotalMs / sampleCount,
         getWorstFrameTime(frameSamples, sampleCount),
+        assetStats,
       );
 
       if (config.debugWarningsEnabled) {

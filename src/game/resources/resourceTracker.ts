@@ -100,6 +100,25 @@ const disposeObjectResources = (
   });
 };
 
+const runObjectCleanupCallbacks = (object: THREE.Object3D): void => {
+  const cleanupCallbacks: Array<() => void> = [];
+
+  object.traverse((child) => {
+    const cleanup = child.userData.disposeAssetInstance;
+
+    if (typeof cleanup === 'function') {
+      cleanupCallbacks.push(() => {
+        cleanup();
+        delete child.userData.disposeAssetInstance;
+      });
+    }
+  });
+
+  cleanupCallbacks.forEach((cleanup) => {
+    cleanup();
+  });
+};
+
 export const createResourceTracker = (): ResourceTracker => {
   const cleanupCallbacks = new Set<() => void>();
   let disposed = false;
@@ -119,6 +138,7 @@ export const createResourceTracker = (): ResourceTracker => {
   return {
     trackObject3D(object, options = {}) {
       addCleanup(() => {
+        runObjectCleanupCallbacks(object);
         object.parent?.remove(object);
 
         if (options.disposeResources) {

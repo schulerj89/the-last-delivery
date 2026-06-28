@@ -1,5 +1,6 @@
 import {
   BoxGeometry,
+  Group,
   Mesh,
   MeshBasicMaterial,
   Object3D,
@@ -8,10 +9,11 @@ import {
 } from 'three';
 import {
   assetRegistry,
+  createAssetCache,
   getSelectedNatureAssets,
   isKnownAssetId,
   selectedNatureAssetIds,
-} from '../src/game/assets/assetRegistry';
+} from '../src/game/assets';
 import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
@@ -114,6 +116,85 @@ const runAssetRegistrySmoke = (): void => {
   assert(selectedNatureAssets.length === 3, 'Exactly three selected nature assets should be registered for this pass.');
   assert(selectedNatureBytes > 0, 'Selected nature runtime asset size should be measurable.');
   console.info(`Selected nature runtime assets: ${selectedNatureAssets.length} files, ${formatBytes(selectedNatureBytes)}.`);
+};
+
+const runAssetCacheSmoke = async (): Promise<void> => {
+  let loadCount = 0;
+  const log = {
+    info: () => undefined,
+    warn: () => undefined,
+  };
+  const cache = createAssetCache({
+    canLoad: () => true,
+    log,
+    loadSource: async (asset) => {
+      loadCount += 1;
+      const group = new Group();
+      group.name = `test-source:${asset.id}`;
+      return group;
+    },
+  });
+  const firstEntryPromise = cache.loadAssetEntry('crate-box-001');
+  const secondEntryPromise = cache.loadAssetEntry('crate-box-001');
+
+  assert(firstEntryPromise === secondEntryPromise, 'Asset cache should return a stable entry promise for repeated ids.');
+
+  const firstEntry = await firstEntryPromise;
+  const secondEntry = await secondEntryPromise;
+
+  assert(firstEntry === secondEntry, 'Repeated cache loads should resolve to the same cached asset entry.');
+  assert(loadCount === 1, 'Repeated asset loads should not fetch or parse the same source twice.');
+  assert(cache.getRuntimeStats().loadedAssetIds.includes('crate-box-001'), 'Loaded asset ids should include the cached asset.');
+
+  const firstInstance = await cache.createInstance('crate-box-001');
+  const secondInstance = await cache.createInstance('crate-box-001');
+
+  assert(firstInstance.object !== secondInstance.object, 'Asset cache should create separate world instance objects.');
+  assert(cache.getInstanceCount('crate-box-001') === 2, 'Asset instance count should track active scene instances.');
+  assert(cache.getRuntimeStats().sceneInstanceCountsByAssetId['crate-box-001'] === 2, 'Runtime stats should expose scene instances by asset id.');
+  assert(!cache.disposeCachedAsset('crate-box-001'), 'Cached source asset should not dispose while instances are active.');
+
+  const tracker = createResourceTracker();
+  const trackedRoot = tracker.trackObject3D(new Object3D());
+  trackedRoot.add(firstInstance.object);
+  tracker.dispose();
+
+  assert(firstInstance.isDisposed(), 'Tracked scene-root disposal should dispose attached asset instances.');
+  assert(cache.getInstanceCount('crate-box-001') === 1, 'Tracked scene-root disposal should release one asset instance count.');
+
+  firstInstance.dispose();
+  firstInstance.dispose();
+  secondInstance.dispose();
+  secondInstance.dispose();
+
+  assert(cache.getInstanceCount('crate-box-001') === 0, 'Asset instance count should not go below zero.');
+  assert(cache.getRuntimeStats().sceneInstanceCountsByAssetId['crate-box-001'] === 0, 'Runtime stats should keep zero count for loaded assets.');
+  assert(cache.disposeCachedAsset('crate-box-001'), 'Cached source asset should dispose after all instances are gone.');
+  assert(!cache.getRuntimeStats().loadedAssetIds.includes('crate-box-001'), 'Disposed cached source should leave loaded asset ids.');
+
+  let invalidFailedSafely = false;
+  try {
+    await cache.loadAssetEntry('missing-asset');
+  } catch {
+    invalidFailedSafely = true;
+  }
+  assert(invalidFailedSafely, 'Invalid asset ids should fail safely.');
+
+  const disabledCache = createAssetCache({
+    canLoad: () => false,
+    log,
+    loadSource: async () => {
+      throw new Error('Disabled cache should not load sources.');
+    },
+  });
+  let disabledFailedSafely = false;
+  try {
+    await disabledCache.createInstance('crate-box-001');
+  } catch {
+    disabledFailedSafely = true;
+  }
+  assert(disabledFailedSafely, 'Disabled asset cache should reject so primitive fallback can remain.');
+  assert(disabledCache.getRuntimeStats().totalSceneInstances === 0, 'Failed asset loads should not create scene instances.');
 };
 
 const runWorldDefinitionSmoke = (): void => {
@@ -305,7 +386,14 @@ const runPerformanceSmoke = (): void => {
       },
     },
   };
-  const snapshot = createPerformanceSnapshot(16.67, rendererInfo, 17, 22);
+  const assetStats = {
+    loadedAssetIds: ['crate-box-001'],
+    sceneInstanceCountsByAssetId: {
+      'crate-box-001': 2,
+    },
+    totalSceneInstances: 2,
+  };
+  const snapshot = createPerformanceSnapshot(16.67, rendererInfo, 17, 22, assetStats);
 
   assert(snapshot.currentFps > 0, 'Performance snapshot should calculate current FPS.');
   assert(snapshot.averageFps > 0, 'Performance snapshot should calculate average FPS.');
@@ -316,10 +404,14 @@ const runPerformanceSmoke = (): void => {
   assert(snapshot.triangles === 345, 'Performance snapshot should include triangles.');
   assert(snapshot.geometries === 6, 'Performance snapshot should include geometry count.');
   assert(snapshot.textures === 2, 'Performance snapshot should include texture count.');
+  assert(snapshot.loadedAssetIds.includes('crate-box-001'), 'Performance snapshot should include loaded asset ids.');
+  assert(snapshot.sceneInstanceCountsByAssetId['crate-box-001'] === 2, 'Performance snapshot should include asset instance counts.');
+  assert(snapshot.totalSceneInstances === 2, 'Performance snapshot should include total asset instances.');
 
   const monitor = createPerformanceMonitor();
-  const monitoredSnapshot = monitor.update(1 / 60, rendererInfo);
+  const monitoredSnapshot = monitor.update(1 / 60, rendererInfo, assetStats);
   assert(monitoredSnapshot.renderCalls === 12, 'Performance monitor should read renderer info.');
+  assert(monitoredSnapshot.totalSceneInstances === 2, 'Performance monitor should read runtime asset stats.');
   assert(monitoredSnapshot.averageFrameTimeMs > 0, 'Performance monitor should track frame-time averages.');
   monitor.dispose();
   assert(monitor.getSnapshot().frameTimeMs === 0, 'Performance monitor should reset on dispose.');
@@ -465,6 +557,7 @@ const runModuleSmoke = (): void => {
 };
 
 runAssetRegistrySmoke();
+await runAssetCacheSmoke();
 runWorldDefinitionSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();

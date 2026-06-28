@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
+import { disposeAssetCache, getAssetRuntimeStats } from './game/assets';
 import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
 import {
   createDeliveryBoardOverlay,
@@ -141,6 +142,7 @@ const dispose = (): void => {
   performanceMonitor.dispose();
   performanceDebugOverlay.dispose();
   appResources.dispose();
+  disposeAssetCache();
   renderer.dispose();
   renderer.domElement.remove();
 };
@@ -174,7 +176,7 @@ const animate = (): void => {
   deliveryGuidanceOverlay.update(deliveryState);
   deliveryBoardOverlay.update(deliveryState);
   renderer.render(scene, camera);
-  performanceDebugOverlay.update(performanceMonitor.update(rawDeltaSeconds, renderer));
+  performanceDebugOverlay.update(performanceMonitor.update(rawDeltaSeconds, renderer, getAssetRuntimeStats()));
   animationFrameId = window.requestAnimationFrame(animate);
 };
 

@@ -2,6 +2,21 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.22.0] - 2026-06-28
+
+### Added
+
+- Added an explicit cached GLB source asset layer so repeated asset ids share one fetch/parse result.
+- Added disposable asset instance handles that remove world clones and decrement usage counts without disposing shared GLB resources.
+- Added runtime asset stats for loaded asset ids and scene instance counts by asset id.
+- Added asset runtime counts to the performance debug snapshot and overlay.
+- Added smoke checks for cache reuse, invalid asset ids, fallback-safe load failures, guarded cached-source disposal, and instance count floors.
+
+### Changed
+
+- Updated world GLB rendering to create cached asset instances while keeping primitive fallbacks on load failure.
+- Updated scene-root cleanup to run asset instance cleanup callbacks before removing tracked roots.
+
 ## [0.21.1] - 2026-06-28
 
 ### Added

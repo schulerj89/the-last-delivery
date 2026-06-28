@@ -7,6 +7,13 @@ export interface PerformanceDebugOverlay {
 
 const formatWhole = (value: number): string => Math.round(value).toString();
 const formatDecimal = (value: number): string => value.toFixed(1);
+const formatAssetCounts = (snapshot: PerformanceSnapshot): string => {
+  const counts = Object.entries(snapshot.sceneInstanceCountsByAssetId)
+    .filter(([, count]) => count > 0)
+    .map(([assetId, count]) => `${assetId}:${count}`);
+
+  return counts.length > 0 ? counts.join(' ') : 'none';
+};
 
 export const createPerformanceDebugOverlay = (parent: HTMLElement): PerformanceDebugOverlay => {
   const overlay = document.createElement('div');
@@ -24,6 +31,8 @@ export const createPerformanceDebugOverlay = (parent: HTMLElement): PerformanceD
         `Calls ${snapshot.renderCalls}`,
         `Triangles ${snapshot.triangles}`,
         `Memory G:${snapshot.geometries} T:${snapshot.textures}`,
+        `Assets ${snapshot.loadedAssetIds.length} loaded ${snapshot.totalSceneInstances} inst`,
+        `Asset inst ${formatAssetCounts(snapshot)}`,
       ].join('\n');
     },
     dispose() {
