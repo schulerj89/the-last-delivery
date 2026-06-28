@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import './style.css';
 import './townEditor.css';
+import { createModelInstance } from './game/assets';
 import { getCappedPixelRatio, clampFrameDelta } from './game/performance';
 import { createResourceTracker } from './game/resources';
 import { createWorldEnvironment } from './world/environment';
@@ -25,7 +26,7 @@ root.innerHTML = `
   <aside class="town-editor__palette" aria-label="Town editor asset palette">
     <div class="town-editor__header">
       <h1>Town Editor</h1>
-      <p>Drag a square into the world. Save/export from the placement HUD.</p>
+      <p>Drag an asset square into the world. Save or export from the right panel.</p>
     </div>
     <input class="town-editor__search" type="search" placeholder="Filter assets" aria-label="Filter assets" />
     <div class="town-editor__section">
@@ -44,6 +45,7 @@ root.innerHTML = `
       <span>Wheel zoom</span>
       <span>Right-drag orbit</span>
       <span>Middle-drag pan</span>
+      <span>Delete selected</span>
     </div>
     <div class="town-editor__viewport"></div>
     <div class="town-editor__status" role="status">Ready.</div>
@@ -85,9 +87,35 @@ const placementEditor = createPlacementEditor({
   parent: root,
   isLayoutModeActive: layoutDebugView.isActive,
   draftPersistenceEnabled: import.meta.env.DEV,
+  hudVariant: 'builder',
 });
 placementEditor.setActive(true);
 scene.add(placementEditor.object);
+
+const thumbnailSize = 144;
+const thumbnailScene = new THREE.Scene();
+const thumbnailCamera = new THREE.OrthographicCamera(-2.25, 2.25, 2.25, -2.25, 0.1, 40);
+const thumbnailRenderer = new THREE.WebGLRenderer({
+  antialias: true,
+  alpha: true,
+  preserveDrawingBuffer: true,
+});
+const thumbnailCacheByAssetId = new Map<string, string>();
+const thumbnailPromisesByAssetId = new Map<string, Promise<string>>();
+thumbnailCamera.position.set(3.2, 2.4, 3.6);
+thumbnailCamera.lookAt(0, 0, 0);
+thumbnailRenderer.setPixelRatio(getCappedPixelRatio(window.devicePixelRatio));
+thumbnailRenderer.setSize(thumbnailSize, thumbnailSize, false);
+thumbnailRenderer.setClearColor(0x000000, 0);
+thumbnailScene.add(
+  new THREE.HemisphereLight(0xffffff, 0x26352c, 2.2),
+  new THREE.DirectionalLight(0xfff1c4, 2.8),
+);
+const thumbnailSun = thumbnailScene.children.find((child) => child instanceof THREE.DirectionalLight);
+
+if (thumbnailSun instanceof THREE.DirectionalLight) {
+  thumbnailSun.position.set(2.8, 4, 3.2);
+}
 
 const clock = new THREE.Clock();
 const raycaster = new THREE.Raycaster();
@@ -112,9 +140,102 @@ const getPaletteDragPayload = (item: TownEditorPaletteItem): string => (
   JSON.stringify({ type: item.type, id: item.id })
 );
 
+const getAssetThumbnailDataUrl = (assetId: string): Promise<string> => {
+  const cachedThumbnail = thumbnailCacheByAssetId.get(assetId);
+
+  if (cachedThumbnail) {
+    return Promise.resolve(cachedThumbnail);
+  }
+
+  const pendingThumbnail = thumbnailPromisesByAssetId.get(assetId);
+
+  if (pendingThumbnail) {
+    return pendingThumbnail;
+  }
+
+  const thumbnailPromise = createModelInstance(assetId)
+    .then((instance) => {
+      const group = new THREE.Group();
+      group.add(instance.object);
+      thumbnailScene.add(group);
+
+      try {
+        instance.object.position.set(0, 0, 0);
+        instance.object.rotation.set(0, 0, 0);
+        instance.object.updateMatrixWorld(true);
+
+        const box = new THREE.Box3().setFromObject(instance.object);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        const maxDimension = Math.max(size.x, size.y, size.z);
+
+        if (!Number.isFinite(maxDimension) || maxDimension <= 0) {
+          throw new Error(`Cannot thumbnail zero-sized asset: ${assetId}`);
+        }
+
+        instance.object.position.sub(center);
+        instance.object.scale.multiplyScalar(2.55 / maxDimension);
+        group.rotation.y = -Math.PI / 5;
+        group.rotation.x = THREE.MathUtils.degToRad(4);
+        group.updateMatrixWorld(true);
+        thumbnailRenderer.render(thumbnailScene, thumbnailCamera);
+
+        const dataUrl = thumbnailRenderer.domElement.toDataURL('image/png');
+        thumbnailCacheByAssetId.set(assetId, dataUrl);
+        return dataUrl;
+      } finally {
+        thumbnailScene.remove(group);
+        instance.dispose();
+      }
+    })
+    .finally(() => {
+      thumbnailPromisesByAssetId.delete(assetId);
+    });
+
+  thumbnailPromisesByAssetId.set(assetId, thumbnailPromise);
+  return thumbnailPromise;
+};
+
+const applyAssetThumbnail = (
+  item: TownEditorPaletteItem,
+  image: HTMLImageElement,
+  fallback: HTMLElement,
+): void => {
+  if (item.type !== 'asset') {
+    return;
+  }
+
+  const cachedThumbnail = thumbnailCacheByAssetId.get(item.id);
+
+  if (cachedThumbnail) {
+    image.src = cachedThumbnail;
+    image.hidden = false;
+    fallback.hidden = true;
+    return;
+  }
+
+  void getAssetThumbnailDataUrl(item.id)
+    .then((dataUrl) => {
+      if (disposed || !image.isConnected) {
+        return;
+      }
+
+      image.src = dataUrl;
+      image.hidden = false;
+      fallback.hidden = true;
+    })
+    .catch((error: unknown) => {
+      if (!disposed && image.isConnected) {
+        fallback.title = `Preview unavailable: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    });
+};
+
 const createPaletteCard = (item: TownEditorPaletteItem): HTMLButtonElement => {
   const card = document.createElement('button');
-  const swatch = document.createElement('span');
+  const preview = document.createElement('span');
+  const previewImage = document.createElement('img');
+  const previewFallback = document.createElement('span');
   const label = document.createElement('span');
   const detail = document.createElement('span');
   const source = document.createElement('span');
@@ -124,20 +245,28 @@ const createPaletteCard = (item: TownEditorPaletteItem): HTMLButtonElement => {
   card.draggable = item.placeable;
   card.disabled = !item.placeable;
   card.dataset.paletteKey = `${item.type}:${item.id}`;
-  swatch.className = 'town-editor-card__swatch';
-  swatch.textContent = item.label
+  preview.className = `town-editor-card__preview town-editor-card__preview--${item.type}`;
+  previewImage.className = 'town-editor-card__image';
+  previewImage.alt = '';
+  previewImage.draggable = false;
+  previewImage.hidden = true;
+  previewFallback.className = 'town-editor-card__fallback';
+  previewFallback.textContent = item.label
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? '')
     .join('');
+  preview.append(previewImage, previewFallback);
   label.className = 'town-editor-card__label';
   label.textContent = item.label;
   detail.className = 'town-editor-card__detail';
   detail.textContent = item.detail;
   source.className = 'town-editor-card__source';
   source.textContent = item.source;
-  card.append(swatch, label, detail, source);
+  card.append(preview, label, detail, source);
+
+  applyAssetThumbnail(item, previewImage, previewFallback);
 
   card.addEventListener('dragstart', (event) => {
     if (!item.placeable || !event.dataTransfer) {
@@ -223,7 +352,7 @@ const placePaletteItem = (item: TownEditorPaletteItem): void => {
   }
 
   placementCountsByItemId.set(item.id, placementCount + 1);
-  setStatus(`Placed ${item.label} as ${objectId}. Save/export from the placement HUD.`);
+  setStatus(`Placed ${item.label} as ${objectId}. Save/export from the right panel.`);
 };
 
 const handleDragOver = (event: DragEvent): void => {
@@ -300,6 +429,7 @@ const dispose = (): void => {
   layoutDebugView.dispose();
   environment.dispose();
   resources.dispose();
+  thumbnailRenderer.dispose();
   renderer.dispose();
   renderer.domElement.remove();
 };

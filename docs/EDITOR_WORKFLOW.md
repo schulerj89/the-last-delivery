@@ -7,11 +7,15 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Run `npm run dev`.
 - Open `/town-editor.html`.
 - Use the left asset shelf to browse generated ground pieces and selected runtime GLB assets.
+- Runtime asset cards show a small rendered preview when the GLB can be loaded.
 - Drag an asset square onto the grass to place it into an editable world-object slot.
 - Use the search box to filter the asset shelf.
-- Use the placement HUD to fine tune position, rotation, scale, Y offset, gameplay role, action, destination, and JSON import/export.
+- Use the compact right save panel to save, load, copy, import, or export the active layout JSON.
+- Click a placed object or use `Tab` to select it, then use the keyboard controls to fine tune position, rotation, scale, and Y offset.
+- Press `Delete` or click `Delete Selected` to remove the selected object from the active editor layout.
 - The standalone builder starts on the clean playground canvas with grass and fence only, so authored village objects do not clutter the initial view.
 - Asset squares reuse existing editable object slots. If an asset says it has no slot, add or repurpose an authored world object before it can be placed permanently.
+- Deleting from the editor does not delete GLB files or registry entries. It marks the selected object inactive in the exported layout JSON.
 
 ## Enter Layout Mode
 
@@ -59,6 +63,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - `Ctrl+Z`: undo the last editor operation.
 - `Ctrl+Shift+Z` or `Ctrl+Y`: redo the last undone editor operation.
 - `Escape`: clear selection.
+- `Delete`: remove the selected object from the active editor layout.
 
 Browser edits are temporary until exported and promoted.
 

@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.49.0] - 2026-06-28
+
+### Added
+
+- Added rendered GLB thumbnail previews to the standalone town editor asset shelf using the existing asset loader and a shared thumbnail renderer.
+- Added a save-focused builder HUD variant for `/town-editor.html` with save, load, copy, import, export, and delete controls instead of the full dropdown inspector.
+- Added Delete-key and `Delete Selected` support for removing selected objects from the active editor layout without deleting asset files.
+- Added smoke coverage for the builder HUD variant, asset thumbnail route wiring, and delete-draft behavior.
+
+### Changed
+
+- Updated town editor workflow docs to describe asset previews, the compact save panel, and safe layout deletion.
+
 ## [0.48.0] - 2026-06-28
 
 ### Added

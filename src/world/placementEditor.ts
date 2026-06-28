@@ -48,6 +48,14 @@ export const placementEditorConfig = {
   undoHistoryLimit: 30,
 } as const;
 
+export const placementEditorHudVariants = ['full', 'builder'] as const;
+
+export type PlacementEditorHudVariant = (typeof placementEditorHudVariants)[number];
+
+export const isPlacementEditorHudVariant = (value: string): value is PlacementEditorHudVariant => (
+  placementEditorHudVariants.includes(value as PlacementEditorHudVariant)
+);
+
 export interface EditablePlacementObject {
   id: string;
   kind: WorldObjectDefinition['kind'];
@@ -94,6 +102,7 @@ interface PlacementEditorOptions {
   parent: HTMLElement;
   isLayoutModeActive: () => boolean;
   draftPersistenceEnabled?: boolean;
+  hudVariant?: PlacementEditorHudVariant;
 }
 
 interface SceneObjectBaseline {
@@ -246,6 +255,12 @@ export const clonePlacementDraft = (draft: PlacementTransformDraft): PlacementTr
   destinationName: draft.destinationName,
   mailboxVariant: draft.mailboxVariant,
 });
+
+export const markPlacementDraftDeleted = (draft: PlacementTransformDraft): PlacementTransformDraft => {
+  draft.active = false;
+  draft.assetId = null;
+  return draft;
+};
 
 export const capPlacementHistoryLength = <T>(
   history: readonly T[],
@@ -602,7 +617,9 @@ export const createPlacementEditor = ({
   parent,
   isLayoutModeActive,
   draftPersistenceEnabled = false,
+  hudVariant = 'full',
 }: PlacementEditorOptions): PlacementEditor => {
+  const useBuilderHud = hudVariant === 'builder';
   const editableObjects = createEditablePlacementObjects();
   const editableObjectsById = new Map(editableObjects.map((object) => [object.id, object]));
   const editableObjectIds = editableObjects.map((object) => object.id);
@@ -641,6 +658,7 @@ export const createPlacementEditor = ({
   const markPostOfficeButton = document.createElement('button');
   const markDeliveryBoardButton = document.createElement('button');
   const markMailboxButton = document.createElement('button');
+  const deleteSelectedButton = document.createElement('button');
   const saveDraftButton = document.createElement('button');
   const saveActiveButton = document.createElement('button');
   const loadDraftButton = document.createElement('button');
@@ -674,7 +692,9 @@ export const createPlacementEditor = ({
     typeof camera === 'function' ? camera() : camera
   );
 
-  overlay.className = 'placement-editor-hud';
+  overlay.className = useBuilderHud
+    ? 'placement-editor-hud placement-editor-hud--builder'
+    : 'placement-editor-hud';
   overlay.hidden = true;
   summary.className = 'placement-editor-hud__summary';
   controls.className = 'placement-editor-hud__controls';
@@ -708,6 +728,8 @@ export const createPlacementEditor = ({
   markDeliveryBoardButton.textContent = 'Delivery Board';
   markMailboxButton.type = 'button';
   markMailboxButton.textContent = 'Mailbox Target';
+  deleteSelectedButton.type = 'button';
+  deleteSelectedButton.textContent = 'Delete Selected';
   saveDraftButton.type = 'button';
   saveDraftButton.textContent = 'Save Draft';
   saveActiveButton.type = 'button';
@@ -731,6 +753,18 @@ export const createPlacementEditor = ({
   importTextArea.spellcheck = false;
   destinationNameInput.type = 'text';
   destinationNameInput.placeholder = 'Destination name, e.g. Blue House Mailbox';
+
+  if (useBuilderHud) {
+    saveActiveButton.textContent = 'Save Layout';
+    loadActiveButton.textContent = 'Load Layout';
+    clearDraftButton.textContent = 'Clear Saved Layout';
+    copyJsonButton.textContent = 'Copy JSON';
+    openJsonFileButton.textContent = 'Open JSON';
+    saveJsonFileButton.textContent = 'Save JSON File';
+    importJsonButton.textContent = 'Import Pasted JSON';
+    importTextArea.placeholder = 'Paste layout JSON here when loading a saved layout.';
+  }
+
   instructionsText.textContent = [
     'Button Instructions',
     'Preview Asset: put selected GLB on selected object.',
@@ -740,6 +774,7 @@ export const createPlacementEditor = ({
     'Generated pavement: select a pavement object, Toggle Active, then drag/scale it.',
     'Save Active JSON: save working town layout locally.',
     'Copy JSON / Save JSON File: export layout for layout:apply.',
+    'Delete Selected: remove the selected object from active editor JSON.',
   ].join('\n');
   objectSelect.append(...editableObjects.map((object, index) => {
     const option = document.createElement('option');
@@ -782,11 +817,13 @@ export const createPlacementEditor = ({
     'WASD / arrows hold to move  Shift faster  Alt finer',
     'Q / E rotate  Z / X scale  [ / ] Y offset',
     '1 / 2 / 3 snap size',
+    'Delete removes selected object from active editor JSON',
     'Ctrl+Z undo  Ctrl+Shift+Z or Ctrl+Y redo',
     'Ctrl+S save active JSON  Ctrl+O reload active JSON  Ctrl+Shift+Delete clear',
     'C copy selected TS  Shift+C copy active JSON',
     'Object panel toggles active state. Asset panel previews registered GLBs.',
     'Gameplay panel assigns spawn, board, post office, mailbox, or decorative roles.',
+    'Delete removes selected object from the active editor layout; source files are unchanged.',
   ].join('\n');
   objectPanel.append(objectSelect, objectProperties);
   assetPanel.append(assetSelect, assetProperties);
@@ -798,26 +835,41 @@ export const createPlacementEditor = ({
     gameplayProperties,
   );
   instructionsPanel.append(instructionsText);
-  controls.append(
-    toggleActiveButton,
-    applyAssetButton,
-    clearAssetButton,
-    markDecorativeButton,
-    markSpawnButton,
-    markPostOfficeButton,
-    markDeliveryBoardButton,
-    markMailboxButton,
-    saveActiveButton,
-    loadActiveButton,
-    saveDraftButton,
-    loadDraftButton,
-    clearDraftButton,
-    copyJsonButton,
-    openJsonFileButton,
-    saveJsonFileButton,
-    importJsonButton,
-  );
-  overlay.append(summary, instructionsPanel, objectPanel, assetPanel, gameplayPanel, controls, importTextArea);
+  if (useBuilderHud) {
+    controls.append(
+      saveActiveButton,
+      loadActiveButton,
+      copyJsonButton,
+      openJsonFileButton,
+      saveJsonFileButton,
+      importJsonButton,
+      clearDraftButton,
+      deleteSelectedButton,
+    );
+    overlay.append(summary, controls, importTextArea);
+  } else {
+    controls.append(
+      toggleActiveButton,
+      applyAssetButton,
+      clearAssetButton,
+      deleteSelectedButton,
+      markDecorativeButton,
+      markSpawnButton,
+      markPostOfficeButton,
+      markDeliveryBoardButton,
+      markMailboxButton,
+      saveActiveButton,
+      loadActiveButton,
+      saveDraftButton,
+      loadDraftButton,
+      clearDraftButton,
+      copyJsonButton,
+      openJsonFileButton,
+      saveJsonFileButton,
+      importJsonButton,
+    );
+    overlay.append(summary, instructionsPanel, objectPanel, assetPanel, gameplayPanel, controls, importTextArea);
+  }
   parent.append(overlay);
   parent.append(helpOverlay);
 
@@ -1680,6 +1732,33 @@ export const createPlacementEditor = ({
       return;
     }
 
+    if (useBuilderHud) {
+      const lines = [
+        'Town Builder Save Panel',
+        'Save Layout stores the active layout in this browser.',
+        'Copy JSON or Save JSON File exports it for layout:apply.',
+        `Snap ${snap}`,
+      ];
+
+      if (selectedObject && draft) {
+        lines.push(
+          `Selected ${selectedObject.id} (${selectedObject.kind})`,
+          `Active ${draft.active ? 'yes' : 'no'}`,
+          `Position ${formatTuple(draft.position)}`,
+          `RotationY ${formatNumber(THREE.MathUtils.radToDeg(draft.rotationY))}deg`,
+          `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
+          `Render ${draft.assetId ?? getObjectAssetId(selectedObject.worldObject) ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
+          'Delete key or Delete Selected removes this object from active JSON.',
+        );
+      } else {
+        lines.push('Selected: none', 'Drag an asset tile into the world or click a placed object.');
+      }
+
+      lines.push(status);
+      summary.textContent = lines.join('\n');
+      return;
+    }
+
     if (!selectedObject || !draft) {
       summary.textContent = [
         'Placement Editor',
@@ -2105,6 +2184,26 @@ export const createPlacementEditor = ({
     updateHud();
   };
 
+  const deleteSelectedObject = (): void => {
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (!selectedObject || !draft) {
+      status = 'No selected object to delete.';
+      updateHud();
+      return;
+    }
+
+    pushUndoSnapshot();
+    markPlacementDraftDeleted(draft);
+    status = `Deleted ${selectedObject.id} from the active editor layout. Save JSON to keep this change.`;
+    applyDraftToScene(selectedObject);
+    selectedIndex = -1;
+    objectSelect.value = '';
+    updateMarker();
+    updateHud();
+  };
+
   const handleOpenJsonFileClick = (): void => {
     void openJsonFile();
   };
@@ -2128,6 +2227,7 @@ export const createPlacementEditor = ({
   toggleActiveButton.addEventListener('click', toggleSelectedActive);
   applyAssetButton.addEventListener('click', applySelectedAsset);
   clearAssetButton.addEventListener('click', clearSelectedAsset);
+  deleteSelectedButton.addEventListener('click', deleteSelectedObject);
   markDecorativeButton.addEventListener('click', handleMarkDecorativeClick);
   markSpawnButton.addEventListener('click', handleMarkSpawnClick);
   markPostOfficeButton.addEventListener('click', handleMarkPostOfficeClick);
@@ -2263,6 +2363,12 @@ export const createPlacementEditor = ({
         return true;
       }
 
+      if (key === 'Delete') {
+        deleteSelectedObject();
+        event.preventDefault();
+        return true;
+      }
+
       if (key === '1' || key === '2' || key === '3') {
         snapIndex = Number(key) - 1;
         status = `Snap set to ${placementEditorConfig.snapValues[snapIndex]}.`;
@@ -2344,6 +2450,7 @@ export const createPlacementEditor = ({
       toggleActiveButton.removeEventListener('click', toggleSelectedActive);
       applyAssetButton.removeEventListener('click', applySelectedAsset);
       clearAssetButton.removeEventListener('click', clearSelectedAsset);
+      deleteSelectedButton.removeEventListener('click', deleteSelectedObject);
       markDecorativeButton.removeEventListener('click', handleMarkDecorativeClick);
       markSpawnButton.removeEventListener('click', handleMarkSpawnClick);
       markPostOfficeButton.removeEventListener('click', handleMarkPostOfficeClick);

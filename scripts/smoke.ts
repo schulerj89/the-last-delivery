@@ -121,6 +121,7 @@ import {
 import {
   capPlacementHistoryLength,
   canUseTownEditorFilePicker,
+  clonePlacementDraft,
   createLayoutOverrideDocumentFromPlacementDrafts,
   createPrimitivePlacementPreviewObject,
   createDraggedPlacementPosition,
@@ -129,8 +130,11 @@ import {
   getEditablePlacementObjectById,
   getPlacementEditorSnapValues,
   getPlacementEditorMoveSpeed,
+  isPlacementEditorHudVariant,
   isPrimitivePlacementPreviewKind,
+  markPlacementDraftDeleted,
   placementEditorConfig,
+  placementEditorHudVariants,
   primitivePlacementPreviewKinds,
   serializePlacementTransform,
   serializePlacementTransforms,
@@ -672,6 +676,9 @@ const runTownEditorRouteSmoke = (): void => {
   assert(townEditorHtml.includes('/src/townEditor.ts'), 'Town editor route should load the isolated editor entry.');
   assert(townEditorScript.includes('createPlacementEditor'), 'Town editor should reuse the placement editor workflow.');
   assert(townEditorScript.includes('renderAuthoredWorldObjects: false'), 'Town editor should open on the clean playground canvas.');
+  assert(townEditorScript.includes("hudVariant: 'builder'"), 'Town editor should use the save-focused builder HUD variant.');
+  assert(townEditorScript.includes('getAssetThumbnailDataUrl'), 'Town editor should render asset thumbnails for palette cards.');
+  assert(townEditorScript.includes('createModelInstance'), 'Town editor thumbnails should load GLB assets through the existing asset loader.');
   assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
   assert(assetItems.length > 0, 'Town editor asset palette should initialize.');
@@ -1271,6 +1278,9 @@ const runPlacementEditorSmoke = (): void => {
   assert(placementEditorConfig.fastMoveMultiplier > 1, 'Placement editor fast modifier should increase movement speed.');
   assert(placementEditorConfig.fineMoveMultiplier > 0 && placementEditorConfig.fineMoveMultiplier < 1, 'Placement editor fine modifier should reduce movement speed.');
   assert(placementEditorConfig.undoHistoryLimit >= 10, 'Placement editor undo history should keep a useful number of operations.');
+  assert(placementEditorHudVariants.includes('builder'), 'Placement editor should expose a standalone builder HUD variant.');
+  assert(isPlacementEditorHudVariant('builder'), 'Placement editor builder HUD variant should validate.');
+  assert(!isPlacementEditorHudVariant('dropdown-heavy'), 'Placement editor HUD variant validation should reject unknown values.');
   assert(primitivePlacementPreviewKinds.includes('pavement'), 'Placement editor primitive previews should support generated pavement.');
   assert(isPrimitivePlacementPreviewKind('pavement'), 'Pavement should be a primitive preview kind.');
 
@@ -1296,6 +1306,13 @@ const runPlacementEditorSmoke = (): void => {
   }
 
   const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
+  const deletedDraft = markPlacementDraftDeleted({
+    ...clonePlacementDraft(draft),
+    active: true,
+    assetId: 'fantasy-box-001',
+  });
+  assert(!deletedDraft.active, 'Placement editor delete should mark a draft inactive.');
+  assert(deletedDraft.assetId === null, 'Placement editor delete should clear asset previews from a draft.');
   const pavementDraft = createPlacementTransformDraft(pavementTile.worldObject);
   pavementDraft.active = true;
   pavementDraft.scaleMultiplier = 2.5;
