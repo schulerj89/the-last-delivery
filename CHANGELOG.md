@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.13.0] - 2026-06-28
+
+### Added
+
+- Expanded the first village square blockout with a post office, three cottages, two mailbox placeholders, a central well, and primitive props.
+- Moved new village layout objects and colliders into the world definition layer.
+- Updated smoke validation for village object counts, active delivery target rules, post office proximity, and generated collision data.
+
 ## [0.12.0] - 2026-06-28
 
 ### Added

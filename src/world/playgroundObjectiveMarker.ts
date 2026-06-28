@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { WorldObjectDefinition } from './types';
-import { deliveryBoardObject, mailboxObject } from './villageDefinition';
+import { activeDeliveryTargetObject, deliveryBoardObject } from './villageDefinition';
 
 const createObjectiveMarker = (
   name: string,
@@ -47,7 +47,7 @@ export const createDeliveryBoardObjectiveMarker = (): THREE.Group => (
 );
 
 export const createMailboxObjectiveMarker = (): THREE.Group => (
-  createObjectiveMarker('objective:mailbox', getObjectiveAnchorPosition(mailboxObject), 0xffe45c)
+  createObjectiveMarker('objective:mailbox', getObjectiveAnchorPosition(activeDeliveryTargetObject), 0xffe45c)
 );
 
 export const updateObjectiveMarker = (marker: THREE.Object3D, elapsedSeconds: number): void => {

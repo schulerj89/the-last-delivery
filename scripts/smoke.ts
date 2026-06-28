@@ -31,6 +31,13 @@ const runWorldDefinitionSmoke = (): void => {
     ids.add(object.id);
     assert(isFiniteVector3Tuple(object.position), `World object should have a valid position: ${object.id}`);
 
+    if (object.dimensions) {
+      assert(
+        isFiniteVector3Tuple(object.dimensions) && object.dimensions.every((component) => component > 0),
+        `World object should have positive dimensions: ${object.id}`,
+      );
+    }
+
     if (object.interactable) {
       assert(isFiniteVector3Tuple(object.interactable.position), `Interactable should have a valid position: ${object.id}`);
       assert(object.interactable.radius > 0, `Interactable should have a positive radius: ${object.id}`);
@@ -45,7 +52,29 @@ const runWorldDefinitionSmoke = (): void => {
     }
   });
 
-  assert(ids.has(deliveryTargetObjectId), 'Delivery target world object should exist.');
+  const mailboxObjects = villageWorldObjects.filter((object) => object.kind === 'mailbox');
+  const cottageObjects = villageWorldObjects.filter((object) => object.kind === 'cottage');
+  const deliveryTarget = villageWorldObjects.find((object) => object.id === deliveryTargetObjectId);
+  const deliveryBoard = villageWorldObjects.find((object) => object.id === 'delivery-board');
+  const postOffice = villageWorldObjects.find((object) => object.id === 'post-office');
+  const well = villageWorldObjects.find((object) => object.id === 'town-well');
+
+  assert(deliveryTarget !== undefined, 'Delivery target world object should exist.');
+  assert(deliveryTarget.kind === 'mailbox', 'Delivery target should be a mailbox.');
+  assert(deliveryTarget.interactable !== undefined, 'Delivery target should be interactable.');
+  assert(deliveryTarget.objectiveAnchor !== undefined, 'Delivery target should have an objective anchor.');
+  assert(mailboxObjects.length === 2, 'Village should define exactly two mailbox placeholders.');
+  assert(mailboxObjects.filter((object) => object.interactable).length === 1, 'Only one mailbox should be interactable for now.');
+  assert(cottageObjects.length === 3, 'Village should define exactly three cottage placeholders.');
+  assert(deliveryBoard !== undefined, 'Delivery board world object should exist.');
+  assert(postOffice !== undefined, 'Post office world object should exist.');
+  assert(well !== undefined, 'Town-square well world object should exist.');
+
+  const boardToPostOfficeDistanceSq = (
+    (deliveryBoard.position[0] - postOffice.position[0]) ** 2
+    + (deliveryBoard.position[2] - postOffice.position[2]) ** 2
+  );
+  assert(boardToPostOfficeDistanceSq < 8, 'Delivery board should stay near the post office placeholder.');
 };
 
 const runDeliveryStateSmoke = (): void => {
@@ -85,8 +114,14 @@ const runModuleSmoke = (): void => {
   assert(thirdPersonCameraSettings.distance > 0, 'Camera distance should be positive.');
   assert(thirdPersonCameraSettings.minPitch < thirdPersonCameraSettings.maxPitch, 'Camera pitch limits should be ordered.');
   assert(playgroundCollisionWorld.boxes.length >= 2, 'Playground collision boxes should initialize.');
+  assert(
+    playgroundCollisionWorld.boxes.length === villageWorldObjects.filter((object) => object.collider).length,
+    'Collision boxes should be generated from collidable world objects.',
+  );
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'mailbox'), 'Mailbox collision box should initialize.');
-  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'house-mail-lane'), 'Village house collision should initialize.');
+  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'post-office'), 'Post office collision box should initialize.');
+  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'cottage-west'), 'Village cottage collision should initialize.');
+  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'town-well'), 'Town well collision should initialize.');
 
   const playground = createPlayground();
   assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');

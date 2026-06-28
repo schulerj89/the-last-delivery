@@ -1,5 +1,11 @@
 import * as THREE from 'three';
-import { deliveryBoardObject, mailboxObject } from './villageDefinition';
+import type { WorldObjectDefinition } from './types';
+import {
+  activeDeliveryTargetObject,
+  deliveryBoardObject,
+  getWorldObjectsByKind,
+  playerSpawnPosition,
+} from './villageDefinition';
 
 const villageWidth = 18;
 const villageDepth = 14;
@@ -11,7 +17,6 @@ const materials = {
   ground: new THREE.MeshStandardMaterial({ color: 0x38473d, roughness: 0.9 }),
   path: new THREE.MeshStandardMaterial({ color: 0x8a7861, roughness: 0.95 }),
   fence: new THREE.MeshStandardMaterial({ color: 0x8d7657, roughness: 0.75 }),
-  ramp: new THREE.MeshStandardMaterial({ color: 0x6f7f88, roughness: 0.65 }),
   crate: new THREE.MeshStandardMaterial({ color: 0x9a6435, roughness: 0.85 }),
   crateStrap: new THREE.MeshStandardMaterial({ color: 0x5a3826, roughness: 0.8 }),
   barrel: new THREE.MeshStandardMaterial({ color: 0x7c4f34, roughness: 0.82 }),
@@ -20,6 +25,8 @@ const materials = {
   houseRoof: new THREE.MeshStandardMaterial({ color: 0x6d3d35, roughness: 0.8 }),
   houseDoor: new THREE.MeshStandardMaterial({ color: 0x4f3428, roughness: 0.75 }),
   houseWindow: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, roughness: 0.45 }),
+  wellStone: new THREE.MeshStandardMaterial({ color: 0x7a827d, roughness: 0.9 }),
+  wellWater: new THREE.MeshStandardMaterial({ color: 0x347da3, roughness: 0.45 }),
   mailbox: new THREE.MeshStandardMaterial({ color: 0x2d7bc0, roughness: 0.5 }),
   mailboxDoor: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, roughness: 0.45 }),
   mailboxFlag: new THREE.MeshStandardMaterial({ color: 0xe85c42, roughness: 0.45 }),
@@ -35,6 +42,14 @@ const nameObject = <T extends THREE.Object3D>(object: T, name: string): T => {
   object.name = name;
   object.userData.label = name;
   return object;
+};
+
+const getDimensions = (object: WorldObjectDefinition): THREE.Vector3Tuple => {
+  if (!object.dimensions) {
+    throw new Error(`Missing dimensions for world object: ${object.id}`);
+  }
+
+  return object.dimensions;
 };
 
 const createBox = (
@@ -243,8 +258,9 @@ const addPathSegment = (
 };
 
 const addPaths = (group: THREE.Group): void => {
-  const mailboxPathPoint = mailboxObject.interactable?.position ?? mailboxObject.position;
+  const mailboxPathPoint = activeDeliveryTargetObject.interactable?.position ?? activeDeliveryTargetObject.position;
   const boardPathPoint = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
+  const well = getWorldObjectsByKind('well')[0];
 
   addPathSegment(
     group,
@@ -256,8 +272,8 @@ const addPaths = (group: THREE.Group): void => {
   addPathSegment(
     group,
     'village:side-path-spawn-connector',
-    new THREE.Vector2(0, 2.5),
-    new THREE.Vector2(-1.65, 1.35),
+    new THREE.Vector2(playerSpawnPosition[0], playerSpawnPosition[2]),
+    new THREE.Vector2(well.position[0], well.position[2]),
     1.05,
   );
 };
@@ -314,55 +330,109 @@ const addHouse = (
 };
 
 const addHouses = (group: THREE.Group): void => {
-  addHouse(group, 'village:house-mail-lane', new THREE.Vector2(-6.4, 3.9), [2.3, 1.6, 2.1]);
-  addHouse(group, 'village:house-north-square', new THREE.Vector2(-1.3, -5.1), [2.8, 1.6, 1.9]);
-  addHouse(group, 'village:house-east-corner', new THREE.Vector2(6.6, 2.8), [2.2, 1.6, 2.4]);
+  getWorldObjectsByKind('cottage').forEach((cottage) => {
+    addHouse(
+      group,
+      `village:${cottage.id}`,
+      new THREE.Vector2(cottage.position[0], cottage.position[2]),
+      getDimensions(cottage),
+    );
+  });
 };
 
-const addRamp = (group: THREE.Group): void => {
-  const ramp = addBox(
+const addPostOffice = (group: THREE.Group): void => {
+  const postOffice = getWorldObjectsByKind('post-office')[0];
+  const [x, , z] = postOffice.position;
+  const [width, height, depth] = getDimensions(postOffice);
+
+  addBox(
     group,
-    'playground:ramp',
-    [2.8, 0.25, 2.4],
-    [-1.6, 0.18, -0.8],
-    materials.ramp,
+    'village:post-office:body',
+    [width, height, depth],
+    [x, height / 2, z],
+    materials.houseWall,
   );
-  ramp.rotation.x = THREE.MathUtils.degToRad(-15);
+
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(Math.max(width, depth) * 0.72, 0.82, 4),
+    materials.houseRoof,
+  );
+  roof.name = 'village:post-office:roof';
+  roof.userData.label = roof.name;
+  roof.position.set(x, height + 0.4, z);
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  roof.receiveShadow = true;
+  group.add(roof);
+
+  addBox(group, 'village:post-office:door', [0.5, 0.8, 0.06], [x - 0.55, 0.4, z + depth / 2 + 0.04], materials.houseDoor);
+  addBox(group, 'village:post-office:window', [0.5, 0.38, 0.06], [x + 0.45, height * 0.66, z + depth / 2 + 0.05], materials.houseWindow);
+  addBox(group, 'village:post-office:sign', [1.15, 0.28, 0.08], [x, height + 0.05, z + depth / 2 + 0.08], materials.boardFrame);
+  addBox(group, 'village:post-office:mail-slot', [0.42, 0.1, 0.08], [x - 0.55, 0.78, z + depth / 2 + 0.09], materials.board);
 };
 
 const addCrates = (group: THREE.Group): void => {
-  addBox(group, 'playground:crate-large', [1, 1, 1], [2.35, 0.5, 1.65], materials.crate);
-  addBox(group, 'playground:crate-large-strap', [1.04, 0.08, 1.04], [2.35, 0.78, 1.65], materials.crateStrap);
-  addBox(group, 'playground:crate-small-a', [0.7, 0.7, 0.7], [3.15, 0.35, 0.8], materials.crate);
-  addBox(group, 'playground:crate-small-a-strap', [0.74, 0.06, 0.74], [3.15, 0.56, 0.8], materials.crateStrap);
-  addBox(group, 'playground:crate-small-b', [0.7, 0.7, 0.7], [2.75, 1.05, 1.55], materials.crate);
-  addBox(group, 'playground:crate-small-b-strap', [0.74, 0.06, 0.74], [2.75, 1.26, 1.55], materials.crateStrap);
+  getWorldObjectsByKind('crate').forEach((crate) => {
+    const [width, height, depth] = getDimensions(crate);
+    const [x, y, z] = crate.position;
+
+    addBox(group, `village:${crate.id}`, [width, height, depth], [x, y, z], materials.crate);
+    addBox(
+      group,
+      `village:${crate.id}:strap`,
+      [width + 0.04, Math.max(0.06, height * 0.08), depth + 0.04],
+      [x, y + height * 0.28, z],
+      materials.crateStrap,
+    );
+  });
 };
 
 const addVillageProps = (group: THREE.Group): void => {
-  addCylinder(group, 'village:barrel-north-a', 0.26, 0.64, [1.6, 0.32, -4.4], materials.barrel);
-  addCylinder(group, 'village:barrel-north-b', 0.24, 0.58, [2.12, 0.29, -4.15], materials.barrel);
-  addRock(group, 'village:rock-west-boundary', [-7.2, 0.24, -0.9], [1.25, 0.72, 0.9]);
-  addRock(group, 'village:rock-east-boundary', [7.4, 0.2, -4.7], [0.9, 0.62, 1.1]);
-  addRock(group, 'village:rock-south-corner', [5.8, 0.18, 5.35], [0.82, 0.56, 0.78]);
+  getWorldObjectsByKind('barrel').forEach((barrel) => {
+    const [diameter, height] = getDimensions(barrel);
+    addCylinder(group, `village:${barrel.id}`, diameter / 2, height, barrel.position, materials.barrel);
+  });
+
+  getWorldObjectsByKind('rock').forEach((rock) => {
+    addRock(group, `village:${rock.id}`, rock.position, getDimensions(rock));
+  });
 };
 
-const addMailbox = (group: THREE.Group): void => {
-  const [x, , z] = mailboxObject.position;
-  const interactionPosition = mailboxObject.interactable?.position ?? mailboxObject.position;
+const addWell = (group: THREE.Group): void => {
+  const well = getWorldObjectsByKind('well')[0];
+  const [x, , z] = well.position;
+  const [diameter, height] = getDimensions(well);
 
-  addGroundRing(
-    group,
-    'playground:mailbox-interaction-ring',
-    0.72,
-    0.025,
-    [interactionPosition[0], 0.035, interactionPosition[2]],
-    materials.interactablePad,
-  );
-  addBox(group, 'playground:mailbox-post', [0.16, 0.9, 0.16], [x, 0.45, z], materials.fence);
-  addBox(group, 'playground:mailbox-box', [0.85, 0.42, 0.5], [x, 1.03, z], materials.mailbox);
-  addBox(group, 'playground:mailbox-door-highlight', [0.08, 0.28, 0.36], [x - 0.44, 1.03, z], materials.mailboxDoor);
-  addBox(group, 'playground:mailbox-flag', [0.08, 0.38, 0.46], [x + 0.46, 1.19, z], materials.mailboxFlag);
+  addCylinder(group, 'village:well-stone-ring', diameter / 2, height, [x, height / 2, z], materials.wellStone);
+  addCylinder(group, 'village:well-water', diameter * 0.36, 0.06, [x, height + 0.04, z], materials.wellWater);
+  addBox(group, 'village:well-left-post', [0.12, 1.25, 0.12], [x - diameter * 0.45, height + 0.48, z], materials.fence);
+  addBox(group, 'village:well-right-post', [0.12, 1.25, 0.12], [x + diameter * 0.45, height + 0.48, z], materials.fence);
+  addBox(group, 'village:well-roof', [diameter * 1.2, 0.16, diameter * 0.95], [x, height + 1.12, z], materials.houseRoof);
+};
+
+const addMailbox = (group: THREE.Group, mailbox: WorldObjectDefinition): void => {
+  const [x, , z] = mailbox.position;
+
+  if (mailbox.interactable) {
+    const interactionPosition = mailbox.interactable.position;
+    addGroundRing(
+      group,
+      `village:${mailbox.id}:interaction-ring`,
+      0.72,
+      0.025,
+      [interactionPosition[0], 0.035, interactionPosition[2]],
+      materials.interactablePad,
+    );
+  }
+
+  addBox(group, `village:${mailbox.id}:post`, [0.16, 0.9, 0.16], [x, 0.45, z], materials.fence);
+  addBox(group, `village:${mailbox.id}:box`, [0.85, 0.42, 0.5], [x, 1.03, z], materials.mailbox);
+  addBox(group, `village:${mailbox.id}:door-highlight`, [0.08, 0.28, 0.36], [x - 0.44, 1.03, z], materials.mailboxDoor);
+  addBox(group, `village:${mailbox.id}:flag`, [0.08, 0.38, 0.46], [x + 0.46, 1.19, z], materials.mailboxFlag);
+};
+
+const addMailboxes = (group: THREE.Group): void => {
+  getWorldObjectsByKind('mailbox').forEach((mailbox) => addMailbox(group, mailbox));
 };
 
 const addDeliveryBoard = (group: THREE.Group): void => {
@@ -411,8 +481,9 @@ const addDeliveryBoard = (group: THREE.Group): void => {
 };
 
 const addSpawnMarker = (group: THREE.Group): void => {
-  addGroundRing(group, 'playground:player-spawn-ring', 0.58, 0.025, [0, 0.035, 2.5], materials.spawnPad);
-  addBox(group, 'playground:player-spawn-forward-arrow', [0.18, 0.04, 0.52], [0, 0.045, 2.12], materials.spawnPad);
+  const [x, , z] = playerSpawnPosition;
+  addGroundRing(group, 'playground:player-spawn-ring', 0.58, 0.025, [x, 0.035, z], materials.spawnPad);
+  addBox(group, 'playground:player-spawn-forward-arrow', [0.18, 0.04, 0.52], [x + 0.34, 0.045, z - 0.34], materials.spawnPad);
 };
 
 export const createPlayground = (): THREE.Group => {
@@ -422,11 +493,12 @@ export const createPlayground = (): THREE.Group => {
   addPaths(playground);
   addFence(playground);
   addSpawnMarker(playground);
+  addPostOffice(playground);
   addHouses(playground);
-  addRamp(playground);
+  addWell(playground);
   addCrates(playground);
   addVillageProps(playground);
-  addMailbox(playground);
+  addMailboxes(playground);
   addDeliveryBoard(playground);
 
   return playground;

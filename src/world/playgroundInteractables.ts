@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { DeliveryController } from '../game/delivery';
 import type { Interactable } from '../game/interaction';
 import type { WorldObjectDefinition } from './types';
-import { deliveryBoardObject, mailboxObject } from './villageDefinition';
+import { activeDeliveryTargetObject, deliveryBoardObject } from './villageDefinition';
 
 const createInteractablePosition = (object: WorldObjectDefinition): THREE.Vector3 => {
   if (!object.interactable) {
@@ -22,9 +22,9 @@ const getInteractableRadius = (object: WorldObjectDefinition): number => {
 
 export const createPlaygroundInteractables = (delivery: DeliveryController): readonly Interactable[] => [
   {
-    id: mailboxObject.id,
-    position: createInteractablePosition(mailboxObject),
-    radius: getInteractableRadius(mailboxObject),
+    id: activeDeliveryTargetObject.id,
+    position: createInteractablePosition(activeDeliveryTargetObject),
+    radius: getInteractableRadius(activeDeliveryTargetObject),
     prompt: () => (
       delivery.getState().status === 'delivery-accepted'
         ? 'Complete delivery'

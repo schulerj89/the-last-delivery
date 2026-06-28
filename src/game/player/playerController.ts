@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { resolvePlayerCollision } from '../collision';
 import type { PlayerController, PlayerControllerOptions, PlayerMovementSettings, PlayerState } from './types';
+import { playerSpawnPosition } from '../../world/villageDefinition';
 
-const spawnPosition = new THREE.Vector3(0, 0, 2.5);
+const spawnPosition = new THREE.Vector3(...playerSpawnPosition);
 const groundedY = 0;
 
 export const playerMovementSettings: PlayerMovementSettings = {

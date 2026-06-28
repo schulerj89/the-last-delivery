@@ -1,6 +1,14 @@
 import type * as THREE from 'three';
 
-export type WorldObjectKind = 'delivery-board' | 'mailbox';
+export type WorldObjectKind =
+  | 'barrel'
+  | 'cottage'
+  | 'crate'
+  | 'delivery-board'
+  | 'mailbox'
+  | 'post-office'
+  | 'rock'
+  | 'well';
 
 export interface WorldColliderDefinition {
   position: THREE.Vector3Tuple;
