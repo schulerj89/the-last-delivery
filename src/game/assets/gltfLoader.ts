@@ -151,12 +151,17 @@ export const createAssetCache = ({
   const failedAssets = new Set<string>();
   const loadingAssets = new Set<string>();
   const instanceCounts = new Map<string, number>();
+  let cacheDisposed = false;
 
   const loadAssetEntry = (assetId: string): Promise<CachedGltfAsset> => {
     const asset = getAssetDefinition(assetId);
 
     if (!asset) {
       return Promise.reject(new Error(`Unknown GLB asset id: ${assetId}`));
+    }
+
+    if (cacheDisposed) {
+      return Promise.reject(new Error(`GLB asset cache has been disposed: ${assetId}`));
     }
 
     if (!canLoad()) {
@@ -175,6 +180,11 @@ export const createAssetCache = ({
 
     const entryPromise = loadSource(asset)
       .then((source) => {
+        if (cacheDisposed) {
+          disposeObjectResources(source);
+          throw new Error(`GLB asset cache was disposed before ${asset.id} finished loading.`);
+        }
+
         const entry = { asset, source };
         loadedEntries.set(asset.id, entry);
         failedAssets.delete(asset.id);
@@ -261,6 +271,7 @@ export const createAssetCache = ({
     },
     disposeCachedAsset,
     disposeCache() {
+      cacheDisposed = true;
       return [...loadedEntries.keys()].filter((assetId) => disposeCachedAsset(assetId));
     },
     getRuntimeStats() {

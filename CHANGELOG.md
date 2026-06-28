@@ -2,6 +2,12 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.22.1] - 2026-06-28
+
+### Fixed
+
+- Added an asset-cache disposal guard so in-flight GLB loads dispose their source resources if they finish after the cache has been shut down.
+
 ## [0.22.0] - 2026-06-28
 
 ### Added
