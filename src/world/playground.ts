@@ -138,11 +138,11 @@ const getSceneObjectNamePrefixes = (objectId: string): readonly string[] => {
   }
 
   if (objectId === 'delivery-board') {
-    return ['playground:delivery-board'];
+    return ['village:delivery-board', 'playground:delivery-board'];
   }
 
   if (objectId === 'town-well') {
-    return ['village:well'];
+    return ['village:town-well', 'village:well'];
   }
 
   return [`village:${objectId}`];
@@ -700,22 +700,24 @@ const addLabelSign = (
 };
 
 const addVillageLabels = (group: THREE.Group): void => {
-  addLabelSign(group, 'village:label-post-office', 'Post Office', [-4.1, 0, 7.4], '#3baea3', Math.PI * 0.05);
-  addLabelSign(group, 'village:label-blue-house', 'Blue House', [-6.25, 0, -2.05], '#4f88b8', Math.PI * 0.12);
-  addLabelSign(group, 'village:label-red-house', 'Red House', [6.25, 0, -1.1], '#b35d52', -Math.PI * 0.14);
-  addLabelSign(group, 'village:label-side-path', 'North Path', [2.25, 0, 2.25], '#6f958e', -Math.PI * 0.28);
+  void group;
 };
 
 const addPostOffice = (group: THREE.Group, options: PlaygroundOptions): void => {
   const postOffice = getWorldObjectsByGameplayRole('post-office')[0] ?? getWorldObjectsByKind('post-office')[0];
+  if (!postOffice) {
+    return;
+  }
+
   const [x, , z] = postOffice.position;
   const [width, height, depth] = getDimensions(postOffice);
+  const name = `village:${postOffice.id}`;
   const fallbackObjects: THREE.Object3D[] = [];
 
   fallbackObjects.push(
     addBox(
       group,
-      'village:post-office:body',
+      `${name}:body`,
       [width, height, depth],
       [x, height / 2, z],
       materials.houseWall,
@@ -726,7 +728,7 @@ const addPostOffice = (group: THREE.Group, options: PlaygroundOptions): void => 
     new THREE.ConeGeometry(Math.max(width, depth) * 0.72, 0.82, 4),
     materials.houseRoof,
   );
-  roof.name = 'village:post-office:roof';
+  roof.name = `${name}:roof`;
   roof.userData.label = roof.name;
   roof.position.set(x, height + 0.4, z);
   roof.rotation.y = Math.PI / 4;
@@ -736,10 +738,10 @@ const addPostOffice = (group: THREE.Group, options: PlaygroundOptions): void => 
   fallbackObjects.push(roof);
 
   fallbackObjects.push(
-    addBox(group, 'village:post-office:door', [0.5, 0.8, 0.06], [x - 0.55, 0.4, z + depth / 2 + 0.04], materials.houseDoor),
-    addBox(group, 'village:post-office:window', [0.5, 0.38, 0.06], [x + 0.45, height * 0.66, z + depth / 2 + 0.05], materials.houseWindow),
-    addBox(group, 'village:post-office:sign', [1.15, 0.28, 0.08], [x, height + 0.05, z + depth / 2 + 0.08], materials.boardFrame),
-    addBox(group, 'village:post-office:mail-slot', [0.42, 0.1, 0.08], [x - 0.55, 0.78, z + depth / 2 + 0.09], materials.board),
+    addBox(group, `${name}:door`, [0.5, 0.8, 0.06], [x - 0.55, 0.4, z + depth / 2 + 0.04], materials.houseDoor),
+    addBox(group, `${name}:window`, [0.5, 0.38, 0.06], [x + 0.45, height * 0.66, z + depth / 2 + 0.05], materials.houseWindow),
+    addBox(group, `${name}:sign`, [1.15, 0.28, 0.08], [x, height + 0.05, z + depth / 2 + 0.08], materials.boardFrame),
+    addBox(group, `${name}:mail-slot`, [0.42, 0.1, 0.08], [x - 0.55, 0.78, z + depth / 2 + 0.09], materials.board),
   );
   tryApplyAssetRender(group, postOffice, fallbackObjects, options);
 };
@@ -913,14 +915,19 @@ const addNatureProps = (group: THREE.Group, options: PlaygroundOptions): void =>
 
 const addWell = (group: THREE.Group): void => {
   const well = getWorldObjectsByKind('well')[0];
+  if (!well) {
+    return;
+  }
+
   const [x, , z] = well.position;
   const [diameter, height] = getDimensions(well);
+  const name = `village:${well.id}`;
 
-  addCylinder(group, 'village:well-stone-ring', diameter / 2, height, [x, height / 2, z], materials.wellStone);
-  addCylinder(group, 'village:well-water', diameter * 0.36, 0.06, [x, height + 0.04, z], materials.wellWater);
-  addBox(group, 'village:well-left-post', [0.12, 1.25, 0.12], [x - diameter * 0.45, height + 0.48, z], materials.fence);
-  addBox(group, 'village:well-right-post', [0.12, 1.25, 0.12], [x + diameter * 0.45, height + 0.48, z], materials.fence);
-  addBox(group, 'village:well-roof', [diameter * 1.2, 0.16, diameter * 0.95], [x, height + 1.12, z], materials.houseRoof);
+  addCylinder(group, `${name}:stone-ring`, diameter / 2, height, [x, height / 2, z], materials.wellStone);
+  addCylinder(group, `${name}:water`, diameter * 0.36, 0.06, [x, height + 0.04, z], materials.wellWater);
+  addBox(group, `${name}:left-post`, [0.12, 1.25, 0.12], [x - diameter * 0.45, height + 0.48, z], materials.fence);
+  addBox(group, `${name}:right-post`, [0.12, 1.25, 0.12], [x + diameter * 0.45, height + 0.48, z], materials.fence);
+  addBox(group, `${name}:roof`, [diameter * 1.2, 0.16, diameter * 0.95], [x, height + 1.12, z], materials.houseRoof);
 };
 
 const addMailbox = (
@@ -960,44 +967,49 @@ const addMailboxes = (group: THREE.Group, options: PlaygroundOptions): void => {
 };
 
 const addDeliveryBoard = (group: THREE.Group): void => {
+  if (!deliveryBoardObject) {
+    return;
+  }
+
+  const name = `village:${deliveryBoardObject.id}`;
   const [x, , z] = deliveryBoardObject.position;
   const interactionPosition = deliveryBoardObject.interactable?.position ?? deliveryBoardObject.position;
 
   addGroundRing(
     group,
-    'playground:delivery-board-interaction-ring',
+    `${name}:interaction-ring`,
     0.85,
     0.025,
     [interactionPosition[0], 0.035, interactionPosition[2]],
     materials.interactablePad,
   );
-  addBox(group, 'playground:delivery-board-left-post', [0.16, 1.8, 0.16], [x - 0.6, 0.9, z], materials.boardFrame);
-  addBox(group, 'playground:delivery-board-right-post', [0.16, 1.8, 0.16], [x + 0.6, 0.9, z], materials.boardFrame);
-  addBox(group, 'playground:delivery-board-panel', [1.55, 1, 0.12], [x, 1.3, z], materials.board);
+  addBox(group, `${name}:left-post`, [0.16, 1.8, 0.16], [x - 0.6, 0.9, z], materials.boardFrame);
+  addBox(group, `${name}:right-post`, [0.16, 1.8, 0.16], [x + 0.6, 0.9, z], materials.boardFrame);
+  addBox(group, `${name}:panel`, [1.55, 1, 0.12], [x, 1.3, z], materials.board);
   addBox(
     group,
-    'playground:delivery-board-header-placeholder',
+    `${name}:header-placeholder`,
     [1.25, 0.12, 0.14],
     [x, 1.62, z + 0.08],
     materials.boardFrame,
   );
   addBox(
     group,
-    'playground:delivery-board-note-large',
+    `${name}:note-large`,
     [0.55, 0.34, 0.14],
     [x - 0.27, 1.26, z + 0.08],
     materials.boardPaper,
   );
   addBox(
     group,
-    'playground:delivery-board-note-small',
+    `${name}:note-small`,
     [0.42, 0.24, 0.14],
     [x + 0.27, 1.19, z + 0.08],
     materials.boardPaper,
   );
   addBox(
     group,
-    'playground:delivery-board-note-pin',
+    `${name}:note-pin`,
     [0.12, 0.12, 0.16],
     [x - 0.27, 1.44, z + 0.1],
     materials.boardPin,
@@ -1020,8 +1032,6 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
     return playground;
   }
 
-  addCentralPlazaSurface(playground);
-  addPaths(playground);
   addPavementTiles(playground);
   addSpawnMarker(playground);
   addPostOffice(playground, options);
@@ -1033,7 +1043,6 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
   addNatureProps(playground, options);
   addMailboxes(playground, options);
   addDeliveryBoard(playground);
-  addVillageLabels(playground);
   applyAuthoredSceneTransforms(playground);
 
   return playground;

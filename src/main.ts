@@ -10,6 +10,7 @@ import { createDevDebugPanelManager, debugUiConfig } from './game/debug/debugUiM
 import {
   createDeliveryBoardOverlay,
   createDeliveryController,
+  createDeliveryJobsFromWorldObjects,
   createDeliveryGuidanceOverlay,
 } from './game/delivery';
 import { createInteractionController } from './game/interaction';
@@ -28,6 +29,7 @@ import {
   getLayoutObjectCountsByKind,
   layoutDebugConfig,
 } from './world/layoutDebug';
+import { villageWorldObjects } from './world/villageDefinition';
 import { createWorldEnvironment } from './world/environment';
 import { createPlacementEditor } from './world/placementEditor';
 import { createPlayground } from './world/playground';
@@ -112,7 +114,7 @@ player.object.add(playerRootHelper);
 appResources.trackObject3D(player.object);
 scene.add(player.object);
 
-const delivery = createDeliveryController();
+const delivery = createDeliveryController(createDeliveryJobsFromWorldObjects(villageWorldObjects));
 followCamera = createThirdPersonCameraController({
   camera,
   target: player.object,
@@ -293,7 +295,9 @@ const animate = (): void => {
   interaction.update(deltaSeconds);
   placementEditor.update(deltaSeconds);
   const deliveryState = delivery.getState();
+  const hasDeliveryBoardMarkerTarget = typeof deliveryBoardObjectiveMarker.userData.targetWorldObjectId === 'string';
   deliveryBoardObjectiveMarker.visible = enableAuthoredPlayground
+    && hasDeliveryBoardMarkerTarget
     && deliveryState.status !== 'delivery-accepted';
   deliveryTargetObjectiveMarker.visible = enableAuthoredPlayground
     && deliveryState.status === 'delivery-accepted'

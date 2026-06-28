@@ -106,6 +106,98 @@ const addDelta = (
   value[2] + delta[2],
 ];
 
+const getObjectScaleMultiplier = (object: WorldObjectDefinition): number => (
+  object.render?.mode === 'asset'
+    ? object.render.scaleMultiplier ?? 1
+    : object.layoutTransform?.scaleMultiplier ?? 1
+);
+
+const getObjectYOffset = (object: WorldObjectDefinition): number => (
+  object.render?.mode === 'asset'
+    ? object.render.yOffset ?? 0
+    : object.layoutTransform?.yOffset ?? 0
+);
+
+const getObjectRotationY = (object: WorldObjectDefinition): number => (
+  (object.render?.mode === 'asset' ? object.render.rotation?.[1] : undefined)
+  ?? object.rotation?.[1]
+  ?? 0
+);
+
+const getDimensionRatios = (
+  sourceDimensions: THREE.Vector3Tuple | undefined,
+  targetDimensions: THREE.Vector3Tuple | undefined,
+  scaleMultiplier: number,
+): THREE.Vector3Tuple => {
+  if (!sourceDimensions || !targetDimensions) {
+    return [scaleMultiplier, scaleMultiplier, scaleMultiplier];
+  }
+
+  return [
+    sourceDimensions[0] > 0 ? (targetDimensions[0] / sourceDimensions[0]) * scaleMultiplier : scaleMultiplier,
+    sourceDimensions[1] > 0 ? (targetDimensions[1] / sourceDimensions[1]) * scaleMultiplier : scaleMultiplier,
+    sourceDimensions[2] > 0 ? (targetDimensions[2] / sourceDimensions[2]) * scaleMultiplier : scaleMultiplier,
+  ];
+};
+
+const rotateOffsetY = (
+  offset: THREE.Vector3Tuple,
+  rotationY: number,
+): THREE.Vector3Tuple => {
+  const cos = Math.cos(rotationY);
+  const sin = Math.sin(rotationY);
+
+  return [
+    offset[0] * cos + offset[2] * sin,
+    offset[1],
+    -offset[0] * sin + offset[2] * cos,
+  ];
+};
+
+const createFittedCollider = (
+  sourceObject: WorldObjectDefinition,
+  targetObject: WorldObjectDefinition,
+): WorldColliderDefinition | undefined => {
+  if (!sourceObject.collider) {
+    return undefined;
+  }
+
+  const scaleMultiplier = getObjectScaleMultiplier(targetObject);
+  const ratios = getDimensionRatios(sourceObject.dimensions, targetObject.dimensions, scaleMultiplier);
+  const rotationY = getObjectRotationY(targetObject);
+  const sourceOffset: THREE.Vector3Tuple = [
+    sourceObject.collider.position[0] - sourceObject.position[0],
+    sourceObject.collider.position[1] - sourceObject.position[1],
+    sourceObject.collider.position[2] - sourceObject.position[2],
+  ];
+  const scaledOffset: THREE.Vector3Tuple = [
+    sourceOffset[0] * ratios[0],
+    sourceOffset[1] * ratios[1] + getObjectYOffset(targetObject),
+    sourceOffset[2] * ratios[2],
+  ];
+  const rotatedOffset = rotateOffsetY(scaledOffset, rotationY);
+  const scaledSize: THREE.Vector3Tuple = [
+    sourceObject.collider.size[0] * ratios[0],
+    sourceObject.collider.size[1] * ratios[1],
+    sourceObject.collider.size[2] * ratios[2],
+  ];
+  const cos = Math.abs(Math.cos(rotationY));
+  const sin = Math.abs(Math.sin(rotationY));
+
+  return {
+    position: [
+      targetObject.position[0] + rotatedOffset[0],
+      targetObject.position[1] + rotatedOffset[1],
+      targetObject.position[2] + rotatedOffset[2],
+    ],
+    size: [
+      Math.max(0.01, scaledSize[0] * cos + scaledSize[2] * sin),
+      Math.max(0.01, scaledSize[1]),
+      Math.max(0.01, scaledSize[0] * sin + scaledSize[2] * cos),
+    ],
+  };
+};
+
 const inferBaseTemplateIdFromObjectId = (
   objectId: string,
   knownObjectIdSet: ReadonlySet<string>,
@@ -683,6 +775,10 @@ const applyLayoutTransformOverride = (
 
   if (override.gameplay !== undefined) {
     nextObject.gameplay = override.gameplay === null ? undefined : cloneGameplay(override.gameplay);
+  }
+
+  if (override.collider === undefined && object.collider) {
+    nextObject.collider = createFittedCollider(object, nextObject);
   }
 
   return nextObject;

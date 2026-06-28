@@ -2,6 +2,16 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.6] - 2026-06-28
+
+### Fixed
+
+- Made the playable playground use the promoted town editor layout as the active world source instead of silently filling in unedited base objects.
+- Derived runtime delivery jobs from active editor-placed mailbox interactables so missing or unplaced mailboxes do not break the game.
+- Made objective markers, path guides, and interactables tolerate missing editor targets without throwing.
+- Updated inherited colliders to follow editor-authored dimensions, scale, Y offset, and rotation.
+- Removed hardcoded path strips, plaza surface, and labels from the playable playground so those elements come from editor-placed objects.
+
 ## [0.53.5] - 2026-06-28
 
 ### Changed

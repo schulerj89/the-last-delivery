@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { WorldObjectDefinition } from './types';
-import { deliveryBoardObject, getWorldObject } from './villageDefinition';
+import { deliveryBoardObject, tryGetWorldObject } from './villageDefinition';
 
 export const objectiveMarkerSettings = {
   bobAmplitude: 0.12,
@@ -66,16 +66,24 @@ const createObjectiveMarker = (
   return marker;
 };
 
-const getObjectiveAnchorPosition = (object: WorldObjectDefinition): THREE.Vector3Tuple => {
-  if (!object.objectiveAnchor) {
-    throw new Error(`Missing objective anchor for world object: ${object.id}`);
-  }
+const getObjectiveAnchorPosition = (object: WorldObjectDefinition): THREE.Vector3Tuple => (
+  object.objectiveAnchor?.position ?? [
+    object.position[0],
+    object.position[1] + (object.dimensions?.[1] ?? 1.6) + 0.6,
+    object.position[2],
+  ]
+);
 
-  return object.objectiveAnchor.position;
+export const tryResolveObjectiveAnchorForWorldObject = (
+  worldObjectId: string,
+): THREE.Vector3Tuple | null => {
+  const object = tryGetWorldObject(worldObjectId);
+
+  return object ? getObjectiveAnchorPosition(object) : null;
 };
 
 export const resolveObjectiveAnchorForWorldObject = (worldObjectId: string): THREE.Vector3Tuple => (
-  getObjectiveAnchorPosition(getWorldObject(worldObjectId))
+  tryResolveObjectiveAnchorForWorldObject(worldObjectId) ?? [0, 2, 0]
 );
 
 export const setObjectiveMarkerTarget = (
@@ -91,16 +99,28 @@ export const setObjectiveMarkerTarget = (
     return true;
   }
 
-  const position = resolveObjectiveAnchorForWorldObject(worldObjectId);
+  const position = tryResolveObjectiveAnchorForWorldObject(worldObjectId);
+
+  if (!position) {
+    marker.userData.targetWorldObjectId = null;
+    return false;
+  }
+
   marker.position.set(...position);
   marker.userData.baseY = position[1];
   marker.userData.targetWorldObjectId = worldObjectId;
   return true;
 };
 
-export const createDeliveryBoardObjectiveMarker = (): THREE.Group => (
-  createObjectiveMarker('objective:delivery-board', getObjectiveAnchorPosition(deliveryBoardObject), 0x7cf2cf)
-);
+export const createDeliveryBoardObjectiveMarker = (): THREE.Group => {
+  const marker = createObjectiveMarker(
+    'objective:delivery-board',
+    deliveryBoardObject ? getObjectiveAnchorPosition(deliveryBoardObject) : [0, 2, 0],
+    0x7cf2cf,
+  );
+  marker.userData.targetWorldObjectId = deliveryBoardObject?.id ?? null;
+  return marker;
+};
 
 export const createDeliveryTargetObjectiveMarker = (): THREE.Group => (
   createObjectiveMarker('objective:delivery-target', [0, 2, 0], 0xffe45c)

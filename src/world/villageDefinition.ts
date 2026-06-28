@@ -508,7 +508,16 @@ export const authoredVillageWorldObjects: readonly WorldObjectDefinition[] = mer
   generatedVillageLayoutOverrides,
 );
 
+const promotedLayoutObjectIds = new Set(generatedVillageLayoutOverrides.overrides.map((override) => override.id));
+const baseVillageWorldObjectIds = new Set(baseVillageWorldObjects.map((object) => object.id));
+const hasPromotedEditorLayout = generatedVillageLayoutOverrides.overrides.length > 0;
+
 export const villageWorldObjects: readonly WorldObjectDefinition[] = authoredVillageWorldObjects
+  .filter((worldObject) => (
+    !hasPromotedEditorLayout
+    || !baseVillageWorldObjectIds.has(worldObject.id)
+    || promotedLayoutObjectIds.has(worldObject.id)
+  ))
   .filter((worldObject) => worldObject.active !== false);
 
 export const getWorldObjectsByGameplayRole = (
@@ -526,8 +535,12 @@ export const getWorldObjectsByInteractionAction = (
 const playerSpawnObject = getWorldObjectsByGameplayRole('player-spawn')[0];
 export const playerSpawnPosition: THREE.Vector3Tuple = playerSpawnObject?.position ?? [0, 0, 10];
 
+export const tryGetWorldObject = (id: string): WorldObjectDefinition | null => (
+  villageWorldObjects.find((worldObject) => worldObject.id === id) ?? null
+);
+
 export const getWorldObject = (id: string): WorldObjectDefinition => {
-  const object = villageWorldObjects.find((worldObject) => worldObject.id === id);
+  const object = tryGetWorldObject(id);
 
   if (!object) {
     throw new Error(`Missing world object definition: ${id}`);
@@ -543,5 +556,4 @@ export const getWorldObjectsByKind = (kind: WorldObjectKind): readonly WorldObje
 export const collidableWorldObjects = villageWorldObjects.filter((worldObject) => worldObject.collider);
 export const interactableWorldObjects = villageWorldObjects.filter((worldObject) => worldObject.interactable);
 
-export const deliveryBoardObject = getWorldObjectsByInteractionAction('open-delivery-board')[0]
-  ?? getWorldObject('delivery-board');
+export const deliveryBoardObject: WorldObjectDefinition | undefined = getWorldObjectsByInteractionAction('open-delivery-board')[0];

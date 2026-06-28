@@ -37,6 +37,24 @@ export const createPlaygroundInteractables = (
     return [];
   }
 
+  const deliveryBoardInteractables: Interactable[] = deliveryBoardObject?.interactable
+    ? [
+      {
+        id: deliveryBoardObject.id,
+        position: createInteractablePosition(deliveryBoardObject),
+        radius: getInteractableRadius(deliveryBoardObject),
+        prompt: () => {
+          const state = delivery.getState();
+
+          return state.status === 'delivery-accepted'
+            ? `${state.activeDelivery?.title ?? 'Delivery'} in progress`
+            : 'Open delivery board';
+        },
+        interact: () => (openDeliveryBoard ? openDeliveryBoard() : delivery.acceptDelivery()),
+      },
+    ]
+    : [];
+
   return [
     ...getWorldObjectsByInteractionAction('complete-delivery')
       .filter((mailbox) => mailbox.interactable)
@@ -61,18 +79,6 @@ export const createPlaygroundInteractables = (
             : 'Check the delivery board first.'
         ),
       })),
-    {
-      id: deliveryBoardObject.id,
-      position: createInteractablePosition(deliveryBoardObject),
-      radius: getInteractableRadius(deliveryBoardObject),
-      prompt: () => {
-        const state = delivery.getState();
-
-        return state.status === 'delivery-accepted'
-          ? `${state.activeDelivery?.title ?? 'Delivery'} in progress`
-          : 'Open delivery board';
-      },
-      interact: () => (openDeliveryBoard ? openDeliveryBoard() : delivery.acceptDelivery()),
-    },
+    ...deliveryBoardInteractables,
   ];
 };
