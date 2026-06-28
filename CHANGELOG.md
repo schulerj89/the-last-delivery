@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.10.0] - 2026-06-28
+
+### Added
+
+- Added iteration 008 playground readability and game-feel polish.
+- Added visible ground cues for player spawn and interactable stand points.
+- Added delivery board and mailbox objective markers with subtle animation.
+
+### Changed
+
+- Improved primitive material contrast for interactables and obstacles.
+- Improved interaction prompt placement and message timing.
+
 ## [0.9.0] - 2026-06-28
 
 ### Added

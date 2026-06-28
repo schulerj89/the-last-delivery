@@ -5,7 +5,11 @@ import { createDeliveryController } from '../src/game/delivery';
 import { playerMovementSettings } from '../src/game/player';
 import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
-import { createMailboxObjectiveMarker } from '../src/world/playgroundObjectiveMarker';
+import {
+  createDeliveryBoardObjectiveMarker,
+  createMailboxObjectiveMarker,
+  updateObjectiveMarker,
+} from '../src/world/playgroundObjectiveMarker';
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
@@ -64,6 +68,11 @@ const runModuleSmoke = (): void => {
   const marker = createMailboxObjectiveMarker();
   assert(marker.name === 'objective:mailbox', 'Mailbox objective marker should initialize.');
   assert(marker.visible === false, 'Mailbox objective marker should start hidden.');
+
+  const boardMarker = createDeliveryBoardObjectiveMarker();
+  assert(boardMarker.name === 'objective:delivery-board', 'Delivery board objective marker should initialize.');
+  updateObjectiveMarker(boardMarker, 1);
+  assert(boardMarker.position.y > 0, 'Objective marker animation should keep marker above the ground.');
 };
 
 runDeliveryStateSmoke();

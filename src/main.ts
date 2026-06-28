@@ -8,7 +8,11 @@ import { createPlayground } from './world/playground';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
 import { createPlaygroundInteractables } from './world/playgroundInteractables';
-import { createMailboxObjectiveMarker } from './world/playgroundObjectiveMarker';
+import {
+  createDeliveryBoardObjectiveMarker,
+  createMailboxObjectiveMarker,
+  updateObjectiveMarker,
+} from './world/playgroundObjectiveMarker';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -31,6 +35,9 @@ scene.add(createPlayground());
 
 const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisionWorld);
 scene.add(collisionDebugView.object);
+
+const deliveryBoardObjectiveMarker = createDeliveryBoardObjectiveMarker();
+scene.add(deliveryBoardObjectiveMarker);
 
 const mailboxObjectiveMarker = createMailboxObjectiveMarker();
 scene.add(mailboxObjectiveMarker);
@@ -79,14 +86,19 @@ const clock = new THREE.Clock();
 
 const animate = () => {
   const deltaSeconds = clock.getDelta();
+  const elapsedSeconds = clock.elapsedTime;
 
   player.update(deltaSeconds);
   interaction.update(deltaSeconds);
-  mailboxObjectiveMarker.visible = delivery.getState().status === 'delivery-accepted';
+  const deliveryState = delivery.getState();
+  deliveryBoardObjectiveMarker.visible = deliveryState.status !== 'delivery-accepted';
+  mailboxObjectiveMarker.visible = deliveryState.status === 'delivery-accepted';
+  updateObjectiveMarker(deliveryBoardObjectiveMarker, elapsedSeconds);
+  updateObjectiveMarker(mailboxObjectiveMarker, elapsedSeconds);
   followCamera.update(deltaSeconds);
   playerDebugOverlay.update(player.getState());
   cameraDebugOverlay.update(followCamera.getState());
-  deliveryDebugOverlay.update(delivery.getState());
+  deliveryDebugOverlay.update(deliveryState);
   renderer.render(scene, camera);
   window.requestAnimationFrame(animate);
 };

@@ -45,21 +45,26 @@ canvas {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  padding: 8px 12px;
+  box-sizing: border-box;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 9px 14px;
   color: #f8f2dc;
-  background: rgb(16 19 24 / 82%);
-  border: 1px solid rgb(248 242 220 / 30%);
+  background: rgb(16 19 24 / 88%);
+  border: 1px solid rgb(248 242 220 / 42%);
   border-radius: 4px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 26%);
   font: 14px/1.35 Arial, sans-serif;
+  text-align: center;
   pointer-events: none;
 }
 
 .interaction-prompt {
-  bottom: 28px;
+  bottom: 72px;
 }
 
 .interaction-message {
-  top: 24px;
+  top: 28px;
+  border-color: rgb(124 242 207 / 52%);
 }
 
 .interaction-prompt[hidden],

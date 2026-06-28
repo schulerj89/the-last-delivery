@@ -8,7 +8,7 @@ import type {
 } from './types';
 
 export const interactionSettings: InteractionSettings = {
-  messageDurationSeconds: 2.25,
+  messageDurationSeconds: 3,
 };
 
 const getPrompt = (interactable: Interactable): string => (
@@ -89,7 +89,10 @@ export const createInteractionController = ({
       currentInteractable = findNearestInteractable(player.position, interactables);
 
       if (currentInteractable) {
-        prompt.textContent = `Press E - ${getPrompt(currentInteractable)}`;
+        const nextPrompt = `Press E - ${getPrompt(currentInteractable)}`;
+        if (prompt.textContent !== nextPrompt) {
+          prompt.textContent = nextPrompt;
+        }
         prompt.hidden = false;
       } else {
         prompt.hidden = true;
