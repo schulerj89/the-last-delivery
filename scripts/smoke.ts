@@ -104,10 +104,13 @@ import {
   layoutDebugCameraModes,
 } from '../src/world/layoutDebug';
 import {
+  assetMaterialOverrideAssetIds,
   assetMaterialOverrideConfig,
   assetMaterialOverrideKinds,
   isAssetMaterialOverrideKind,
+  isAssetMaterialOverrideAssetId,
   isValidMaterialOverrideColor,
+  natureAssetMaterialOverrideConfig,
 } from '../src/world/assetMaterialOverrides';
 import {
   createEmptyLayoutOverrideDocument,
@@ -615,21 +618,49 @@ const runVisualPolishSmoke = (): void => {
   assert(isAssetMaterialOverrideKind('cottage'), 'Cottage assets should have material override support.');
   assert(!isAssetMaterialOverrideKind('mailbox'), 'Procedural mailboxes should not use GLB material overrides.');
   assert(assetMaterialOverrideKinds.length > 0, 'Material override kinds should initialize.');
-  assetMaterialOverrideKinds.forEach((kind) => {
-    const palette = assetMaterialOverrideConfig[kind];
-
-    assert(isValidMaterialOverrideColor(palette.primaryColor), `Material override primary color should be valid: ${kind}`);
+  const assertMaterialPaletteIsValid = (
+    palette: {
+      primaryColor: number;
+      secondaryColor?: number;
+      accentColor?: number;
+      roughness: number;
+      metalness: number;
+    },
+    label: string,
+  ): void => {
+    assert(isValidMaterialOverrideColor(palette.primaryColor), `Material override primary color should be valid: ${label}`);
     assert(
       palette.secondaryColor === undefined || isValidMaterialOverrideColor(palette.secondaryColor),
-      `Material override secondary color should be valid: ${kind}`,
+      `Material override secondary color should be valid: ${label}`,
     );
     assert(
       palette.accentColor === undefined || isValidMaterialOverrideColor(palette.accentColor),
-      `Material override accent color should be valid: ${kind}`,
+      `Material override accent color should be valid: ${label}`,
     );
-    assert(palette.roughness >= 0 && palette.roughness <= 1, `Material override roughness should be normalized: ${kind}`);
-    assert(palette.metalness >= 0 && palette.metalness <= 1, `Material override metalness should be normalized: ${kind}`);
+    assert(palette.roughness >= 0 && palette.roughness <= 1, `Material override roughness should be normalized: ${label}`);
+    assert(palette.metalness >= 0 && palette.metalness <= 1, `Material override metalness should be normalized: ${label}`);
+  };
+
+  assetMaterialOverrideKinds.forEach((kind) => {
+    assertMaterialPaletteIsValid(assetMaterialOverrideConfig[kind], kind);
   });
+
+  assert(assetMaterialOverrideAssetIds.length === selectedNatureAssetIds.length, 'Every selected nature asset should be material-normalized.');
+  assert(!isAssetMaterialOverrideAssetId('fantasy-box-001'), 'Fantasy assets should not be treated as nature material overrides.');
+  selectedNatureAssetIds.forEach((assetId) => {
+    assert(isAssetMaterialOverrideAssetId(assetId), `Selected nature asset should have an asset-id material override: ${assetId}`);
+    assertMaterialPaletteIsValid(natureAssetMaterialOverrideConfig[assetId], assetId);
+  });
+
+  assert(
+    natureAssetMaterialOverrideConfig['nature-flower-yellow'].accentColor === 0xf0d052,
+    'Yellow flower assets should keep a yellow blossom accent.',
+  );
+  assert(
+    Number(natureAssetMaterialOverrideConfig['nature-rock'].primaryColor)
+      !== Number(natureAssetMaterialOverrideConfig['nature-grass01'].primaryColor),
+    'Rock and grass assets should not share the same material palette.',
+  );
 };
 
 const runAnimationHarnessSmoke = (): void => {

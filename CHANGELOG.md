@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.8] - 2026-06-28
+
+### Fixed
+
+- Added per-asset material palettes for every selected Low Poly Nature Pack Lite runtime asset so editor-placed trees, rocks, bushes, grass, flowers, mushrooms, tents, fences, logs, hills, and tiles get consistent color.
+- Made nature material normalization resolve by asset id before falling back to broad world-object kind palettes.
+- Added smoke coverage to ensure selected nature assets stay covered by material override palettes.
+
 ## [0.53.7] - 2026-06-28
 
 ### Fixed
