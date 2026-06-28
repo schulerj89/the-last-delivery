@@ -16,10 +16,11 @@ import type {
   MailboxVariant,
   WorldGameplayRole,
   WorldInteractionAction,
+  WorldObjectKind,
   WorldObjectDefinition,
 } from './types';
 import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
-import { villageWorldObjects } from './villageDefinition';
+import { authoredVillageWorldObjects } from './villageDefinition';
 import {
   getDefaultActionForRole,
   getWorldObjectGameplay,
@@ -115,6 +116,12 @@ interface EditorAssetPreview {
   requestId: number;
 }
 
+export const primitivePlacementPreviewKinds = ['pavement'] as const satisfies readonly WorldObjectKind[];
+
+export const isPrimitivePlacementPreviewKind = (kind: WorldObjectKind): boolean => (
+  primitivePlacementPreviewKinds.includes(kind as (typeof primitivePlacementPreviewKinds)[number])
+);
+
 interface BrowserFileHandle {
   getFile(): Promise<File>;
   createWritable(): Promise<{
@@ -155,7 +162,7 @@ export const canUseTownEditorFilePicker = (
 export const getPlacementEditorSnapValues = (): readonly number[] => placementEditorConfig.snapValues;
 
 export const createEditablePlacementObjects = (
-  worldObjects: readonly WorldObjectDefinition[] = villageWorldObjects,
+  worldObjects: readonly WorldObjectDefinition[] = authoredVillageWorldObjects,
 ): readonly EditablePlacementObject[] => (
   worldObjects
     .filter((object) => object.dimensions)
@@ -409,6 +416,41 @@ const disposeObjectResources = (object: THREE.Object3D): void => {
   });
 };
 
+const createPrimitivePreviewMaterial = (object: WorldObjectDefinition): THREE.Material => {
+  if (object.kind === 'pavement') {
+    return new THREE.MeshStandardMaterial({
+      color: 0x8f8a7a,
+      roughness: 0.92,
+      metalness: 0,
+    });
+  }
+
+  return new THREE.MeshStandardMaterial({
+    color: 0x8a8f85,
+    roughness: 0.9,
+    metalness: 0,
+  });
+};
+
+export const createPrimitivePlacementPreviewObject = (
+  object: WorldObjectDefinition,
+): THREE.Object3D | null => {
+  if (!object.dimensions || !isPrimitivePlacementPreviewKind(object.kind)) {
+    return null;
+  }
+
+  const preview = new THREE.Mesh(
+    new THREE.BoxGeometry(...object.dimensions),
+    createPrimitivePreviewMaterial(object),
+  );
+
+  preview.name = `placement-editor:primitive-preview:${object.id}`;
+  preview.userData.label = preview.name;
+  preview.receiveShadow = true;
+  preview.position.set(...object.position);
+  return preview;
+};
+
 const getDraftKey = (event: KeyboardEvent): string => {
   if (event.key === '[' || event.key === ']') {
     return event.key;
@@ -561,6 +603,7 @@ export const createPlacementEditor = ({
   const draftsByObjectId = new Map<string, PlacementTransformDraft>();
   const baselinesByObjectUuid = new Map<string, SceneObjectBaseline>();
   const assetPreviewsByObjectId = new Map<string, EditorAssetPreview>();
+  const primitivePreviewsByObjectId = new Map<string, THREE.Object3D>();
   const marker = createSelectionMarker();
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
@@ -688,6 +731,7 @@ export const createPlacementEditor = ({
     'Use Primitive: clear selected GLB preview.',
     'Toggle Active: show/hide selected object in editor JSON.',
     'Set Spawn / Post Office / Delivery Board / Mailbox Target: assign gameplay role/action to selected asset.',
+    'Generated pavement: select a pavement object, Toggle Active, then drag/scale it.',
     'Save Active JSON: save working town layout locally.',
     'Copy JSON / Save JSON File: export layout for layout:apply.',
   ].join('\n');
@@ -820,6 +864,11 @@ export const createPlacementEditor = ({
       preview.instance.dispose();
     });
     assetPreviewsByObjectId.clear();
+    primitivePreviewsByObjectId.forEach((preview) => {
+      preview.parent?.remove(preview);
+      disposeObjectResources(preview);
+    });
+    primitivePreviewsByObjectId.clear();
   };
 
   const disposeAssetPreview = (objectId: string): void => {
@@ -832,6 +881,18 @@ export const createPlacementEditor = ({
     preview.disposeMaterialOverrides();
     preview.instance.dispose();
     assetPreviewsByObjectId.delete(objectId);
+  };
+
+  const disposePrimitivePreview = (objectId: string): void => {
+    const preview = primitivePreviewsByObjectId.get(objectId);
+
+    if (!preview) {
+      return;
+    }
+
+    preview.parent?.remove(preview);
+    disposeObjectResources(preview);
+    primitivePreviewsByObjectId.delete(objectId);
   };
 
   const setSceneObjectsVisible = (objectId: string, visible: boolean): void => {
@@ -861,6 +922,22 @@ export const createPlacementEditor = ({
         ? editableObject.worldObject.render.fitMode
         : undefined,
     });
+  };
+
+  const updatePrimitivePreviewTransform = (
+    previewObject: THREE.Object3D,
+    editableObject: EditablePlacementObject,
+    draft: PlacementTransformDraft,
+  ): void => {
+    const dimensions = editableObject.worldObject.dimensions ?? [1, 0.05, 1];
+    const height = Math.max(dimensions[1], 0.01);
+    const groundY = Math.max(0, draft.position[1] - height / 2 + draft.yOffset);
+    const scale = Math.max(draft.scaleMultiplier, 0.001);
+
+    previewObject.position.set(draft.position[0], groundY + height / 2, draft.position[2]);
+    previewObject.rotation.set(0, draft.rotationY, 0);
+    previewObject.scale.set(scale, 1, scale);
+    previewObject.updateMatrixWorld(true);
   };
 
   const updateAssetPreviewTransform = (
@@ -941,6 +1018,35 @@ export const createPlacementEditor = ({
           updateHud();
         }
       });
+  };
+
+  const loadPrimitivePreview = (
+    editableObject: EditablePlacementObject,
+    draft: PlacementTransformDraft,
+  ): boolean => {
+    if (!active || !draft.active || !isPrimitivePlacementPreviewKind(editableObject.kind)) {
+      disposePrimitivePreview(editableObject.id);
+      return false;
+    }
+
+    let preview = primitivePreviewsByObjectId.get(editableObject.id);
+
+    if (!preview) {
+      preview = createPrimitivePlacementPreviewObject(editableObject.worldObject) ?? undefined;
+
+      if (!preview) {
+        return false;
+      }
+
+      primitivePreviewsByObjectId.set(editableObject.id, preview);
+      sceneRoot.add(preview);
+    }
+
+    updatePrimitivePreviewTransform(preview, editableObject, draft);
+    preview.visible = true;
+    setSceneObjectsVisible(editableObject.id, false);
+    status = `Previewing generated ${editableObject.kind} for ${editableObject.id}.`;
+    return true;
   };
 
   const createDraftSnapshot = (): PlacementDraftSnapshot => (
@@ -1041,6 +1147,7 @@ export const createPlacementEditor = ({
     if (!draft.active) {
       setSceneObjectsVisible(selectedObject.id, false);
       disposeAssetPreview(selectedObject.id);
+      disposePrimitivePreview(selectedObject.id);
       updateMarker();
       return;
     }
@@ -1069,10 +1176,14 @@ export const createPlacementEditor = ({
     });
 
     if (draft.assetId) {
+      disposePrimitivePreview(selectedObject.id);
       loadAssetPreview(selectedObject, draft);
     } else {
       disposeAssetPreview(selectedObject.id);
-      setSceneObjectsVisible(selectedObject.id, true);
+
+      if (!loadPrimitivePreview(selectedObject, draft)) {
+        setSceneObjectsVisible(selectedObject.id, true);
+      }
     }
 
     updateMarker();

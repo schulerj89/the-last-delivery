@@ -188,6 +188,36 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
     },
   },
   {
+    id: 'pavement-tile-square',
+    kind: 'pavement',
+    active: false,
+    position: [0, 0.025, 6],
+    dimensions: [4, 0.05, 4],
+    render: {
+      mode: 'primitive',
+    },
+  },
+  {
+    id: 'pavement-tile-long',
+    kind: 'pavement',
+    active: false,
+    position: [4, 0.025, 6],
+    dimensions: [7, 0.05, 2],
+    render: {
+      mode: 'primitive',
+    },
+  },
+  {
+    id: 'pavement-tile-plaza',
+    kind: 'pavement',
+    active: false,
+    position: [-4, 0.025, 6],
+    dimensions: [6, 0.05, 6],
+    render: {
+      mode: 'primitive',
+    },
+  },
+  {
     id: 'tree-northwest',
     kind: 'tree',
     position: [-12.4, 1.35, -10.2],
@@ -473,10 +503,13 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
   },
 ];
 
-export const villageWorldObjects: readonly WorldObjectDefinition[] = mergeWorldObjectOverrides(
+export const authoredVillageWorldObjects: readonly WorldObjectDefinition[] = mergeWorldObjectOverrides(
   baseVillageWorldObjects,
   generatedVillageLayoutOverrides,
-).filter((worldObject) => worldObject.active !== false);
+);
+
+export const villageWorldObjects: readonly WorldObjectDefinition[] = authoredVillageWorldObjects
+  .filter((worldObject) => worldObject.active !== false);
 
 export const getWorldObjectsByGameplayRole = (
   role: WorldGameplayRole,

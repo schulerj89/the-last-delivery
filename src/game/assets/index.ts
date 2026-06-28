@@ -1,9 +1,12 @@
 export {
+  assetVerticalAlignments,
   assetFitModes,
   createAssetTargetBounds,
+  defaultWorldAssetVerticalAlignment,
   defaultWorldAssetFitMode,
   fitAssetObjectToBounds,
   getAssetFitScale,
+  isAssetVerticalAlignment,
   isAssetFitMode,
   resolveAssetFitMode,
 } from './assetFitting';
@@ -39,6 +42,7 @@ export type {
   AssetFitMode,
   AssetFitOptions,
   AssetFitResult,
+  AssetVerticalAlignment,
 } from './assetFitting';
 export type {
   AssetDefinition,

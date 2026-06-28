@@ -31,6 +31,7 @@ const materials = {
   path: new THREE.MeshStandardMaterial({ color: 0xc8aa70, roughness: 0.95 }),
   sidePath: new THREE.MeshStandardMaterial({ color: 0x9b8c65, roughness: 0.95 }),
   pathEdge: new THREE.MeshStandardMaterial({ color: 0xf0d88f, roughness: 0.9 }),
+  pavement: new THREE.MeshStandardMaterial({ color: 0x8f8a7a, roughness: 0.92 }),
   fence: new THREE.MeshStandardMaterial({ color: 0x8d7657, roughness: 0.75 }),
   crate: new THREE.MeshStandardMaterial({ color: 0x9a6435, roughness: 0.85 }),
   crateStrap: new THREE.MeshStandardMaterial({ color: 0x5a3826, roughness: 0.8 }),
@@ -229,6 +230,19 @@ const applyAuthoredSceneTransforms = (root: THREE.Object3D): void => {
       sceneObject.position.copy(pivot).add(localOffset);
       sceneObject.position.y += transform.yOffset;
       sceneObject.rotation.y += transform.rotationY;
+
+      if (object.kind === 'pavement' && object.dimensions) {
+        const height = Math.max(object.dimensions[1], 0.01);
+        const groundY = Math.max(0, object.position[1] - height / 2 + transform.yOffset);
+        sceneObject.position.y = groundY + height / 2;
+        sceneObject.scale.set(
+          sceneObject.scale.x * transform.scaleMultiplier,
+          sceneObject.scale.y,
+          sceneObject.scale.z * transform.scaleMultiplier,
+        );
+        return;
+      }
+
       sceneObject.scale.multiplyScalar(transform.scaleMultiplier);
     });
   });
@@ -557,6 +571,20 @@ const addPaths = (group: THREE.Group): void => {
       new THREE.Vector2(path.end[0], path.end[2]),
       path.width,
       path.kind === 'main' ? materials.path : materials.sidePath,
+    );
+  });
+};
+
+const addPavementTiles = (group: THREE.Group): void => {
+  getWorldObjectsByKind('pavement').forEach((pavement) => {
+    const [width, height, depth] = getDimensions(pavement);
+    addSurface(
+      group,
+      `village:${pavement.id}`,
+      [width, height, depth],
+      pavement.position,
+      materials.pavement,
+      pavement.rotation?.[1] ?? 0,
     );
   });
 };
@@ -994,6 +1022,7 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
 
   addCentralPlazaSurface(playground);
   addPaths(playground);
+  addPavementTiles(playground);
   addSpawnMarker(playground);
   addPostOffice(playground, options);
   addHouses(playground, options);

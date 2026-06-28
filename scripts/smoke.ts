@@ -1,5 +1,6 @@
 import {
   Bone,
+  Box3,
   BoxGeometry,
   Color,
   Float32BufferAttribute,
@@ -23,9 +24,11 @@ import {
   cloneGltfSourceForInstance,
   createAssetCache,
   createAssetTargetBounds,
+  defaultWorldAssetVerticalAlignment,
   defaultWorldAssetFitMode,
   fitAssetObjectToBounds,
   getAssetFitScale,
+  isAssetVerticalAlignment,
   getSelectedCharacterAssets,
   getSelectedFantasyAssets,
   getSelectedNatureAssets,
@@ -119,13 +122,16 @@ import {
   capPlacementHistoryLength,
   canUseTownEditorFilePicker,
   createLayoutOverrideDocumentFromPlacementDrafts,
+  createPrimitivePlacementPreviewObject,
   createDraggedPlacementPosition,
   createEditablePlacementObjects,
   createPlacementTransformDraft,
   getEditablePlacementObjectById,
   getPlacementEditorSnapValues,
   getPlacementEditorMoveSpeed,
+  isPrimitivePlacementPreviewKind,
   placementEditorConfig,
+  primitivePlacementPreviewKinds,
   serializePlacementTransform,
   serializePlacementTransforms,
 } from '../src/world/placementEditor';
@@ -146,6 +152,7 @@ import { createMailboxProp } from '../src/world/props/createMailbox';
 import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
 import { generatedVillageLayoutOverrides } from '../src/world/villageOverrides.generated';
 import {
+  authoredVillageWorldObjects,
   baseVillageWorldObjects,
   getWorldObjectsByGameplayRole,
   getWorldObjectsByInteractionAction,
@@ -458,6 +465,9 @@ const runAssetFittingSmoke = (): void => {
   assert(isAssetFitMode('contain'), 'Valid asset fit modes should be accepted.');
   assert(!isAssetFitMode('stretch'), 'Invalid asset fit modes should be rejected.');
   assert(resolveAssetFitMode('stretch') === defaultWorldAssetFitMode, 'Invalid asset fit modes should safely fall back.');
+  assert(defaultWorldAssetVerticalAlignment === 'ground', 'Asset fitting should ground-align loaded models by default.');
+  assert(isAssetVerticalAlignment('ground'), 'Ground should be a valid asset vertical alignment.');
+  assert(isAssetVerticalAlignment('center'), 'Center should be a valid asset vertical alignment.');
 
   const noneScale = getAssetFitScale(new Vector3(1, 2, 4), new Vector3(2, 2, 2), 'none');
   assert(noneScale.x === 1 && noneScale.y === 1 && noneScale.z === 1, 'None fit mode should keep source scale.');
@@ -496,6 +506,19 @@ const runAssetFittingSmoke = (): void => {
   assert(Math.abs(exactSize.y - 2) < 0.001, 'Exact fit should match target Y size.');
   assert(Math.abs(exactSize.z - 2) < 0.001, 'Exact fit should match target Z size.');
   disposeFitSmokeMesh(exactMesh);
+
+  const scaledGroundMesh = new Mesh(new BoxGeometry(1, 1, 1), new MeshBasicMaterial());
+  const scaledGroundResult = fitAssetObjectToBounds(scaledGroundMesh, {
+    targetPosition: [0, 1, 0],
+    targetDimensions: [2, 2, 2],
+    fitMode: 'contain',
+    scaleMultiplier: 2,
+  });
+  assert(
+    Math.abs(scaledGroundResult.visualBox.min.y) < 0.001,
+    'Scaled assets should keep their visual bottom on the target ground instead of sinking.',
+  );
+  disposeFitSmokeMesh(scaledGroundMesh);
 
   const zeroWidthMesh = new Mesh(new BoxGeometry(0, 1, 1), new MeshBasicMaterial());
   const zeroWidthResult = fitAssetObjectToBounds(zeroWidthMesh, {
@@ -882,6 +905,8 @@ const runWorldDefinitionSmoke = (): void => {
   });
 
   const mailboxObjects = villageWorldObjects.filter((object) => object.kind === 'mailbox');
+  const authoredPavementObjects = authoredVillageWorldObjects.filter((object) => object.kind === 'pavement');
+  const activePavementObjects = villageWorldObjects.filter((object) => object.kind === 'pavement');
   const spawnObjects = getWorldObjectsByGameplayRole('player-spawn');
   const deliveryBoardActionObjects = getWorldObjectsByInteractionAction('open-delivery-board');
   const deliveryTargetActionObjects = getWorldObjectsByInteractionAction('complete-delivery');
@@ -919,6 +944,9 @@ const runWorldDefinitionSmoke = (): void => {
 
   assert(getDefaultActionForRole('mailbox') === 'complete-delivery', 'Mailbox roles should default to complete-delivery.');
   assert(getDefaultActionForRole('delivery-board') === 'open-delivery-board', 'Delivery board roles should default to open-delivery-board.');
+  assert(authoredPavementObjects.length >= 3, 'World should include generated pavement pieces in the editable authored object list.');
+  assert(activePavementObjects.length === 0, 'Generated pavement pieces should start inactive so the clean canvas stays clear.');
+  assert(authoredPavementObjects.every((object) => object.collider === undefined), 'Generated pavement pieces should not add collision by default.');
   assert(spawnObjects.length === 1, 'World should define exactly one player spawn role.');
   assert(deliveryBoardActionObjects.length >= 1, 'World should define a delivery board action object.');
   assert(deliveryTargetActionObjects.length >= 3, 'World should define mailbox delivery action objects.');
@@ -1179,11 +1207,13 @@ const runPlacementEditorSmoke = (): void => {
   const snapValues = getPlacementEditorSnapValues();
   const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
   const playerSpawn = getEditablePlacementObjectById('player-spawn', editableObjects);
+  const pavementTile = getEditablePlacementObjectById('pavement-tile-square', editableObjects);
   const missingObject = getEditablePlacementObjectById('missing-object', editableObjects);
 
   assert(editableObjects.length > 0, 'Placement editor editable object list should initialize.');
   assert(deliveryBoard !== null, 'Placement editor should resolve important editable objects.');
   assert(playerSpawn !== null, 'Placement editor should expose the player spawn as an editable object.');
+  assert(pavementTile !== null, 'Placement editor should expose generated pavement tiles as editable objects.');
   assert(missingObject === null, 'Placement editor should handle missing object ids safely.');
   assert(snapValues.length === 3, 'Placement editor should expose three snap values.');
   assert(snapValues.every((value) => value > 0), 'Placement editor snap values should be positive.');
@@ -1194,6 +1224,8 @@ const runPlacementEditorSmoke = (): void => {
   assert(placementEditorConfig.fastMoveMultiplier > 1, 'Placement editor fast modifier should increase movement speed.');
   assert(placementEditorConfig.fineMoveMultiplier > 0 && placementEditorConfig.fineMoveMultiplier < 1, 'Placement editor fine modifier should reduce movement speed.');
   assert(placementEditorConfig.undoHistoryLimit >= 10, 'Placement editor undo history should keep a useful number of operations.');
+  assert(primitivePlacementPreviewKinds.includes('pavement'), 'Placement editor primitive previews should support generated pavement.');
+  assert(isPrimitivePlacementPreviewKind('pavement'), 'Pavement should be a primitive preview kind.');
 
   const baseMoveSpeed = getPlacementEditorMoveSpeed(0.25);
   const fastMoveSpeed = getPlacementEditorMoveSpeed(0.25, { shiftKey: true });
@@ -1212,7 +1244,32 @@ const runPlacementEditorSmoke = (): void => {
     throw new Error('Missing delivery board editable object.');
   }
 
+  if (!pavementTile) {
+    throw new Error('Missing pavement editable object.');
+  }
+
   const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
+  const pavementDraft = createPlacementTransformDraft(pavementTile.worldObject);
+  pavementDraft.active = true;
+  pavementDraft.scaleMultiplier = 2.5;
+  const pavementPreview = createPrimitivePlacementPreviewObject(pavementTile.worldObject);
+  assert(pavementPreview !== null, 'Generated pavement should create an editor primitive preview.');
+  if (pavementPreview) {
+    pavementPreview.scale.set(pavementDraft.scaleMultiplier, 1, pavementDraft.scaleMultiplier);
+    pavementPreview.updateMatrixWorld(true);
+    const pavementPreviewBox = new Box3().setFromObject(pavementPreview);
+    assert(pavementPreviewBox.min.y >= -0.001, 'Generated pavement preview should stay above ground while scaled.');
+    pavementPreview.traverse((object) => {
+      if (object instanceof Mesh) {
+        object.geometry.dispose();
+        if (Array.isArray(object.material)) {
+          object.material.forEach((material) => material.dispose());
+        } else {
+          object.material.dispose();
+        }
+      }
+    });
+  }
   assert(
     createDraggedPlacementPosition(null, new Vector3(1, 0, 1), snapValues[0]) === null,
     'Placement editor drag math should handle missing selection safely.',

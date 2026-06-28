@@ -20,6 +20,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - The Asset panel lists registered runtime GLB assets that are safe to preview.
 - The Gameplay panel assigns the selected object a role/action such as spawn, post office, delivery board, mailbox target, or decorative.
 - The Button Instructions panel explains the editor buttons inside the HUD.
+- Generated pavement pieces are available in the Object panel as inactive editable ground objects.
 
 ## Editor Camera
 
@@ -85,6 +86,8 @@ Browser file saving is explicit. The editor does not silently write source files
 - Select a registered asset from the Asset panel.
 - Click `Preview Asset` to load that GLB onto the selected object using the current transform and dimensions.
 - Click `Use Primitive` to clear the asset preview and export a primitive render override.
+- Select `pavement-tile-square`, `pavement-tile-long`, or `pavement-tile-plaza` and click `Toggle Active` to place generated pavement without importing a GLB.
+- Pavement tiles can be dragged, rotated, and scaled like other editable objects; they stay aligned to the ground while scaling.
 - Collision remains authored from the world object data; visual asset previews do not create mesh collision.
 
 ## Gameplay Roles

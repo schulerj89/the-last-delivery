@@ -9,6 +9,7 @@ export type WorldObjectKind =
   | 'crate'
   | 'delivery-board'
   | 'mailbox'
+  | 'pavement'
   | 'post-office'
   | 'rock'
   | 'sack'

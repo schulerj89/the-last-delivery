@@ -2,8 +2,11 @@ import * as THREE from 'three';
 
 export const assetFitModes = ['none', 'contain', 'cover', 'exact'] as const;
 export type AssetFitMode = (typeof assetFitModes)[number];
+export const assetVerticalAlignments = ['ground', 'center'] as const;
+export type AssetVerticalAlignment = (typeof assetVerticalAlignments)[number];
 
 export const defaultWorldAssetFitMode: AssetFitMode = 'contain';
+export const defaultWorldAssetVerticalAlignment: AssetVerticalAlignment = 'ground';
 
 export interface AssetFitOptions {
   targetPosition?: THREE.Vector3Tuple;
@@ -12,6 +15,7 @@ export interface AssetFitOptions {
   scaleMultiplier?: number;
   yOffset?: number;
   fitMode?: AssetFitMode | string | null;
+  verticalAlign?: AssetVerticalAlignment;
 }
 
 export interface AssetFitResult {
@@ -62,6 +66,10 @@ export const resolveAssetFitMode = (
   isAssetFitMode(value) ? value : fallback
 );
 
+export const isAssetVerticalAlignment = (value: unknown): value is AssetVerticalAlignment => (
+  typeof value === 'string' && assetVerticalAlignments.includes(value as AssetVerticalAlignment)
+);
+
 export const createAssetTargetBounds = (
   position: THREE.Vector3Tuple,
   dimensions: THREE.Vector3Tuple,
@@ -110,6 +118,7 @@ export const fitAssetObjectToBounds = (
   options: AssetFitOptions = {},
 ): AssetFitResult => {
   const fitMode = resolveAssetFitMode(options.fitMode);
+  const verticalAlign = options.verticalAlign ?? defaultWorldAssetVerticalAlignment;
   const scaleMultiplier = getPositiveScaleMultiplier(options.scaleMultiplier);
   const targetBox = options.targetPosition && options.targetDimensions
     ? createAssetTargetBounds(options.targetPosition, options.targetDimensions, options.yOffset ?? 0)
@@ -141,7 +150,15 @@ export const fitAssetObjectToBounds = (
       targetCenter.y += options.yOffset ?? 0;
     }
 
-    object.position.add(targetCenter.sub(visualCenter));
+    const offset = new THREE.Vector3(
+      targetCenter.x - visualCenter.x,
+      verticalAlign === 'center'
+        ? targetCenter.y - visualCenter.y
+        : (targetBox?.min.y ?? targetCenter.y) - visualBoxBeforeCentering.min.y,
+      targetCenter.z - visualCenter.z,
+    );
+
+    object.position.add(offset);
     object.updateMatrixWorld(true);
   }
 

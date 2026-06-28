@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.47.0] - 2026-06-28
+
+### Added
+
+- Added inactive generated pavement objects to the authored world list so they can be activated, dragged, scaled, and promoted through the placement editor.
+- Added editor primitive previews for generated pavement so ground pieces can be placed without importing GLB assets.
+- Added smoke coverage for generated pavement availability and preview initialization.
+
+### Fixed
+
+- Changed GLB asset fitting to ground-align visual bounds by default so scaled asset previews grow upward instead of sinking through the ground.
+- Kept generated pavement previews and authored pavement renders clamped above ground while scaling.
+
 ## [0.46.0] - 2026-06-28
 
 ### Added
