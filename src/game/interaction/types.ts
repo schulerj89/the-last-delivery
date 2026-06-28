@@ -4,8 +4,8 @@ export interface Interactable {
   id: string;
   position: THREE.Vector3;
   radius: number;
-  prompt: string;
-  message: string;
+  prompt: string | (() => string);
+  interact(): string;
 }
 
 export interface InteractionSettings {

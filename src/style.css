@@ -36,6 +36,10 @@ canvas {
   top: 122px;
 }
 
+.debug-overlay--delivery {
+  top: 214px;
+}
+
 .interaction-prompt,
 .interaction-message {
   position: absolute;

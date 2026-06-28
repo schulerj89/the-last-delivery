@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 import './style.css';
 import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
+import { createDeliveryController, createDeliveryDebugOverlay } from './game/delivery';
 import { createInteractionController } from './game/interaction';
 import { createPlayerController, createPlayerDebugOverlay } from './game/player';
 import { createPlayground } from './world/playground';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
-import { playgroundInteractables } from './world/playgroundInteractables';
+import { createPlaygroundInteractables } from './world/playgroundInteractables';
+import { createMailboxObjectiveMarker } from './world/playgroundObjectiveMarker';
 
 const app = document.querySelector<HTMLDivElement>('#app');
 
@@ -30,9 +32,13 @@ scene.add(createPlayground());
 const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisionWorld);
 scene.add(collisionDebugView.object);
 
+const mailboxObjectiveMarker = createMailboxObjectiveMarker();
+scene.add(mailboxObjectiveMarker);
+
 const player = createPlayerController({ collisionWorld: playgroundCollisionWorld });
 scene.add(player.object);
 
+const delivery = createDeliveryController();
 const playerDebugOverlay = createPlayerDebugOverlay(app);
 const followCamera = createThirdPersonCameraController({
   camera,
@@ -40,9 +46,10 @@ const followCamera = createThirdPersonCameraController({
   domElement: renderer.domElement,
 });
 const cameraDebugOverlay = createCameraDebugOverlay(app);
+const deliveryDebugOverlay = createDeliveryDebugOverlay(app);
 const interaction = createInteractionController({
   player: player.object,
-  interactables: playgroundInteractables,
+  interactables: createPlaygroundInteractables(delivery),
   parent: app,
 });
 
@@ -75,9 +82,11 @@ const animate = () => {
 
   player.update(deltaSeconds);
   interaction.update(deltaSeconds);
+  mailboxObjectiveMarker.visible = delivery.getState().status === 'delivery-accepted';
   followCamera.update(deltaSeconds);
   playerDebugOverlay.update(player.getState());
   cameraDebugOverlay.update(followCamera.getState());
+  deliveryDebugOverlay.update(delivery.getState());
   renderer.render(scene, camera);
   window.requestAnimationFrame(animate);
 };

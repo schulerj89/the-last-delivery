@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.7.0] - 2026-06-28
+
+### Added
+
+- Added iteration 006 first delivery loop.
+- Added a minimal delivery state machine with idle, delivery accepted, and delivery completed states.
+- Added delivery board acceptance and mailbox completion interactions.
+- Added a mailbox objective marker while a delivery is active and a delivery status overlay with completed count.
+
 ## [0.6.0] - 2026-06-28
 
 ### Added

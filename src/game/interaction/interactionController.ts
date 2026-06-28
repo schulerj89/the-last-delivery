@@ -11,6 +11,10 @@ export const interactionSettings: InteractionSettings = {
   messageDurationSeconds: 2.25,
 };
 
+const getPrompt = (interactable: Interactable): string => (
+  typeof interactable.prompt === 'function' ? interactable.prompt() : interactable.prompt
+);
+
 const horizontalDistanceSq = (a: THREE.Vector3, b: THREE.Vector3): number => {
   const dx = a.x - b.x;
   const dz = a.z - b.z;
@@ -65,7 +69,7 @@ export const createInteractionController = ({
       return;
     }
 
-    lastMessage = currentInteractable.message;
+    lastMessage = currentInteractable.interact();
     messageSecondsRemaining = settings.messageDurationSeconds;
     message.textContent = lastMessage;
     message.hidden = false;
@@ -85,7 +89,7 @@ export const createInteractionController = ({
       currentInteractable = findNearestInteractable(player.position, interactables);
 
       if (currentInteractable) {
-        prompt.textContent = `Press E - ${currentInteractable.prompt}`;
+        prompt.textContent = `Press E - ${getPrompt(currentInteractable)}`;
         prompt.hidden = false;
       } else {
         prompt.hidden = true;
