@@ -4,6 +4,12 @@ import type { Interactable } from '../game/interaction';
 import type { WorldObjectDefinition } from './types';
 import { deliveryBoardObject, getWorldObjectsByInteractionAction } from './villageDefinition';
 import { playgroundCompositionConfig } from './playgroundComposition';
+import { getWorldObjectGameplay } from './worldObjectGameplay';
+
+export const playgroundInteractionReach = {
+  deliveryBoardMinimumRadius: 2.2,
+  mailboxMinimumRadius: 1.8,
+} as const;
 
 interface PlaygroundInteractableOptions {
   openDeliveryBoard?: () => string;
@@ -21,6 +27,16 @@ const createInteractablePosition = (object: WorldObjectDefinition): THREE.Vector
 const getInteractableRadius = (object: WorldObjectDefinition): number => {
   if (!object.interactable) {
     throw new Error(`Missing interactable data for world object: ${object.id}`);
+  }
+
+  const gameplay = getWorldObjectGameplay(object);
+
+  if (gameplay.role === 'delivery-board') {
+    return Math.max(object.interactable.radius, playgroundInteractionReach.deliveryBoardMinimumRadius);
+  }
+
+  if (gameplay.role === 'mailbox') {
+    return Math.max(object.interactable.radius, playgroundInteractionReach.mailboxMinimumRadius);
   }
 
   return object.interactable.radius;

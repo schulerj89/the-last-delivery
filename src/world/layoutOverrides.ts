@@ -198,6 +198,40 @@ const createFittedCollider = (
   };
 };
 
+const createFittedInteractable = (
+  sourceObject: WorldObjectDefinition,
+  targetObject: WorldObjectDefinition,
+): WorldInteractableDefinition | undefined => {
+  if (!sourceObject.interactable) {
+    return undefined;
+  }
+
+  const scaleMultiplier = getObjectScaleMultiplier(targetObject);
+  const ratios = getDimensionRatios(sourceObject.dimensions, targetObject.dimensions, scaleMultiplier);
+  const rotationY = getObjectRotationY(targetObject);
+  const sourceOffset: THREE.Vector3Tuple = [
+    sourceObject.interactable.position[0] - sourceObject.position[0],
+    sourceObject.interactable.position[1] - sourceObject.position[1],
+    sourceObject.interactable.position[2] - sourceObject.position[2],
+  ];
+  const scaledOffset: THREE.Vector3Tuple = [
+    sourceOffset[0] * ratios[0],
+    sourceOffset[1] * ratios[1],
+    sourceOffset[2] * ratios[2],
+  ];
+  const rotatedOffset = rotateOffsetY(scaledOffset, rotationY);
+  const horizontalRadiusScale = Math.max(Math.abs(ratios[0]), Math.abs(ratios[2]));
+
+  return {
+    position: [
+      targetObject.position[0] + rotatedOffset[0],
+      targetObject.position[1] + rotatedOffset[1],
+      targetObject.position[2] + rotatedOffset[2],
+    ],
+    radius: Math.max(0.01, sourceObject.interactable.radius * horizontalRadiusScale),
+  };
+};
+
 const inferBaseTemplateIdFromObjectId = (
   objectId: string,
   knownObjectIdSet: ReadonlySet<string>,
@@ -779,6 +813,10 @@ const applyLayoutTransformOverride = (
 
   if (override.collider === undefined && object.collider) {
     nextObject.collider = createFittedCollider(object, nextObject);
+  }
+
+  if (override.interactable === undefined && object.interactable) {
+    nextObject.interactable = createFittedInteractable(object, nextObject);
   }
 
   return nextObject;

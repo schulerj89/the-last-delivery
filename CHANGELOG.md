@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.15] - 2026-06-28
+
+### Fixed
+
+- Made inherited interaction anchors follow rotated and scaled town-editor placements so delivery board and mailbox prompts appear on the correct side.
+- Added more forgiving gameplay prompt radii for delivery boards and mailboxes.
+- Added smoke coverage for rotated interactable anchors and prompt reach floors.
+
 ## [0.53.14] - 2026-06-28
 
 ### Changed

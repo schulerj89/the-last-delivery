@@ -154,7 +154,7 @@ import {
   playgroundCollisionFootprintScale,
   playgroundCollisionWorld,
 } from '../src/world/playgroundCollision';
-import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
+import { createPlaygroundInteractables, playgroundInteractionReach } from '../src/world/playgroundInteractables';
 import {
   createDeliveryBoardObjectiveMarker,
   createDeliveryTargetObjectiveMarker,
@@ -1008,7 +1008,6 @@ const runLayoutOverrideSmoke = (): void => {
   const generatedOverrideNewObjectCount = generatedVillageLayoutOverrides.overrides
     .filter((override) => !knownObjectIds.includes(override.id))
     .length;
-  const boardDeltaX = (validDocument.overrides[0].position?.[0] ?? 0) - (baseBoard?.position[0] ?? 0);
 
   assert(generatedValidation.ok, 'Generated village layout overrides should validate against known object ids.');
   assert(generatedVillageLayoutOverrides.overrides.length > 0, 'Generated village layout overrides should include authored placements.');
@@ -1029,14 +1028,21 @@ const runLayoutOverrideSmoke = (): void => {
   assert(scaledDeliveryBoard?.collider !== undefined, 'Generated collidable objects should keep a fitted collider.');
   assert(Math.abs((scaledDeliveryBoard?.collider?.size[0] ?? 0) - 1.5) < 0.001, 'Fitted collider X size should follow rotated visual dimensions.');
   assert(Math.abs((scaledDeliveryBoard?.collider?.size[2] ?? 0) - 3) < 0.001, 'Fitted collider Z size should follow rotated visual dimensions.');
+  assert(scaledDeliveryBoard?.interactable !== undefined, 'Generated interactable objects should keep a fitted interactable anchor.');
+  assert(
+    (scaledDeliveryBoard?.interactable?.radius ?? 0) > (baseBoard?.interactable?.radius ?? 0),
+    'Fitted interactable radius should scale with generated object dimensions.',
+  );
   assert(overriddenBoard?.position[0] === -3.25, 'Merged overrides should update object position.');
   assert(overriddenBoard?.dimensions?.[0] === 1.9, 'Merged overrides should update dimensions.');
   assert(overriddenBoard?.collider?.size[0] === 1.9, 'Merged overrides should update collider data.');
   assert(overriddenCrate?.active === false, 'Merged overrides should preserve inactive state.');
   assert(overriddenCrate?.render?.mode === 'asset' && overriddenCrate.render.assetId === 'fantasy-box-001', 'Merged overrides should update asset render choices.');
+  assert(overriddenBoard?.interactable !== undefined, 'Merged overrides should preserve delivery board interactable data.');
   assert(
-    Math.abs((overriddenBoard?.interactable?.position[0] ?? 0) - ((baseBoard?.interactable?.position[0] ?? 0) + boardDeltaX)) < 0.001,
-    'Merged position overrides should move interactable anchors by delta.',
+    (overriddenBoard?.interactable?.position[0] ?? 0) > (overriddenBoard?.position[0] ?? 0)
+    && (overriddenBoard?.interactable?.position[2] ?? 0) < (overriddenBoard?.position[2] ?? 0),
+    'Merged rotation overrides should rotate inherited interactable anchors to the object front side.',
   );
   assert(overriddenBoard?.layoutTransform?.scaleMultiplier === 1.1, 'Primitive layout overrides should preserve scale multiplier.');
   assert(overriddenCrate !== undefined, 'Overridden crate should resolve.');
@@ -1775,6 +1781,7 @@ const runInteractionSmoke = (): void => {
   assert(board === undefined || typeof board.prompt === 'function', 'Delivery board interactable should initialize when a board is placed.');
 
   if (board) {
+    assert(board.radius >= playgroundInteractionReach.deliveryBoardMinimumRadius, 'Delivery board prompt radius should be forgiving in gameplay.');
     assert(getInteractablePromptText(board.prompt) === 'Open delivery board', 'Board should prompt for opening the delivery board.');
     assert(board.interact() === 'Delivery board opened.', 'Board interaction should open the delivery board.');
     assert(boardOpened, 'Board interaction should call the delivery board overlay opener.');
@@ -1788,6 +1795,7 @@ const runInteractionSmoke = (): void => {
   assert(delivery.acceptDelivery(firstDelivery.id).includes(firstDelivery.title), 'Selected delivery should be accepted by id.');
   assert(board === undefined || getInteractablePromptText(board.prompt).includes('in progress'), 'Board should report an active delivery.');
 
+  assert(mailbox.radius >= playgroundInteractionReach.mailboxMinimumRadius, 'Mailbox prompt radius should be forgiving in gameplay.');
   assert(getInteractablePromptText(mailbox.prompt) === 'Complete delivery', 'Mailbox should prompt for completion after acceptance.');
   if (wrongMailbox) {
     assert(getInteractablePromptText(wrongMailbox.prompt) === 'Wrong mailbox', 'Wrong mailbox should prompt clearly.');
