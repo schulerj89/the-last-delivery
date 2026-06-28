@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.14] - 2026-06-28
+
+### Changed
+
+- Increased the courier run animation playback speed slightly while leaving gameplay movement speed unchanged.
+- Added smoke coverage to ensure the run animation plays faster than the walk animation.
+
 ## [0.53.13] - 2026-06-28
 
 ### Fixed

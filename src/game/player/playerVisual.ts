@@ -36,7 +36,7 @@ export const playerCharacterVisualSettings = {
   runSpeedThreshold: 2.2,
   animationFadeDuration: 0.18,
   walkAnimationTimeScale: 1,
-  runAnimationTimeScale: 1.05,
+  runAnimationTimeScale: 1.2,
   lockHipPositionXZ: true,
   visibleMeshNames: [
     'Body_010',

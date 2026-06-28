@@ -2093,6 +2093,10 @@ const runModuleSmoke = (): void => {
   assert(playerCharacterVisualSettings.animationFadeDuration > 0, 'Player animation fade duration should be positive.');
   assert(playerCharacterVisualSettings.walkAnimationTimeScale > 0, 'Player walk animation time scale should be positive.');
   assert(playerCharacterVisualSettings.runAnimationTimeScale > 0, 'Player run animation time scale should be positive.');
+  assert(
+    playerCharacterVisualSettings.runAnimationTimeScale > playerCharacterVisualSettings.walkAnimationTimeScale,
+    'Player run animation should play faster than the walk animation.',
+  );
   assert(playerCharacterVisualSettings.lockHipPositionXZ, 'Player runtime animations should lock hip X/Z by default.');
 
   const filterFallback = resolveVisibleCharacterMeshNames(['Body_010', 'Outerwear_036'], ['missing-mesh-name'], 'configured');
