@@ -2,6 +2,21 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.32.0] - 2026-06-28
+
+### Added
+
+- Added layout override document types, validation, stable JSON serialization, and runtime merging for generated village transform overrides.
+- Added dev-mode placement editor draft persistence with `Ctrl+S`, `Ctrl+O`, `Ctrl+Shift+Delete`, HUD buttons, JSON copy, and validated JSON import.
+- Added `scripts/applyLayoutOverrides.mjs` plus `npm run layout:apply` and `npm run layout:check` for promoting exported editor JSON into `src/world/villageOverrides.generated.ts`.
+- Added `docs/EDITOR_WORKFLOW.md` documenting layout mode controls, local drafts, JSON export/import, and the source-promotion workflow.
+- Added smoke checks for layout override validation, duplicate/unknown id rejection, stable JSON serialization, generated override merging, and placement JSON export.
+
+### Changed
+
+- Kept `src/world/villageDefinition.ts` as the readable base layout and merged generated overrides at runtime without changing object count.
+- Updated all-edits placement copy (`Shift+C`) to emit layout override JSON for the promotion workflow.
+
 ## [0.31.0] - 2026-06-28
 
 ### Added

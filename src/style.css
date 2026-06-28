@@ -71,22 +71,64 @@ canvas {
 
 .placement-editor-hud {
   position: absolute;
+  display: grid;
+  gap: 8px;
   right: 12px;
   bottom: 12px;
   box-sizing: border-box;
-  width: min(420px, calc(100vw - 24px));
+  width: min(460px, calc(100vw - 24px));
   padding: 10px 12px;
   color: #f8f2dc;
   background: rgb(16 19 24 / 86%);
   border: 1px solid rgb(124 242 207 / 48%);
   border-radius: 4px;
   font: 12px/1.45 Consolas, 'Courier New', monospace;
-  white-space: pre-wrap;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .placement-editor-hud[hidden] {
   display: none;
+}
+
+.placement-editor-hud__summary {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.placement-editor-hud__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.placement-editor-hud button {
+  padding: 4px 7px;
+  color: #f8f2dc;
+  background: rgb(124 242 207 / 12%);
+  border: 1px solid rgb(124 242 207 / 44%);
+  border-radius: 4px;
+  font: 12px/1.2 Arial, sans-serif;
+  cursor: pointer;
+}
+
+.placement-editor-hud button:hover,
+.placement-editor-hud button:focus-visible,
+.placement-editor-hud__import:focus {
+  border-color: rgb(240 202 114 / 86%);
+  outline: none;
+}
+
+.placement-editor-hud__import {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 70px;
+  resize: vertical;
+  padding: 6px 8px;
+  color: #f8f2dc;
+  background: rgb(0 0 0 / 28%);
+  border: 1px solid rgb(248 242 220 / 24%);
+  border-radius: 4px;
+  font: 12px/1.35 Consolas, 'Courier New', monospace;
 }
 
 .interaction-prompt,

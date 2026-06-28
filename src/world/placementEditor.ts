@@ -1,8 +1,16 @@
 import * as THREE from 'three';
+import {
+  layoutOverrideDocumentVersion,
+  parseLayoutOverrideJson,
+  serializeLayoutOverrideDocument,
+  type LayoutOverrideDocument,
+  type LayoutTransformOverride,
+} from './layoutOverrides';
 import type { WorldObjectDefinition } from './types';
 import { villageWorldObjects } from './villageDefinition';
 
 export const placementEditorConfig = {
+  draftStorageKey: 'the-last-delivery:village-layout-draft',
   snapValues: [0.1, 0.25, 1] as const,
   defaultSnapIndex: 1,
   rotationStepRadians: THREE.MathUtils.degToRad(15),
@@ -39,6 +47,7 @@ interface PlacementEditorOptions {
   domElement: HTMLElement;
   parent: HTMLElement;
   isLayoutModeActive: () => boolean;
+  draftPersistenceEnabled?: boolean;
 }
 
 interface SceneObjectBaseline {
@@ -90,8 +99,8 @@ export const createPlacementTransformDraft = (
     id: object.id,
     position: [...object.position],
     rotationY: assetRenderSettings?.rotation?.[1] ?? object.rotation?.[1] ?? 0,
-    scaleMultiplier: assetRenderSettings?.scaleMultiplier ?? 1,
-    yOffset: assetRenderSettings?.yOffset ?? 0,
+    scaleMultiplier: assetRenderSettings?.scaleMultiplier ?? object.layoutTransform?.scaleMultiplier ?? 1,
+    yOffset: assetRenderSettings?.yOffset ?? object.layoutTransform?.yOffset ?? 0,
   };
 };
 
@@ -129,18 +138,9 @@ export const serializePlacementTransforms = (
   draftsByObjectId: ReadonlyMap<string, PlacementTransformDraft>,
   editableObjects: readonly EditablePlacementObject[] = createEditablePlacementObjects(),
 ): string => {
-  const serializedTransforms = editableObjects
-    .map((object) => {
-      const draft = draftsByObjectId.get(object.id);
-      return draft && isChangedDraft(object.worldObject, draft)
-        ? serializePlacementTransform(object.worldObject, draft)
-        : null;
-    })
-    .filter((value): value is string => value !== null);
-
-  return serializedTransforms.length > 0
-    ? `[\n${serializedTransforms.map((value) => value.split('\n').map((line) => `  ${line}`).join('\n')).join(',\n')}\n]`
-    : '[]';
+  return serializeLayoutOverrideDocument(
+    createLayoutOverrideDocumentFromPlacementDrafts(draftsByObjectId, editableObjects),
+  );
 };
 
 const getSceneObjectNamePrefixes = (objectId: string): readonly string[] => {
@@ -265,14 +265,62 @@ const isChangedDraft = (
     || draft.yOffset !== initial.yOffset;
 };
 
+const createOverrideFromDraft = (
+  object: WorldObjectDefinition,
+  draft: PlacementTransformDraft,
+  updatedAt: string,
+): LayoutTransformOverride | null => {
+  const initial = createPlacementTransformDraft(object);
+  const override: LayoutTransformOverride = {
+    id: object.id,
+    updatedAt,
+  };
+
+  if (draft.position.some((value, index) => value !== initial.position[index])) {
+    override.position = [...draft.position];
+  }
+
+  if (draft.rotationY !== initial.rotationY) {
+    override.rotation = [0, draft.rotationY, 0];
+  }
+
+  if (draft.scaleMultiplier !== initial.scaleMultiplier) {
+    override.scaleMultiplier = draft.scaleMultiplier;
+  }
+
+  if (draft.yOffset !== initial.yOffset) {
+    override.yOffset = draft.yOffset;
+  }
+
+  return Object.keys(override).length > 2 ? override : null;
+};
+
+export const createLayoutOverrideDocumentFromPlacementDrafts = (
+  draftsByObjectId: ReadonlyMap<string, PlacementTransformDraft>,
+  editableObjects: readonly EditablePlacementObject[] = createEditablePlacementObjects(),
+  updatedAt = new Date().toISOString(),
+): LayoutOverrideDocument => ({
+  version: layoutOverrideDocumentVersion,
+  updatedAt,
+  overrides: editableObjects
+    .map((object) => {
+      const draft = draftsByObjectId.get(object.id);
+      return draft ? createOverrideFromDraft(object.worldObject, draft, updatedAt) : null;
+    })
+    .filter((override): override is LayoutTransformOverride => override !== null),
+});
+
 export const createPlacementEditor = ({
   sceneRoot,
   camera,
   domElement,
   parent,
   isLayoutModeActive,
+  draftPersistenceEnabled = false,
 }: PlacementEditorOptions): PlacementEditor => {
   const editableObjects = createEditablePlacementObjects();
+  const editableObjectsById = new Map(editableObjects.map((object) => [object.id, object]));
+  const editableObjectIds = editableObjects.map((object) => object.id);
   const draftsByObjectId = new Map<string, PlacementTransformDraft>();
   const baselinesByObjectUuid = new Map<string, SceneObjectBaseline>();
   const marker = createSelectionMarker();
@@ -281,13 +329,40 @@ export const createPlacementEditor = ({
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   const hitPoint = new THREE.Vector3();
   const overlay = document.createElement('div');
+  const summary = document.createElement('pre');
+  const controls = document.createElement('div');
+  const saveDraftButton = document.createElement('button');
+  const loadDraftButton = document.createElement('button');
+  const clearDraftButton = document.createElement('button');
+  const copyJsonButton = document.createElement('button');
+  const importJsonButton = document.createElement('button');
+  const importTextArea = document.createElement('textarea');
   let selectedIndex = -1;
   let active = false;
   let snapIndex = placementEditorConfig.defaultSnapIndex;
-  let status = 'Tab selects editable objects. Edits are temporary until copied into source.';
+  let status = draftPersistenceEnabled
+    ? 'Tab selects editable objects. Drafts can be saved locally or copied as JSON.'
+    : 'Tab selects editable objects. Copy JSON output into source workflow.';
 
   overlay.className = 'placement-editor-hud';
   overlay.hidden = true;
+  summary.className = 'placement-editor-hud__summary';
+  controls.className = 'placement-editor-hud__controls';
+  saveDraftButton.type = 'button';
+  saveDraftButton.textContent = 'Save Draft';
+  loadDraftButton.type = 'button';
+  loadDraftButton.textContent = 'Reload Draft';
+  clearDraftButton.type = 'button';
+  clearDraftButton.textContent = 'Clear Draft';
+  copyJsonButton.type = 'button';
+  copyJsonButton.textContent = 'Copy JSON';
+  importJsonButton.type = 'button';
+  importJsonButton.textContent = 'Import JSON';
+  importTextArea.className = 'placement-editor-hud__import';
+  importTextArea.placeholder = 'Paste layout override JSON here.';
+  importTextArea.spellcheck = false;
+  controls.append(saveDraftButton, loadDraftButton, clearDraftButton, copyJsonButton, importJsonButton);
+  overlay.append(summary, controls, importTextArea);
   parent.append(overlay);
 
   const getSelectedObject = (): EditablePlacementObject | null => (
@@ -395,6 +470,146 @@ export const createPlacementEditor = ({
     });
   };
 
+  const createCurrentOverrideDocument = (): LayoutOverrideDocument => (
+    createLayoutOverrideDocumentFromPlacementDrafts(draftsByObjectId, editableObjects)
+  );
+
+  const applyOverrideDocumentToDrafts = (
+    document: LayoutOverrideDocument,
+    nextStatus: string,
+  ): void => {
+    draftsByObjectId.clear();
+    resetSceneObjects();
+
+    document.overrides.forEach((override) => {
+      const editableObject = editableObjectsById.get(override.id);
+
+      if (!editableObject) {
+        return;
+      }
+
+      const draft = createPlacementTransformDraft(editableObject.worldObject);
+
+      if (override.position) {
+        draft.position = [...override.position];
+      }
+
+      if (override.rotation) {
+        draft.rotationY = override.rotation[1];
+      }
+
+      if (override.scaleMultiplier !== undefined) {
+        draft.scaleMultiplier = override.scaleMultiplier;
+      }
+
+      if (override.yOffset !== undefined) {
+        draft.yOffset = override.yOffset;
+      }
+
+      draftsByObjectId.set(override.id, draft);
+    });
+
+    status = nextStatus;
+
+    if (active) {
+      applyAllDraftsToScene();
+    }
+
+    updateMarker();
+    updateHud();
+  };
+
+  const parseEditorJson = (json: string): LayoutOverrideDocument | null => {
+    const result = parseLayoutOverrideJson(json, editableObjectIds);
+
+    if (!result.ok || !result.document) {
+      status = `Import rejected: ${result.errors.join(' ')}`;
+      updateHud();
+      return null;
+    }
+
+    return result.document;
+  };
+
+  const canUseDraftStorage = (): boolean => (
+    draftPersistenceEnabled
+    && typeof window !== 'undefined'
+    && (() => {
+      try {
+        return window.localStorage !== undefined;
+      } catch {
+        return false;
+      }
+    })()
+  );
+
+  const saveDraftToStorage = (): void => {
+    if (!canUseDraftStorage()) {
+      status = 'Local draft storage is available only in dev mode.';
+      updateHud();
+      return;
+    }
+
+    window.localStorage.setItem(
+      placementEditorConfig.draftStorageKey,
+      serializeLayoutOverrideDocument(createCurrentOverrideDocument()),
+    );
+    status = 'Saved layout draft to localStorage.';
+    updateHud();
+  };
+
+  const loadDraftFromStorage = (silentMissing = false): void => {
+    if (!canUseDraftStorage()) {
+      status = 'Local draft storage is available only in dev mode.';
+      updateHud();
+      return;
+    }
+
+    const storedDraft = window.localStorage.getItem(placementEditorConfig.draftStorageKey);
+
+    if (!storedDraft) {
+      if (!silentMissing) {
+        status = 'No saved layout draft found.';
+        updateHud();
+      }
+      return;
+    }
+
+    const document = parseEditorJson(storedDraft);
+
+    if (document) {
+      applyOverrideDocumentToDrafts(document, `Loaded ${document.overrides.length} saved layout override(s).`);
+    }
+  };
+
+  const clearDraftStorage = (): void => {
+    if (canUseDraftStorage()) {
+      window.localStorage.removeItem(placementEditorConfig.draftStorageKey);
+    }
+
+    draftsByObjectId.clear();
+    resetSceneObjects();
+    status = 'Cleared local layout draft and temporary edits.';
+    updateMarker();
+    updateHud();
+  };
+
+  const importDraftFromPanel = (): void => {
+    const json = importTextArea.value.trim();
+
+    if (!json) {
+      status = 'Paste layout override JSON before importing.';
+      updateHud();
+      return;
+    }
+
+    const document = parseEditorJson(json);
+
+    if (document) {
+      applyOverrideDocumentToDrafts(document, `Imported ${document.overrides.length} layout override(s).`);
+    }
+  };
+
   const updateHud = (): void => {
     const selectedObject = getSelectedObject();
     const draft = getSelectedDraft();
@@ -407,9 +622,10 @@ export const createPlacementEditor = ({
     }
 
     if (!selectedObject || !draft) {
-      overlay.textContent = [
+      summary.textContent = [
         'Placement Editor',
-        'Warning: temporary edits only. Copy output into source.',
+        'Warning: browser edits are temporary until exported and promoted.',
+        'Ctrl+S save draft  Ctrl+O reload  Ctrl+Shift+Delete clear',
         `Snap ${snap}`,
         'Selected: none',
         status,
@@ -418,15 +634,16 @@ export const createPlacementEditor = ({
     }
 
     const renderSettings = getAssetRenderSettings(selectedObject.worldObject);
-    overlay.textContent = [
+    summary.textContent = [
       'Placement Editor',
-      'Warning: temporary edits only. Copy output into source.',
+      'Warning: browser edits are temporary until exported and promoted.',
       `Selected ${selectedObject.id} (${selectedObject.kind})`,
       `Position ${formatTuple(draft.position)}`,
       `RotationY ${formatNumber(THREE.MathUtils.radToDeg(draft.rotationY))}deg`,
       `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
       `Render ${renderSettings ? renderSettings.assetId : selectedObject.worldObject.render?.mode ?? 'primitive'}`,
       `Snap ${snap}  Edited ${isChangedDraft(selectedObject.worldObject, draft) ? 'yes' : 'no'}`,
+      'Ctrl+S save  Ctrl+O reload  Shift+C copy JSON',
       status,
     ].join('\n');
   };
@@ -565,7 +782,7 @@ export const createPlacementEditor = ({
   const copyAll = (): void => {
     void copyText(serializePlacementTransforms(draftsByObjectId, editableObjects))
       .then((copied) => {
-        status = copied ? 'Copied all edited transforms.' : 'Clipboard unavailable; transforms logged to console.';
+        status = copied ? 'Copied layout override JSON.' : 'Clipboard unavailable; layout override JSON logged to console.';
         updateHud();
       })
       .catch(() => {
@@ -590,7 +807,19 @@ export const createPlacementEditor = ({
     }
   };
 
+  const handleLoadDraftButtonClick = (): void => {
+    loadDraftFromStorage();
+  };
+
+  saveDraftButton.addEventListener('click', saveDraftToStorage);
+  loadDraftButton.addEventListener('click', handleLoadDraftButtonClick);
+  clearDraftButton.addEventListener('click', clearDraftStorage);
+  copyJsonButton.addEventListener('click', copyAll);
+  importJsonButton.addEventListener('click', importDraftFromPanel);
   domElement.addEventListener('pointerdown', handlePointerDown);
+  if (draftPersistenceEnabled) {
+    loadDraftFromStorage(true);
+  }
   updateHud();
 
   return {
@@ -621,6 +850,31 @@ export const createPlacementEditor = ({
       }
 
       const key = getDraftKey(event);
+      const isTextInputTarget = event.target instanceof HTMLTextAreaElement
+        || event.target instanceof HTMLInputElement;
+
+      if (event.ctrlKey && key === 's') {
+        saveDraftToStorage();
+        event.preventDefault();
+        return true;
+      }
+
+      if (event.ctrlKey && key === 'o') {
+        loadDraftFromStorage();
+        event.preventDefault();
+        return true;
+      }
+
+      if (event.ctrlKey && event.shiftKey && key === 'Delete') {
+        clearDraftStorage();
+        event.preventDefault();
+        return true;
+      }
+
+      if (isTextInputTarget) {
+        return false;
+      }
+
       const snap = placementEditorConfig.snapValues[snapIndex] ?? placementEditorConfig.snapValues[0];
 
       if (key === 'Tab') {
@@ -688,6 +942,11 @@ export const createPlacementEditor = ({
     },
     dispose() {
       resetSceneObjects();
+      saveDraftButton.removeEventListener('click', saveDraftToStorage);
+      loadDraftButton.removeEventListener('click', handleLoadDraftButtonClick);
+      clearDraftButton.removeEventListener('click', clearDraftStorage);
+      copyJsonButton.removeEventListener('click', copyAll);
+      importJsonButton.removeEventListener('click', importDraftFromPanel);
       domElement.removeEventListener('pointerdown', handlePointerDown);
       overlay.remove();
       marker.parent?.remove(marker);

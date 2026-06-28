@@ -7,6 +7,7 @@ import {
   deliveryBoardObject,
   getWorldObjectsByKind,
   playerSpawnPosition,
+  villageWorldObjects,
 } from './villageDefinition';
 import { villageLayoutConfig } from './villageLayoutConfig';
 import { getVillagePathGuides } from './villagePaths';
@@ -126,11 +127,102 @@ const getAssetId = (object: WorldObjectDefinition): string | null => (
   object.render?.mode === 'asset' ? object.render.assetId : null
 );
 
+const getSceneObjectNamePrefixes = (objectId: string): readonly string[] => {
+  if (objectId === 'delivery-board') {
+    return ['playground:delivery-board'];
+  }
+
+  if (objectId === 'town-well') {
+    return ['village:well'];
+  }
+
+  return [`village:${objectId}`];
+};
+
+const matchesSceneObject = (object: THREE.Object3D, objectId: string): boolean => (
+  getSceneObjectNamePrefixes(objectId).some((prefix) => (
+    object.name === prefix || object.name.startsWith(`${prefix}:`) || object.name.startsWith(`${prefix}-`)
+  ))
+);
+
+const hasMatchingAncestor = (
+  object: THREE.Object3D,
+  root: THREE.Object3D,
+  objectId: string,
+): boolean => {
+  let parent = object.parent;
+
+  while (parent && parent !== root) {
+    if (matchesSceneObject(parent, objectId)) {
+      return true;
+    }
+
+    parent = parent.parent;
+  }
+
+  return false;
+};
+
+const findAuthoredSceneObjects = (
+  root: THREE.Object3D,
+  objectId: string,
+): THREE.Object3D[] => {
+  const objects: THREE.Object3D[] = [];
+
+  root.traverse((object) => {
+    if (object === root || !matchesSceneObject(object, objectId) || hasMatchingAncestor(object, root, objectId)) {
+      return;
+    }
+
+    objects.push(object);
+  });
+
+  return objects;
+};
+
+const getAuthoredSceneTransform = (object: WorldObjectDefinition): {
+  rotationY: number;
+  scaleMultiplier: number;
+  yOffset: number;
+} => {
+  const renderSettings = object.render?.mode === 'asset' ? object.render : undefined;
+
+  return {
+    rotationY: renderSettings?.rotation?.[1] ?? object.rotation?.[1] ?? 0,
+    scaleMultiplier: renderSettings?.scaleMultiplier ?? object.layoutTransform?.scaleMultiplier ?? 1,
+    yOffset: renderSettings?.yOffset ?? object.layoutTransform?.yOffset ?? 0,
+  };
+};
+
 const disposeGeometryOnly = (object: THREE.Object3D): void => {
   object.traverse((child) => {
     if (child instanceof THREE.Mesh) {
       child.geometry.dispose();
     }
+  });
+};
+
+const applyAuthoredSceneTransforms = (root: THREE.Object3D): void => {
+  villageWorldObjects.forEach((object) => {
+    const transform = getAuthoredSceneTransform(object);
+
+    if (transform.rotationY === 0 && transform.scaleMultiplier === 1 && transform.yOffset === 0) {
+      return;
+    }
+
+    const pivot = new THREE.Vector3(...object.position);
+
+    findAuthoredSceneObjects(root, object.id).forEach((sceneObject) => {
+      const localOffset = sceneObject.position.clone().sub(pivot);
+
+      localOffset.x *= transform.scaleMultiplier;
+      localOffset.z *= transform.scaleMultiplier;
+      localOffset.applyAxisAngle(new THREE.Vector3(0, 1, 0), transform.rotationY);
+      sceneObject.position.copy(pivot).add(localOffset);
+      sceneObject.position.y += transform.yOffset;
+      sceneObject.rotation.y += transform.rotationY;
+      sceneObject.scale.multiplyScalar(transform.scaleMultiplier);
+    });
   });
 };
 
@@ -811,7 +903,6 @@ const addMailbox = (group: THREE.Group, mailbox: WorldObjectDefinition): void =>
   group.add(createMailboxProp({
     id: mailbox.id,
     position: mailbox.position,
-    rotationY: mailbox.rotation?.[1],
     variant: mailbox.mailbox?.variant,
   }));
 };
@@ -889,6 +980,7 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
   addMailboxes(playground);
   addDeliveryBoard(playground);
   addVillageLabels(playground);
+  applyAuthoredSceneTransforms(playground);
 
   return playground;
 };

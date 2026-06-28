@@ -1,9 +1,11 @@
 import type * as THREE from 'three';
 import type { WorldObjectDefinition, WorldObjectKind } from './types';
+import { mergeWorldObjectOverrides } from './layoutOverrides';
+import { generatedVillageLayoutOverrides } from './villageOverrides.generated';
 
 export const playerSpawnPosition: THREE.Vector3Tuple = [0, 0, 10];
 
-export const villageWorldObjects: readonly WorldObjectDefinition[] = [
+export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
   {
     id: 'post-office',
     kind: 'post-office',
@@ -435,6 +437,11 @@ export const villageWorldObjects: readonly WorldObjectDefinition[] = [
     },
   },
 ];
+
+export const villageWorldObjects: readonly WorldObjectDefinition[] = mergeWorldObjectOverrides(
+  baseVillageWorldObjects,
+  generatedVillageLayoutOverrides,
+);
 
 export const getWorldObject = (id: string): WorldObjectDefinition => {
   const object = villageWorldObjects.find((worldObject) => worldObject.id === id);

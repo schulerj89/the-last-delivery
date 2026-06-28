@@ -37,6 +37,11 @@ export interface WorldMailboxDefinition {
   destinationName: string;
 }
 
+export interface WorldLayoutTransformDefinition {
+  scaleMultiplier?: number;
+  yOffset?: number;
+}
+
 export type WorldRenderDefinition =
   | { mode: 'primitive' }
   | {
@@ -59,4 +64,5 @@ export interface WorldObjectDefinition {
   interactable?: WorldInteractableDefinition;
   objectiveAnchor?: WorldObjectiveAnchorDefinition;
   mailbox?: WorldMailboxDefinition;
+  layoutTransform?: WorldLayoutTransformDefinition;
 }

@@ -75,6 +75,7 @@ const placementEditor = createPlacementEditor({
   domElement: renderer.domElement,
   parent: app,
   isLayoutModeActive: layoutDebugView.isActive,
+  draftPersistenceEnabled: import.meta.env.DEV,
 });
 scene.add(placementEditor.object);
 

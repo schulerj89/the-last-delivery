@@ -61,6 +61,16 @@ import {
   isValidMaterialOverrideColor,
 } from '../src/world/assetMaterialOverrides';
 import {
+  createEmptyLayoutOverrideDocument,
+  layoutOverrideDocumentVersion,
+  mergeWorldObjectOverrides,
+  parseLayoutOverrideJson,
+  serializeLayoutOverrideDocument,
+  validateLayoutOverrideDocument,
+  type LayoutOverrideDocument,
+} from '../src/world/layoutOverrides';
+import {
+  createLayoutOverrideDocumentFromPlacementDrafts,
   createEditablePlacementObjects,
   createPlacementTransformDraft,
   getEditablePlacementObjectById,
@@ -83,7 +93,8 @@ import {
 import { createPlaygroundVisualBoundsDebugView } from '../src/world/playgroundVisualBoundsDebug';
 import { createMailboxProp } from '../src/world/props/createMailbox';
 import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
-import { playerSpawnPosition, villageWorldObjects } from '../src/world/villageDefinition';
+import { generatedVillageLayoutOverrides } from '../src/world/villageOverrides.generated';
+import { baseVillageWorldObjects, playerSpawnPosition, villageWorldObjects } from '../src/world/villageDefinition';
 import { getVillagePathGuides } from '../src/world/villagePaths';
 
 function assert(condition: boolean, message: string): asserts condition {
@@ -435,6 +446,91 @@ const runVisualPolishSmoke = (): void => {
   });
 };
 
+const runLayoutOverrideSmoke = (): void => {
+  const knownObjectIds = baseVillageWorldObjects.map((object) => object.id);
+  const validDocument: LayoutOverrideDocument = {
+    version: layoutOverrideDocumentVersion,
+    updatedAt: '2026-06-28T00:00:00.000Z',
+    overrides: [
+      {
+        id: 'delivery-board',
+        position: [-3.25, 0, 7.25],
+        rotation: [0, Math.PI / 2, 0],
+        scaleMultiplier: 1.1,
+        yOffset: 0.15,
+        updatedAt: '2026-06-28T00:00:00.000Z',
+      },
+    ],
+  };
+  const validation = validateLayoutOverrideDocument(validDocument, knownObjectIds);
+
+  assert(validation.ok && validation.document !== null, 'Layout override JSON should validate.');
+  assert(
+    !validateLayoutOverrideDocument({
+      ...validDocument,
+      overrides: [{ id: 'missing-object', position: [0, 0, 0] }],
+    }, knownObjectIds).ok,
+    'Unknown layout override object ids should be rejected.',
+  );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...validDocument,
+      overrides: [{ id: 'delivery-board' }, { id: 'delivery-board' }],
+    }, knownObjectIds).ok,
+    'Duplicate layout override ids should be rejected.',
+  );
+
+  const serializedDocument = serializeLayoutOverrideDocument(validDocument);
+  const parsedDocument = parseLayoutOverrideJson(serializedDocument, knownObjectIds);
+
+  assert(parsedDocument.ok && parsedDocument.document !== null, 'Serialized layout override JSON should parse.');
+  assert(
+    serializeLayoutOverrideDocument(parsedDocument.document) === serializedDocument,
+    'Layout override JSON serialization should be stable without browser APIs.',
+  );
+
+  const emptyDocument = createEmptyLayoutOverrideDocument('2026-06-28T00:00:00.000Z');
+  const emptyMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, emptyDocument);
+  const generatedMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, generatedVillageLayoutOverrides);
+  const overriddenMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, validDocument);
+  const overriddenBoard = overriddenMerged.find((object) => object.id === 'delivery-board');
+
+  assert(emptyMerged.length === baseVillageWorldObjects.length, 'Empty generated overrides should not change object count.');
+  assert(generatedMerged.length === baseVillageWorldObjects.length, 'Generated overrides should merge without changing object count.');
+  assert(overriddenMerged.length === baseVillageWorldObjects.length, 'Layout overrides should merge without changing object count.');
+  assert(overriddenBoard?.position[0] === -3.25, 'Merged overrides should update object position.');
+  assert(
+    Math.abs((overriddenBoard?.interactable?.position[0] ?? 0) - -1.95) < 0.001,
+    'Merged position overrides should move interactable anchors by delta.',
+  );
+
+  const editableObjects = createEditablePlacementObjects(baseVillageWorldObjects);
+  const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
+
+  if (!deliveryBoard) {
+    throw new Error('Missing delivery board editable object.');
+  }
+
+  const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
+  draft.position = [-3.25, 0, 7.25];
+  draft.rotationY = Math.PI / 2;
+  draft.scaleMultiplier = 1.1;
+  draft.yOffset = 0.15;
+
+  const draftDocument = createLayoutOverrideDocumentFromPlacementDrafts(
+    new Map([[deliveryBoard.id, draft]]),
+    editableObjects,
+    '2026-06-28T00:00:00.000Z',
+  );
+
+  assert(draftDocument.overrides.length === 1, 'Placement drafts should create layout override JSON.');
+  assert(draftDocument.overrides[0]?.id === 'delivery-board', 'Placement draft JSON should include object id.');
+  assert(
+    validateLayoutOverrideDocument(draftDocument, knownObjectIds).ok,
+    'Placement draft JSON should validate against known world objects.',
+  );
+};
+
 const runWorldDefinitionSmoke = (): void => {
   const ids = new Set<string>();
 
@@ -738,8 +834,9 @@ const runPlacementEditorSmoke = (): void => {
 
   const draftMap = new Map([[deliveryBoard.id, draft]]);
   const serializedAll = serializePlacementTransforms(draftMap, editableObjects);
-  assert(serializedAll.startsWith('['), 'All-placement serialization should be a stable array snippet.');
-  assert(serializedAll.includes("id: 'delivery-board'"), 'All-placement serialization should include edited transforms.');
+  assert(serializedAll.startsWith('{'), 'All-placement serialization should be stable layout override JSON.');
+  assert(serializedAll.includes('"version": 1'), 'All-placement serialization should include the layout override version.');
+  assert(serializedAll.includes('"id": "delivery-board"'), 'All-placement serialization should include edited transforms.');
 };
 
 const runDeliveryStateSmoke = (): void => {
@@ -1083,6 +1180,7 @@ runAssetRegistrySmoke();
 await runAssetCacheSmoke();
 runAssetFittingSmoke();
 runVisualPolishSmoke();
+runLayoutOverrideSmoke();
 runWorldDefinitionSmoke();
 runVillageLayoutConfigSmoke();
 runLayoutDebugSmoke();

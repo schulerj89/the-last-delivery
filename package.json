@@ -1,12 +1,14 @@
 {
   "name": "the-last-delivery",
-  "version": "0.31.0",
+  "version": "0.32.0",
   "private": true,
   "type": "module",
   "description": "A tiny browser Three.js game.",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "assets:scan": "node scripts/scanAssets.mjs",
+    "layout:apply": "node scripts/applyLayoutOverrides.mjs",
+    "layout:check": "node scripts/applyLayoutOverrides.mjs --check",
     "typecheck": "tsc --noEmit",
     "smoke": "tsx scripts/smoke.ts",
     "build": "vite build",
