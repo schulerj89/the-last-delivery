@@ -716,6 +716,8 @@ const runTownEditorRouteSmoke = (): void => {
   const townEditorHtmlUrl = new URL('../town-editor.html', import.meta.url);
   const townEditorScriptUrl = new URL('../src/townEditor.ts', import.meta.url);
   const townEditorCssUrl = new URL('../src/townEditor.css', import.meta.url);
+  const placementEditorScriptUrl = new URL('../src/world/placementEditor.ts', import.meta.url);
+  const appCssUrl = new URL('../src/style.css', import.meta.url);
   const viteConfigUrl = new URL('../vite.config.mjs', import.meta.url);
 
   assert(nodeFileSystem.existsSync(townEditorHtmlUrl), 'Town editor HTML route should exist.');
@@ -725,6 +727,8 @@ const runTownEditorRouteSmoke = (): void => {
   const townEditorHtml = nodeFileSystem.readFileSync(townEditorHtmlUrl, 'utf8');
   const townEditorScript = nodeFileSystem.readFileSync(townEditorScriptUrl, 'utf8');
   const townEditorCss = nodeFileSystem.readFileSync(townEditorCssUrl, 'utf8');
+  const placementEditorScript = nodeFileSystem.readFileSync(placementEditorScriptUrl, 'utf8');
+  const appCss = nodeFileSystem.readFileSync(appCssUrl, 'utf8');
   const viteConfig = nodeFileSystem.readFileSync(viteConfigUrl, 'utf8');
   const editableObjects = createEditablePlacementObjects();
   const generatedItems = getTownEditorGeneratedPaletteItems(editableObjects);
@@ -763,6 +767,11 @@ const runTownEditorRouteSmoke = (): void => {
   assert(townEditorCss.includes('.town-editor-loading'), 'Town editor CSS should style the loading screen.');
   assert(townEditorCss.includes('.town-editor--loading'), 'Town editor CSS should hide editor UI while loading.');
   assert(townEditorCss.includes('#town-editor .placement-editor-help'), 'Town editor CSS should keep the help overlay visible above the editor canvas.');
+  assert(placementEditorScript.includes('placement-editor-hud__save-feedback'), 'Town editor save panel should render a dedicated save confirmation indicator.');
+  assert(placementEditorScript.includes('showSaveFeedback'), 'Town editor saves should trigger visible save feedback.');
+  assert(placementEditorScript.includes('Saved layout'), 'Save Layout should have an explicit saved confirmation label.');
+  assert(appCss.includes('.placement-editor-hud__save-feedback'), 'Shared editor CSS should style the save confirmation indicator.');
+  assert(appCss.includes('placement-save-feedback'), 'Shared editor CSS should animate save confirmation feedback.');
   assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
   assert(markerItems.length >= 3, 'Town editor marker palette should initialize important world markers.');
   assert(assetItems.length > 0, 'Town editor asset palette should initialize.');

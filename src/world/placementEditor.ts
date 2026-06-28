@@ -869,6 +869,7 @@ export const createPlacementEditor = ({
   const toggleHelpButton = document.createElement('button');
   const importTextArea = document.createElement('textarea');
   const helpOverlay = document.createElement('div');
+  const saveFeedback = document.createElement('div');
   const heldKeys = new Set<string>();
   const undoStack: PlacementDraftSnapshot[] = [];
   const redoStack: PlacementDraftSnapshot[] = [];
@@ -882,6 +883,7 @@ export const createPlacementEditor = ({
   let helpVisible = false;
   let continuousMoveHistoryPushed = false;
   let assetPreviewRequestId = 0;
+  let saveFeedbackTimeoutId: number | null = null;
   let snapIndex = placementEditorConfig.defaultSnapIndex;
   let status = draftPersistenceEnabled
     ? 'Tab selects editable objects. Drafts can be saved locally or copied as JSON.'
@@ -1015,6 +1017,10 @@ export const createPlacementEditor = ({
   }));
   helpOverlay.className = 'placement-editor-help';
   helpOverlay.hidden = true;
+  saveFeedback.className = 'placement-editor-hud__save-feedback';
+  saveFeedback.hidden = true;
+  saveFeedback.setAttribute('role', 'status');
+  saveFeedback.setAttribute('aria-live', 'polite');
   helpOverlay.textContent = [
     'Placement Editor Help',
     'F2 layout mode  F1 help',
@@ -1056,7 +1062,7 @@ export const createPlacementEditor = ({
       duplicateSelectedButton,
       deleteSelectedButton,
     );
-    overlay.append(summary, controls, importTextArea);
+    overlay.append(summary, saveFeedback, controls, importTextArea);
   } else {
     controls.append(
       toggleActiveButton,
@@ -1080,10 +1086,39 @@ export const createPlacementEditor = ({
       importJsonButton,
       toggleHelpButton,
     );
-    overlay.append(summary, instructionsPanel, objectPanel, assetPanel, gameplayPanel, controls, importTextArea);
+    overlay.append(summary, saveFeedback, instructionsPanel, objectPanel, assetPanel, gameplayPanel, controls, importTextArea);
   }
   parent.append(overlay);
   parent.append(helpOverlay);
+
+  const getSaveFeedbackTime = (): string => new Date().toLocaleTimeString([], {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  const showSaveFeedback = (
+    label: string,
+    button?: HTMLButtonElement,
+  ): void => {
+    if (saveFeedbackTimeoutId !== null) {
+      window.clearTimeout(saveFeedbackTimeoutId);
+      saveFeedbackTimeoutId = null;
+    }
+
+    saveFeedback.hidden = false;
+    saveFeedback.textContent = `${label} at ${getSaveFeedbackTime()}`;
+    saveFeedback.classList.remove('placement-editor-hud__save-feedback--flash');
+    void saveFeedback.offsetWidth;
+    saveFeedback.classList.add('placement-editor-hud__save-feedback--flash');
+    button?.classList.add('placement-editor-hud__button--saved');
+
+    saveFeedbackTimeoutId = window.setTimeout(() => {
+      saveFeedback.classList.remove('placement-editor-hud__save-feedback--flash');
+      button?.classList.remove('placement-editor-hud__button--saved');
+      saveFeedbackTimeoutId = null;
+    }, 1800);
+  };
 
   const getSelectedObject = (): EditablePlacementObject | null => (
     selectedIndex >= 0 ? editableObjects[selectedIndex] ?? null : null
@@ -1640,6 +1675,7 @@ export const createPlacementEditor = ({
 
     window.localStorage.setItem(placementEditorConfig.activeStorageKey, getCurrentEditorJson());
     status = 'Saved active town editor JSON to localStorage.';
+    showSaveFeedback('Saved layout', saveActiveButton);
     updateHud();
   };
 
@@ -1683,6 +1719,7 @@ export const createPlacementEditor = ({
       getCurrentEditorJson(),
     );
     status = 'Saved layout draft to localStorage.';
+    showSaveFeedback('Saved draft', saveDraftButton);
     updateHud();
   };
 
@@ -1790,6 +1827,7 @@ export const createPlacementEditor = ({
       await writable.write(getCurrentEditorJson());
       await writable.close();
       status = 'Saved active town editor JSON file.';
+      showSaveFeedback('Saved JSON file', saveJsonFileButton);
       updateHud();
     } catch (error) {
       status = `Save JSON cancelled or failed: ${error instanceof Error ? error.message : String(error)}`;
@@ -2883,6 +2921,11 @@ export const createPlacementEditor = ({
       return getSelectedObject()?.id ?? null;
     },
     dispose() {
+      if (saveFeedbackTimeoutId !== null) {
+        window.clearTimeout(saveFeedbackTimeoutId);
+        saveFeedbackTimeoutId = null;
+      }
+
       resetSceneObjects();
       objectSelect.removeEventListener('change', handleObjectSelectChange);
       assetSelect.removeEventListener('change', updateHud);

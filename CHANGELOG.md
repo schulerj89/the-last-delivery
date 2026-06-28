@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.12] - 2026-06-28
+
+### Added
+
+- Added a dedicated save confirmation badge to the town editor placement HUD.
+- Flashes the successful save control and shows the last saved time for Save Layout, Save Draft, and Save JSON File.
+- Added smoke coverage for the town editor save confirmation UI and styles.
+
 ## [0.53.11] - 2026-06-28
 
 ### Fixed
