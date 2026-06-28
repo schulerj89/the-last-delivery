@@ -13,9 +13,18 @@ export interface CollisionBox {
   size: THREE.Vector3;
 }
 
+export interface WalkableSurface {
+  id: string;
+  center: THREE.Vector3;
+  size: THREE.Vector3;
+  rotationY: number;
+  height: number;
+}
+
 export interface CollisionWorld {
   bounds: CollisionBounds;
   boxes: readonly CollisionBox[];
+  walkableSurfaces?: readonly WalkableSurface[];
 }
 
 export interface CollisionResolution {

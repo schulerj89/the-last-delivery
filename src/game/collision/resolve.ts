@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import type { CollisionBox, CollisionResolution, CollisionWorld } from './types';
+import type { CollisionBox, CollisionResolution, CollisionWorld, WalkableSurface } from './types';
+
+export const defaultGroundHeight = 0;
 
 const getBoxEdges = (box: CollisionBox) => ({
   minX: box.center.x - box.size.x / 2,
@@ -71,6 +73,45 @@ const resolveBox = (
   }
 
   return true;
+};
+
+const isPositionOnWalkableSurface = (
+  position: THREE.Vector3,
+  surface: WalkableSurface,
+  supportRadius: number,
+): boolean => {
+  const dx = position.x - surface.center.x;
+  const dz = position.z - surface.center.z;
+  const cos = Math.cos(surface.rotationY);
+  const sin = Math.sin(surface.rotationY);
+  const localX = dx * cos - dz * sin;
+  const localZ = dx * sin + dz * cos;
+  const radius = Math.max(0, supportRadius);
+
+  return (
+    Math.abs(localX) <= surface.size.x / 2 + radius
+    && Math.abs(localZ) <= surface.size.z / 2 + radius
+  );
+};
+
+export const resolveGroundHeightAtPosition = (
+  position: THREE.Vector3,
+  world?: CollisionWorld,
+  supportRadius = 0,
+): number => {
+  let groundHeight = defaultGroundHeight;
+
+  world?.walkableSurfaces?.forEach((surface) => {
+    if (
+      Number.isFinite(surface.height)
+      && surface.height > groundHeight
+      && isPositionOnWalkableSurface(position, surface, supportRadius)
+    ) {
+      groundHeight = surface.height;
+    }
+  });
+
+  return groundHeight;
 };
 
 export const resolvePlayerCollision = (

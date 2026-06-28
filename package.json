@@ -1,6 +1,6 @@
 {
   "name": "the-last-delivery",
-  "version": "0.53.9",
+  "version": "0.53.10",
   "private": true,
   "type": "module",
   "description": "A tiny browser Three.js game.",

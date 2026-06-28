@@ -1,11 +1,10 @@
 import * as THREE from 'three';
-import { resolvePlayerCollision } from '../collision';
+import { resolveGroundHeightAtPosition, resolvePlayerCollision } from '../collision';
 import type { PlayerController, PlayerControllerOptions, PlayerMovementSettings, PlayerState } from './types';
 import { createPlayerVisual } from './playerVisual';
 import { playerSpawnPosition } from '../../world/villageDefinition';
 
 const spawnPosition = new THREE.Vector3(...playerSpawnPosition);
-const groundedY = 0;
 
 export const playerMovementSettings: PlayerMovementSettings = {
   radius: 0.38,
@@ -128,9 +127,20 @@ export const createPlayerController = ({
   const movementRight = new THREE.Vector3();
   let lastCollisionHits: string[] = [];
   let hitBoundsLastFrame = false;
+  let currentGroundY = resolveGroundHeightAtPosition(spawnPosition, collisionWorld, playerMovementSettings.radius);
+
+  const resolvePlayerGroundY = (): number => (
+    resolveGroundHeightAtPosition(object.position, collisionWorld, playerMovementSettings.radius)
+  );
+
+  const snapToGround = (): void => {
+    currentGroundY = resolvePlayerGroundY();
+    object.position.y = currentGroundY;
+  };
 
   const resetToSpawn = (): void => {
     object.position.copy(spawnPosition);
+    snapToGround();
     object.rotation.set(0, 0, 0);
     velocity.set(0, 0, 0);
     lastCollisionHits = [];
@@ -193,7 +203,7 @@ export const createPlayerController = ({
       }
 
       object.position.addScaledVector(velocity, stepSeconds);
-      object.position.y = groundedY;
+      snapToGround();
 
       if (collisionWorld) {
         const resolution = resolvePlayerCollision(
@@ -203,6 +213,7 @@ export const createPlayerController = ({
         );
 
         object.position.copy(resolution.position);
+        snapToGround();
         lastCollisionHits = resolution.hitIds;
         hitBoundsLastFrame = resolution.hitBounds;
 
@@ -226,7 +237,7 @@ export const createPlayerController = ({
       return {
         position: object.position.clone(),
         speed: velocity.length(),
-        grounded: object.position.y === groundedY,
+        grounded: Math.abs(object.position.y - currentGroundY) < 0.001,
         hitBounds: hitBoundsLastFrame,
         collisionHits: [...lastCollisionHits],
         visualStatus: visual.getStatus(),

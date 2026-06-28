@@ -44,7 +44,7 @@ import {
   getZoomedCameraDistance,
   thirdPersonCameraSettings,
 } from '../src/game/camera';
-import { resolvePlayerCollision } from '../src/game/collision';
+import { resolveGroundHeightAtPosition, resolvePlayerCollision } from '../src/game/collision';
 import {
   createDebugUiState,
   cycleDebugDetailLevel,
@@ -2030,6 +2030,40 @@ const runModuleSmoke = (): void => {
       .distanceTo(new Vector3(-1, 0, 0)) < 0.001,
     'Player yaw should face left when moving left.',
   );
+  const walkableSurfaceWorld = {
+    bounds: {
+      minX: -10,
+      maxX: 10,
+      minZ: -10,
+      maxZ: 10,
+    },
+    boxes: [],
+    walkableSurfaces: [
+      {
+        id: 'low-tile',
+        center: new Vector3(0, 0, 0),
+        size: new Vector3(4, 0.05, 4),
+        rotationY: 0,
+        height: 0.05,
+      },
+      {
+        id: 'high-tile',
+        center: new Vector3(0.5, 0, 0.5),
+        size: new Vector3(1, 0.05, 1),
+        rotationY: Math.PI / 4,
+        height: 0.25,
+      },
+    ],
+  };
+
+  assert(
+    resolveGroundHeightAtPosition(new Vector3(0.5, 0, 0.5), walkableSurfaceWorld, playerMovementSettings.radius) === 0.25,
+    'Player ground height should use the highest walkable surface under the player.',
+  );
+  assert(
+    resolveGroundHeightAtPosition(new Vector3(7, 0, 7), walkableSurfaceWorld, playerMovementSettings.radius) === 0,
+    'Player ground height should fall back to base ground away from walkable surfaces.',
+  );
 
   assert(playerCharacterAssetId === 'creative-courier-character', 'Player character asset id should point to the selected courier asset.');
   assert(playerCharacterAnimationAssetId === 'creative-courier-character-animations', 'Player character animation asset id should point to the selected courier animation source.');
@@ -2187,6 +2221,7 @@ const runModuleSmoke = (): void => {
   assert(!playgroundCompositionConfig.enableAuthoredCollision, 'Clean editor canvas should not keep invisible authored collision.');
   assert(!playgroundCompositionConfig.showAuthoredObjectiveMarkers, 'Clean editor canvas should hide authored delivery markers.');
   assert(playgroundCollisionWorld.boxes.length === 0, 'Clean editor canvas should not initialize authored collision boxes.');
+  assert((playgroundCollisionWorld.walkableSurfaces?.length ?? 0) === 0, 'Clean editor canvas should not initialize authored walkable tile surfaces.');
   assert(
     mainSource.includes('renderAuthoredWorldObjects: enableAuthoredPlayground'),
     'Main game should explicitly render the promoted authored layout.',
@@ -2216,12 +2251,27 @@ const runModuleSmoke = (): void => {
   const activeTrees = villageWorldObjects.filter((object) => object.kind === 'tree');
   const activeBushes = villageWorldObjects.filter((object) => object.kind === 'bush');
   const activeRocks = villageWorldObjects.filter((object) => object.kind === 'rock');
+  const activePavements = villageWorldObjects.filter((object) => object.kind === 'pavement');
 
   assert(authoredCollisionWorld.boxes.length >= 2, 'Authored collision boxes should still initialize on demand.');
+  assert(
+    (authoredCollisionWorld.walkableSurfaces?.length ?? 0) === activePavements.length,
+    'Authored pavement objects should generate walkable tile surfaces.',
+  );
   assert(
     authoredCollisionWorld.boxes.length === villageWorldObjects.filter((object) => object.collider).length,
     'Collision boxes should be generated from collidable world objects.',
   );
+  activePavements.slice(0, 5).forEach((pavement) => {
+    const surface = authoredCollisionWorld.walkableSurfaces?.find((walkableSurface) => walkableSurface.id === pavement.id);
+
+    assert(surface !== undefined, `Active pavement should have a matching walkable surface: ${pavement.id}.`);
+    assert(surface.height > pavement.position[1], `Pavement walkable surface should sit above the tile center: ${pavement.id}.`);
+    assert(
+      resolveGroundHeightAtPosition(new Vector3(pavement.position[0], 0, pavement.position[2]), authoredCollisionWorld, playerMovementSettings.radius) >= surface.height,
+      `Player ground height should resolve over active pavement: ${pavement.id}.`,
+    );
+  });
   assert(activeDeliveryJobs.length === getWorldObjectsByGameplayRole('mailbox').filter((object) => object.interactable).length, 'Active delivery jobs should follow active editor mailbox interactables.');
   assert(activeCollisionMailboxes.every((object) => authoredCollisionIds.has(object.id)), 'Active mailbox collision boxes should initialize.');
   assert(activeDeliveryBoard === undefined || !activeDeliveryBoard.collider || authoredCollisionIds.has(activeDeliveryBoard.id), 'The active delivery board collision box should initialize when collidable.');

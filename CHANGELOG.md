@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.10] - 2026-06-28
+
+### Fixed
+
+- Added walkable pavement surface data to the collision world so player feet stand on top of generated tiles instead of clipping through them.
+- Updated player grounding to resolve the highest walkable surface under the player after movement and collision.
+- Added smoke coverage for generated pavement walkable surfaces and ground-height resolution.
+
 ## [0.53.9] - 2026-06-28
 
 ### Fixed
