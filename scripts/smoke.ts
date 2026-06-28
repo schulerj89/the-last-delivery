@@ -165,6 +165,10 @@ import {
 } from '../src/world/playgroundObjectiveMarker';
 import { createPlaygroundVisualBoundsDebugView } from '../src/world/playgroundVisualBoundsDebug';
 import { createMailboxProp } from '../src/world/props/createMailbox';
+import {
+  getPavementTileGridSize,
+  pavementTileDetailConfig,
+} from '../src/world/props/createPavementTile';
 import { villageLayoutConfig } from '../src/world/villageLayoutConfig';
 import { generatedVillageLayoutOverrides } from '../src/world/villageOverrides.generated';
 import {
@@ -1600,10 +1604,32 @@ const runPlacementEditorSmoke = (): void => {
   const pavementPreview = createPrimitivePlacementPreviewObject(pavementTile.worldObject);
   assert(pavementPreview !== null, 'Generated pavement should create an editor primitive preview.');
   if (pavementPreview) {
+    const pavementGrid = getPavementTileGridSize(pavementTile.worldObject.dimensions ?? [1, 0.05, 1]);
+
+    assert(pavementTileDetailConfig.palette.length >= 4, 'Pavement tiles should have multiple stone color tones.');
+    assert(pavementTileDetailConfig.jointGap > 0, 'Pavement tiles should define visible joints.');
+    assert(pavementTileDetailConfig.relief > 0, 'Pavement tiles should define subtle surface relief.');
+    assert(pavementGrid.columns > 1 && pavementGrid.rows > 1, 'Pavement tile grid should create multiple stone cells.');
     pavementPreview.scale.set(pavementDraft.scaleMultiplier, 1, pavementDraft.scaleMultiplier);
     pavementPreview.updateMatrixWorld(true);
     const pavementPreviewBox = new Box3().setFromObject(pavementPreview);
     assert(pavementPreviewBox.min.y >= -0.001, 'Generated pavement preview should stay above ground while scaled.');
+    assert(pavementPreview instanceof Mesh, 'Generated pavement preview should use a single procedural mesh.');
+    if (pavementPreview instanceof Mesh) {
+      const colorAttribute = pavementPreview.geometry.getAttribute('color');
+      const material = pavementPreview.material;
+      const previewGrid = pavementPreview.userData.pavementGrid as { columns?: unknown; rows?: unknown };
+
+      assert(colorAttribute !== undefined && colorAttribute.count > 0, 'Generated pavement should include vertex color detail.');
+      assert(
+        !Array.isArray(material) && 'vertexColors' in material && material.vertexColors === true,
+        'Generated pavement should render with vertex colors enabled.',
+      );
+      assert(
+        previewGrid.columns === pavementGrid.columns && previewGrid.rows === pavementGrid.rows,
+        'Generated pavement should expose its procedural stone grid metadata.',
+      );
+    }
     pavementPreview.traverse((object) => {
       if (object instanceof Mesh) {
         object.geometry.dispose();

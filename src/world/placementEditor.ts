@@ -21,6 +21,7 @@ import type {
   WorldObjectDefinition,
 } from './types';
 import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
+import { createPavementTileMesh } from './props/createPavementTile';
 import {
   authoredVillageWorldObjects,
   baseVillageWorldObjects,
@@ -553,14 +554,6 @@ const disposeObjectResources = (object: THREE.Object3D): void => {
 };
 
 const createPrimitivePreviewMaterial = (object: WorldObjectDefinition): THREE.Material => {
-  if (object.kind === 'pavement') {
-    return new THREE.MeshStandardMaterial({
-      color: 0x8f8a7a,
-      roughness: 0.92,
-      metalness: 0,
-    });
-  }
-
   if (object.kind === 'spawn-point') {
     return new THREE.MeshStandardMaterial({
       color: 0xf0ca72,
@@ -605,6 +598,16 @@ export const createPrimitivePlacementPreviewObject = (
 ): THREE.Object3D | null => {
   if (!object.dimensions || !isPrimitivePlacementPreviewKind(object.kind)) {
     return null;
+  }
+
+  if (object.kind === 'pavement') {
+    return createPavementTileMesh({
+      name: `placement-editor:primitive-preview:${object.id}`,
+      seed: object.id,
+      dimensions: object.dimensions,
+      position: object.position,
+      rotationY: object.rotation?.[1] ?? 0,
+    });
   }
 
   const preview = new THREE.Mesh(

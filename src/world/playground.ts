@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { canLoadGltfAssets, createModelInstance, fitAssetObjectToBounds } from '../game/assets';
 import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
 import { createMailboxProp } from './props/createMailbox';
+import { createPavementTileMesh } from './props/createPavementTile';
 import type { WorldObjectDefinition } from './types';
 import { shouldRenderAuthoredPlaygroundObjects } from './playgroundComposition';
 import {
@@ -31,7 +32,6 @@ const materials = {
   path: new THREE.MeshStandardMaterial({ color: 0xc8aa70, roughness: 0.95 }),
   sidePath: new THREE.MeshStandardMaterial({ color: 0x9b8c65, roughness: 0.95 }),
   pathEdge: new THREE.MeshStandardMaterial({ color: 0xf0d88f, roughness: 0.9 }),
-  pavement: new THREE.MeshStandardMaterial({ color: 0x8f8a7a, roughness: 0.92 }),
   fence: new THREE.MeshStandardMaterial({ color: 0x8d7657, roughness: 0.75 }),
   crate: new THREE.MeshStandardMaterial({ color: 0x9a6435, roughness: 0.85 }),
   crateStrap: new THREE.MeshStandardMaterial({ color: 0x5a3826, roughness: 0.8 }),
@@ -577,15 +577,13 @@ const addPaths = (group: THREE.Group): void => {
 
 const addPavementTiles = (group: THREE.Group): void => {
   getWorldObjectsByKind('pavement').forEach((pavement) => {
-    const [width, height, depth] = getDimensions(pavement);
-    addSurface(
-      group,
-      `village:${pavement.id}`,
-      [width, height, depth],
-      pavement.position,
-      materials.pavement,
-      pavement.rotation?.[1] ?? 0,
-    );
+    group.add(createPavementTileMesh({
+      name: `village:${pavement.id}`,
+      seed: pavement.id,
+      dimensions: getDimensions(pavement),
+      position: pavement.position,
+      rotationY: pavement.rotation?.[1] ?? 0,
+    }));
   });
 };
 

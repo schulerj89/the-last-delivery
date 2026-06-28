@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.9] - 2026-06-28
+
+### Fixed
+
+- Replaced flat generated pavement tile rendering with a lightweight procedural stone mesh using vertex color variation, visible joints, and subtle surface relief.
+- Updated town editor primitive pavement previews to match the in-game generated pavement visuals.
+- Added smoke coverage for pavement palette variety, joint detail, relief, vertex colors, and grid metadata.
+
 ## [0.53.8] - 2026-06-28
 
 ### Fixed
