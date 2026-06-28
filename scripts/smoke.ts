@@ -149,6 +149,7 @@ interface RuntimeFileStats {
 
 interface NodeFileSystem {
   existsSync: (path: string | URL) => boolean;
+  readFileSync: (path: string | URL, encoding: 'utf8') => string;
   statSync: (path: string | URL) => RuntimeFileStats;
 }
 
@@ -547,6 +548,47 @@ const runVisualPolishSmoke = (): void => {
     assert(palette.roughness >= 0 && palette.roughness <= 1, `Material override roughness should be normalized: ${kind}`);
     assert(palette.metalness >= 0 && palette.metalness <= 1, `Material override metalness should be normalized: ${kind}`);
   });
+};
+
+const runAnimationHarnessSmoke = (): void => {
+  const harnessHtmlUrl = new URL('../animation-harness.html', import.meta.url);
+  const harnessScriptUrl = new URL('../src/animationHarness.ts', import.meta.url);
+  const harnessCssUrl = new URL('../src/animationHarness.css', import.meta.url);
+  const viteConfigUrl = new URL('../vite.config.mjs', import.meta.url);
+
+  assert(nodeFileSystem.existsSync(harnessHtmlUrl), 'Animation harness HTML route should exist.');
+  assert(nodeFileSystem.existsSync(harnessScriptUrl), 'Animation harness script should exist.');
+  assert(nodeFileSystem.existsSync(harnessCssUrl), 'Animation harness styles should exist.');
+  assert(nodeFileSystem.existsSync(viteConfigUrl), 'Vite config should exist for multi-page build input.');
+
+  const harnessHtml = nodeFileSystem.readFileSync(harnessHtmlUrl, 'utf8');
+  const harnessScript = nodeFileSystem.readFileSync(harnessScriptUrl, 'utf8');
+  const viteConfig = nodeFileSystem.readFileSync(viteConfigUrl, 'utf8');
+
+  assert(
+    harnessHtml.includes('/src/animationHarness.ts'),
+    'Animation harness route should load the isolated harness entry.',
+  );
+  assert(
+    harnessScript.includes(playerCharacterAssetId) || harnessScript.includes('playerCharacterAssetId'),
+    'Animation harness should use the selected courier visual asset id.',
+  );
+  assert(
+    harnessScript.includes(playerCharacterAnimationAssetId) || harnessScript.includes('playerCharacterAnimationAssetId'),
+    'Animation harness should use the selected courier animation asset id.',
+  );
+  assert(
+    harnessScript.includes('Strip Root.position'),
+    'Animation harness should expose root-motion stripping controls.',
+  );
+  assert(
+    harnessScript.includes('loopStart') && harnessScript.includes('loopEnd'),
+    'Animation harness should expose loop trim values for patch notes.',
+  );
+  assert(
+    viteConfig.includes('animation-harness.html'),
+    'Vite build config should include the animation harness HTML entry.',
+  );
 };
 
 const runLayoutOverrideSmoke = (): void => {
@@ -1538,6 +1580,7 @@ runAssetRegistrySmoke();
 await runAssetCacheSmoke();
 runAssetFittingSmoke();
 runVisualPolishSmoke();
+runAnimationHarnessSmoke();
 runLayoutOverrideSmoke();
 runWorldDefinitionSmoke();
 runVillageLayoutConfigSmoke();

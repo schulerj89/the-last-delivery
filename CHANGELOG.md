@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.40.0] - 2026-06-28
+
+### Added
+
+- Added an isolated `/animation-harness.html` Vite route for inspecting the courier visual and animation clips outside the main game loop.
+- Added animation harness controls for clip selection, play/pause, frame stepping, scrub time, loop start/end trimming, playback speed, root-motion stripping, hip X/Z locking, skeleton visibility, mesh filtering, and copyable patch notes.
+- Added a multi-page Vite build config so the harness is emitted in production builds.
+- Added smoke checks for the animation harness route, build input, courier asset usage, root-motion control, and loop trim output.
+
 ## [0.39.1] - 2026-06-28
 
 ### Fixed
