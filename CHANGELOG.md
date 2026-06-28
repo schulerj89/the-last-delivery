@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.11.0] - 2026-06-28
+
+### Added
+
+- Added iteration 009 tiny village square blockout expansion.
+- Added primitive house placeholders, a main delivery route path, a spawn side path, and village props.
+- Expanded playground boundaries and collision to fit the first village square while preserving the original delivery board and mailbox loop.
+
 ## [0.10.1] - 2026-06-28
 
 ### Fixed

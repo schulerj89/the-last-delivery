@@ -3,6 +3,7 @@ import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import { createDeliveryController } from '../src/game/delivery';
 import { playerMovementSettings } from '../src/game/player';
+import { createPlayground } from '../src/world/playground';
 import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
 import {
@@ -55,6 +56,11 @@ const runModuleSmoke = (): void => {
   assert(thirdPersonCameraSettings.minPitch < thirdPersonCameraSettings.maxPitch, 'Camera pitch limits should be ordered.');
   assert(playgroundCollisionWorld.boxes.length >= 2, 'Playground collision boxes should initialize.');
   assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'mailbox'), 'Mailbox collision box should initialize.');
+  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'house-mail-lane'), 'Village house collision should initialize.');
+
+  const playground = createPlayground();
+  assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');
+  assert(playground.children.length > 20, 'Village square should include primitive blockout children.');
 
   const resolved = resolvePlayerCollision(
     new Vector3(99, 0, 99),
