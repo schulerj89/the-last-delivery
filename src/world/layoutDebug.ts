@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { PerformanceSnapshot } from '../game/performance';
-import { playgroundCollisionWorld } from './playgroundCollision';
+import { createPlaygroundCollisionWorld } from './playgroundCollision';
 import type { WorldObjectDefinition } from './types';
 import { villageLayoutConfig } from './villageLayoutConfig';
 import { playerSpawnPosition, villageWorldObjects } from './villageDefinition';
@@ -55,6 +55,8 @@ const colors = {
   sidePath: 0x6f958e,
   spawn: 0xffffff,
 };
+
+const authoredLayoutCollisionWorld = createPlaygroundCollisionWorld(true);
 
 const formatCountLabel = (id: string): string => (
   id
@@ -212,7 +214,7 @@ const createInteractableRadiusOutlines = (): THREE.Object3D[] => (
 );
 
 const createColliderOutlines = (): THREE.Object3D[] => (
-  playgroundCollisionWorld.boxes.map((box) => {
+  authoredLayoutCollisionWorld.boxes.map((box) => {
     const halfX = box.size.x / 2;
     const halfZ = box.size.z / 2;
     const y = layoutDebugConfig.helperY + 0.04;

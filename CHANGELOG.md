@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.44.0] - 2026-06-28
+
+### Changed
+
+- Cleared the default playground composition to a clean editor canvas with only grass ground and the boundary fence rendered.
+- Disabled authored playground collisions, interactables, delivery objective markers, and delivery guidance in the clean canvas so hidden objects do not block or direct the player.
+- Kept authored village objects, colliders, and primitive fallbacks available on demand for layout debug, editor inspection, and smoke coverage.
+
 ## [0.43.0] - 2026-06-28
 
 ### Added

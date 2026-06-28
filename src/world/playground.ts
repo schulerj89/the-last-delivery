@@ -3,6 +3,7 @@ import { canLoadGltfAssets, createModelInstance, fitAssetObjectToBounds } from '
 import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
 import { createMailboxProp } from './props/createMailbox';
 import type { WorldObjectDefinition } from './types';
+import { shouldRenderAuthoredPlaygroundObjects } from './playgroundComposition';
 import {
   deliveryBoardObject,
   getWorldObjectsByKind,
@@ -66,6 +67,7 @@ interface HouseMaterialSet {
 
 export interface PlaygroundOptions {
   visualBoundsDebugView?: PlaygroundVisualBoundsDebugView;
+  renderAuthoredWorldObjects?: boolean;
 }
 
 const getHouseMaterials = (id: string): HouseMaterialSet => {
@@ -966,9 +968,14 @@ export const createPlayground = (options: PlaygroundOptions = {}): THREE.Group =
   const playground = nameObject(new THREE.Group(), 'village:square-blockout');
 
   addGround(playground);
+  addFence(playground);
+
+  if (!shouldRenderAuthoredPlaygroundObjects(options.renderAuthoredWorldObjects)) {
+    return playground;
+  }
+
   addCentralPlazaSurface(playground);
   addPaths(playground);
-  addFence(playground);
   addSpawnMarker(playground);
   addPostOffice(playground, options);
   addHouses(playground, options);

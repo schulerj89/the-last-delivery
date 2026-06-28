@@ -13,6 +13,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Press `F4` to cycle debug detail between hidden, compact, and expanded.
 - Press `F5` to show or hide expanded performance details.
 - Press `F10` to toggle gameplay collision boxes.
+- The default playground view is a clean editor canvas: grass ground and boundary fence only.
 - The Object panel lists editable world objects and their current collision, interactable, objective, and destination data.
 - The Asset panel lists registered runtime GLB assets that are safe to preview.
 
@@ -55,6 +56,7 @@ Browser edits are temporary until exported and promoted.
 
 - Active editor JSON is the live layout document used by the browser editor.
 - It can include transform overrides, active/inactive state, and asset preview choices.
+- Authored world objects remain in the catalog even when the default playground render is empty.
 - Click `Save Active JSON` to persist it in `localStorage`.
 - Click `Load Active JSON` to reload it without refreshing the page.
 - Click `Copy JSON` or press `Shift+C` to copy the active JSON.

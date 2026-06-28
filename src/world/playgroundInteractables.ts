@@ -3,9 +3,11 @@ import type { DeliveryController } from '../game/delivery';
 import type { Interactable } from '../game/interaction';
 import type { WorldObjectDefinition } from './types';
 import { deliveryBoardObject, getWorldObjectsByKind } from './villageDefinition';
+import { playgroundCompositionConfig } from './playgroundComposition';
 
 interface PlaygroundInteractableOptions {
   openDeliveryBoard?: () => string;
+  enableAuthoredInteractables?: boolean;
 }
 
 const createInteractablePosition = (object: WorldObjectDefinition): THREE.Vector3 => {
@@ -26,42 +28,51 @@ const getInteractableRadius = (object: WorldObjectDefinition): number => {
 
 export const createPlaygroundInteractables = (
   delivery: DeliveryController,
-  { openDeliveryBoard }: PlaygroundInteractableOptions = {},
-): readonly Interactable[] => [
-  ...getWorldObjectsByKind('mailbox')
-    .filter((mailbox) => mailbox.interactable)
-    .map((mailbox): Interactable => ({
-      id: mailbox.id,
-      position: createInteractablePosition(mailbox),
-      radius: getInteractableRadius(mailbox),
+  {
+    openDeliveryBoard,
+    enableAuthoredInteractables = playgroundCompositionConfig.enableAuthoredInteractables,
+  }: PlaygroundInteractableOptions = {},
+): readonly Interactable[] => {
+  if (!enableAuthoredInteractables) {
+    return [];
+  }
+
+  return [
+    ...getWorldObjectsByKind('mailbox')
+      .filter((mailbox) => mailbox.interactable)
+      .map((mailbox): Interactable => ({
+        id: mailbox.id,
+        position: createInteractablePosition(mailbox),
+        radius: getInteractableRadius(mailbox),
+        prompt: () => {
+          const state = delivery.getState();
+
+          if (state.status !== 'delivery-accepted') {
+            return 'Start at delivery board';
+          }
+
+          return state.activeTargetId === mailbox.id
+            ? 'Complete delivery'
+            : 'Wrong mailbox';
+        },
+        interact: () => (
+          delivery.getState().status === 'delivery-accepted'
+            ? delivery.completeDelivery(mailbox.id)
+            : 'Check the delivery board first.'
+        ),
+      })),
+    {
+      id: deliveryBoardObject.id,
+      position: createInteractablePosition(deliveryBoardObject),
+      radius: getInteractableRadius(deliveryBoardObject),
       prompt: () => {
         const state = delivery.getState();
 
-        if (state.status !== 'delivery-accepted') {
-          return 'Start at delivery board';
-        }
-
-        return state.activeTargetId === mailbox.id
-          ? 'Complete delivery'
-          : 'Wrong mailbox';
+        return state.status === 'delivery-accepted'
+          ? `${state.activeDelivery?.title ?? 'Delivery'} in progress`
+          : 'Open delivery board';
       },
-      interact: () => (
-        delivery.getState().status === 'delivery-accepted'
-          ? delivery.completeDelivery(mailbox.id)
-          : 'Check the delivery board first.'
-      ),
-    })),
-  {
-    id: deliveryBoardObject.id,
-    position: createInteractablePosition(deliveryBoardObject),
-    radius: getInteractableRadius(deliveryBoardObject),
-    prompt: () => {
-      const state = delivery.getState();
-
-      return state.status === 'delivery-accepted'
-        ? `${state.activeDelivery?.title ?? 'Delivery'} in progress`
-        : 'Open delivery board';
+      interact: () => (openDeliveryBoard ? openDeliveryBoard() : delivery.acceptDelivery()),
     },
-    interact: () => (openDeliveryBoard ? openDeliveryBoard() : delivery.acceptDelivery()),
-  },
-];
+  ];
+};

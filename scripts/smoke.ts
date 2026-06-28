@@ -125,7 +125,8 @@ import {
   serializePlacementTransforms,
 } from '../src/world/placementEditor';
 import { createPlayground } from '../src/world/playground';
-import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
+import { playgroundCompositionConfig } from '../src/world/playgroundComposition';
+import { createPlaygroundCollisionWorld, playgroundCollisionWorld } from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
 import {
   createDeliveryBoardObjectiveMarker,
@@ -1184,7 +1185,11 @@ const runDeliveryStateSmoke = (): void => {
 const runInteractionSmoke = (): void => {
   const delivery = createDeliveryController();
   let boardOpened = false;
+  const cleanCanvasInteractables = createPlaygroundInteractables(delivery);
+  assert(cleanCanvasInteractables.length === 0, 'Clean editor canvas should not expose authored interactables by default.');
+
   const interactables = createPlaygroundInteractables(delivery, {
+    enableAuthoredInteractables: true,
     openDeliveryBoard: () => {
       boardOpened = true;
       return 'Delivery board opened.';
@@ -1591,17 +1596,25 @@ const runModuleSmoke = (): void => {
     getZoomedCameraDistance(thirdPersonCameraSettings.distance, 100) > thirdPersonCameraSettings.distance,
     'Mouse wheel down should zoom the camera out.',
   );
-  assert(playgroundCollisionWorld.boxes.length >= 2, 'Playground collision boxes should initialize.');
+  assert(playgroundCompositionConfig.renderGrass, 'Clean editor canvas should keep the grass ground.');
+  assert(playgroundCompositionConfig.renderFence, 'Clean editor canvas should keep the boundary fence.');
+  assert(!playgroundCompositionConfig.renderAuthoredWorldObjects, 'Clean editor canvas should hide authored world objects by default.');
+  assert(!playgroundCompositionConfig.enableAuthoredCollision, 'Clean editor canvas should not keep invisible authored collision.');
+  assert(!playgroundCompositionConfig.showAuthoredObjectiveMarkers, 'Clean editor canvas should hide authored delivery markers.');
+  assert(playgroundCollisionWorld.boxes.length === 0, 'Clean editor canvas should not initialize authored collision boxes.');
+
+  const authoredCollisionWorld = createPlaygroundCollisionWorld(true);
+  assert(authoredCollisionWorld.boxes.length >= 2, 'Authored collision boxes should still initialize on demand.');
   assert(
-    playgroundCollisionWorld.boxes.length === villageWorldObjects.filter((object) => object.collider).length,
+    authoredCollisionWorld.boxes.length === villageWorldObjects.filter((object) => object.collider).length,
     'Collision boxes should be generated from collidable world objects.',
   );
-  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'mailbox'), 'Mailbox collision box should initialize.');
-  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'mailbox-post-office-return'), 'Post office return box collision should initialize.');
-  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'post-office'), 'Post office collision box should initialize.');
-  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'cottage-west'), 'Village cottage collision should initialize.');
-  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'town-well'), 'Town well collision should initialize.');
-  assert(playgroundCollisionWorld.boxes.some((box) => box.id === 'cart-south-path'), 'Large fantasy cart collision should initialize.');
+  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'mailbox'), 'Mailbox collision box should initialize.');
+  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'mailbox-post-office-return'), 'Post office return box collision should initialize.');
+  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'post-office'), 'Post office collision box should initialize.');
+  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'cottage-west'), 'Village cottage collision should initialize.');
+  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'town-well'), 'Town well collision should initialize.');
+  assert(authoredCollisionWorld.boxes.some((box) => box.id === 'cart-south-path'), 'Large fantasy cart collision should initialize.');
 
   const mailboxProp = createMailboxProp({
     id: 'smoke-mailbox',
@@ -1617,30 +1630,39 @@ const runModuleSmoke = (): void => {
 
   const playground = createPlayground();
   assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');
-  assert(playground.children.length > 20, 'Village square should include primitive blockout children.');
-  assert(playground.getObjectByName('village:mailbox:rounded-body') !== undefined, 'Blue mailbox procedural body should initialize.');
-  assert(playground.getObjectByName('village:mailbox-east:rounded-body') !== undefined, 'Red mailbox procedural body should initialize.');
-  assert(playground.getObjectByName('village:mailbox-post-office-return:rounded-body') !== undefined, 'Green return-box procedural body should initialize.');
-  assert(playground.getObjectByName('village:mailbox:mail-symbol') !== undefined, 'Procedural mailbox mail symbol should initialize in the village.');
-  assert(playground.getObjectByName('village:crate-large') !== undefined, 'Asset-targeted crate fallback should initialize.');
-  assert(playground.getObjectByName('village:cottage-west:body') !== undefined, 'Fantasy cottage primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:post-office:body') !== undefined, 'Fantasy post office primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:barrel-north-a') !== undefined, 'Fantasy barrel primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:signpost-post-office:post') !== undefined, 'Fantasy pointer primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:cart-south-path:bed') !== undefined, 'Fantasy cart primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:tree-northwest:trunk') !== undefined, 'Tree primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:tree-northwest:canopy') !== undefined, 'Tree canopy primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:bush-side-path-a') !== undefined, 'Bush primitive fallback should initialize.');
-  assert(playground.getObjectByName('village:nature-rock-path-a') !== undefined, 'Asset-targeted nature rock fallback should initialize.');
-  assert(playground.getObjectByName('village:main-path-spawn-to-plaza') !== undefined, 'Main spawn-to-plaza path should initialize.');
-  assert(playground.getObjectByName('village:main-path-plaza-to-north-house') !== undefined, 'Main plaza-to-north-house path should initialize.');
-  assert(playground.getObjectByName('village:side-path-blue-house') !== undefined, 'Blue house side path should initialize.');
-  assert(playground.getObjectByName('village:side-path-red-house') !== undefined, 'Red house side path should initialize.');
-  assert(playground.getObjectByName('village:central-plaza-surface') !== undefined, 'Central plaza surface should initialize.');
-  assert(playground.getObjectByName('village:label-post-office') !== undefined, 'Post office label sign should initialize.');
-  assert(playground.getObjectByName('village:label-blue-house') !== undefined, 'Blue house label sign should initialize.');
-  assert(playground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');
-  assert(playground.getObjectByName('village:label-side-path') !== undefined, 'Side path label sign should initialize.');
+  assert(playground.getObjectByName('village:ground') !== undefined, 'Clean editor canvas should include grass ground.');
+  assert(playground.getObjectByName('village:boundary-rail-north-low') !== undefined, 'Clean editor canvas should include boundary fence rails.');
+  assert(playground.getObjectByName('village:mailbox:rounded-body') === undefined, 'Clean editor canvas should hide mailbox props.');
+  assert(playground.getObjectByName('village:crate-large') === undefined, 'Clean editor canvas should hide crate props.');
+  assert(playground.getObjectByName('village:main-path-spawn-to-plaza') === undefined, 'Clean editor canvas should hide authored paths.');
+  assert(playground.getObjectByName('village:central-plaza-surface') === undefined, 'Clean editor canvas should hide authored plaza surfaces.');
+  assert(playground.getObjectByName('village:label-post-office') === undefined, 'Clean editor canvas should hide authored labels.');
+
+  const authoredPlayground = createPlayground({ renderAuthoredWorldObjects: true });
+  assert(authoredPlayground.children.length > 20, 'Authored village square should include primitive blockout children when requested.');
+  assert(authoredPlayground.getObjectByName('village:mailbox:rounded-body') !== undefined, 'Blue mailbox procedural body should initialize.');
+  assert(authoredPlayground.getObjectByName('village:mailbox-east:rounded-body') !== undefined, 'Red mailbox procedural body should initialize.');
+  assert(authoredPlayground.getObjectByName('village:mailbox-post-office-return:rounded-body') !== undefined, 'Green return-box procedural body should initialize.');
+  assert(authoredPlayground.getObjectByName('village:mailbox:mail-symbol') !== undefined, 'Procedural mailbox mail symbol should initialize in the village.');
+  assert(authoredPlayground.getObjectByName('village:crate-large') !== undefined, 'Asset-targeted crate fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:cottage-west:body') !== undefined, 'Fantasy cottage primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:post-office:body') !== undefined, 'Fantasy post office primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:barrel-north-a') !== undefined, 'Fantasy barrel primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:signpost-post-office:post') !== undefined, 'Fantasy pointer primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:cart-south-path:bed') !== undefined, 'Fantasy cart primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:tree-northwest:trunk') !== undefined, 'Tree primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:tree-northwest:canopy') !== undefined, 'Tree canopy primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:bush-side-path-a') !== undefined, 'Bush primitive fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:nature-rock-path-a') !== undefined, 'Asset-targeted nature rock fallback should initialize.');
+  assert(authoredPlayground.getObjectByName('village:main-path-spawn-to-plaza') !== undefined, 'Main spawn-to-plaza path should initialize.');
+  assert(authoredPlayground.getObjectByName('village:main-path-plaza-to-north-house') !== undefined, 'Main plaza-to-north-house path should initialize.');
+  assert(authoredPlayground.getObjectByName('village:side-path-blue-house') !== undefined, 'Blue house side path should initialize.');
+  assert(authoredPlayground.getObjectByName('village:side-path-red-house') !== undefined, 'Red house side path should initialize.');
+  assert(authoredPlayground.getObjectByName('village:central-plaza-surface') !== undefined, 'Central plaza surface should initialize.');
+  assert(authoredPlayground.getObjectByName('village:label-post-office') !== undefined, 'Post office label sign should initialize.');
+  assert(authoredPlayground.getObjectByName('village:label-blue-house') !== undefined, 'Blue house label sign should initialize.');
+  assert(authoredPlayground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');
+  assert(authoredPlayground.getObjectByName('village:label-side-path') !== undefined, 'Side path label sign should initialize.');
 
   const visualBoundsDebugView = createPlaygroundVisualBoundsDebugView();
   const visualTargetBounds = createAssetTargetBounds([0, 1, 0], [1, 2, 1]);

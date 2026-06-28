@@ -31,6 +31,7 @@ import {
 import { createWorldEnvironment } from './world/environment';
 import { createPlacementEditor } from './world/placementEditor';
 import { createPlayground } from './world/playground';
+import { playgroundCompositionConfig } from './world/playgroundComposition';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
 import { createPlaygroundInteractables } from './world/playgroundInteractables';
@@ -111,7 +112,9 @@ followCamera = createThirdPersonCameraController({
   target: player.object,
   domElement: renderer.domElement,
 });
-const deliveryGuidanceOverlay = createDeliveryGuidanceOverlay(app);
+const deliveryGuidanceOverlay = createDeliveryGuidanceOverlay(app, {
+  enabled: playgroundCompositionConfig.showAuthoredObjectiveMarkers,
+});
 const debugUi = createDevDebugPanelManager(app);
 const layoutObjectCountsByKind = getLayoutObjectCountsByKind();
 const performanceMonitor = createPerformanceMonitor({
@@ -279,8 +282,10 @@ const animate = (): void => {
   interaction.update(deltaSeconds);
   placementEditor.update(deltaSeconds);
   const deliveryState = delivery.getState();
-  deliveryBoardObjectiveMarker.visible = deliveryState.status !== 'delivery-accepted';
-  deliveryTargetObjectiveMarker.visible = deliveryState.status === 'delivery-accepted'
+  deliveryBoardObjectiveMarker.visible = playgroundCompositionConfig.showAuthoredObjectiveMarkers
+    && deliveryState.status !== 'delivery-accepted';
+  deliveryTargetObjectiveMarker.visible = playgroundCompositionConfig.showAuthoredObjectiveMarkers
+    && deliveryState.status === 'delivery-accepted'
     && setObjectiveMarkerTarget(deliveryTargetObjectiveMarker, deliveryState.activeTargetWorldObjectId);
   updateObjectiveMarker(deliveryBoardObjectiveMarker, elapsedSeconds);
   updateObjectiveMarker(deliveryTargetObjectiveMarker, elapsedSeconds);

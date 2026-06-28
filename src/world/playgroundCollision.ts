@@ -3,6 +3,7 @@ import type { CollisionWorld } from '../game/collision';
 import type { WorldObjectDefinition } from './types';
 import { villageLayoutConfig } from './villageLayoutConfig';
 import { collidableWorldObjects } from './villageDefinition';
+import { playgroundCompositionConfig } from './playgroundComposition';
 
 const createWorldObjectCollisionBox = (object: WorldObjectDefinition) => {
   if (!object.collider) {
@@ -16,12 +17,16 @@ const createWorldObjectCollisionBox = (object: WorldObjectDefinition) => {
   };
 };
 
-export const playgroundCollisionWorld: CollisionWorld = {
+export const createPlaygroundCollisionWorld = (
+  includeAuthoredColliders: boolean = playgroundCompositionConfig.enableAuthoredCollision,
+): CollisionWorld => ({
   bounds: {
     minX: villageLayoutConfig.bounds.minX,
     maxX: villageLayoutConfig.bounds.maxX,
     minZ: villageLayoutConfig.bounds.minZ,
     maxZ: villageLayoutConfig.bounds.maxZ,
   },
-  boxes: collidableWorldObjects.map(createWorldObjectCollisionBox),
-};
+  boxes: includeAuthoredColliders ? collidableWorldObjects.map(createWorldObjectCollisionBox) : [],
+});
+
+export const playgroundCollisionWorld: CollisionWorld = createPlaygroundCollisionWorld();
