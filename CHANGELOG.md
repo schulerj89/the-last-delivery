@@ -2,6 +2,12 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.9.0] - 2026-06-28
+
+### Added
+
+- Added project-scoped Codex reviewer agents for game feel, Three.js architecture, browser performance, and validation review.
+
 ## [0.8.0] - 2026-06-28
 
 ### Added
