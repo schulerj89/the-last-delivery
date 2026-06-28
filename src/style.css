@@ -31,3 +31,7 @@ canvas {
   white-space: pre;
   pointer-events: none;
 }
+
+.debug-overlay--camera {
+  top: 102px;
+}

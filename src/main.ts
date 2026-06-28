@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import './style.css';
+import { createCameraDebugOverlay, createThirdPersonCameraController } from './game/camera';
 import { createPlayerController, createPlayerDebugOverlay } from './game/player';
 import { createPlayground } from './world/playground';
 
@@ -13,8 +14,6 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x16191f);
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(7, 6, 9);
-camera.lookAt(0, 0.6, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -28,6 +27,12 @@ const player = createPlayerController();
 scene.add(player.object);
 
 const playerDebugOverlay = createPlayerDebugOverlay(app);
+const followCamera = createThirdPersonCameraController({
+  camera,
+  target: player.object,
+  domElement: renderer.domElement,
+});
+const cameraDebugOverlay = createCameraDebugOverlay(app);
 
 const ambientLight = new THREE.HemisphereLight(0xe8f1ff, 0x253329, 1.8);
 scene.add(ambientLight);
@@ -49,8 +54,12 @@ window.addEventListener('resize', handleResize);
 const clock = new THREE.Clock();
 
 const animate = () => {
-  player.update(clock.getDelta());
+  const deltaSeconds = clock.getDelta();
+
+  player.update(deltaSeconds);
+  followCamera.update(deltaSeconds);
   playerDebugOverlay.update(player.getState());
+  cameraDebugOverlay.update(followCamera.getState());
   renderer.render(scene, camera);
   window.requestAnimationFrame(animate);
 };

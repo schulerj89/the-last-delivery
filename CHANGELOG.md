@@ -2,6 +2,15 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.4.0] - 2026-06-28
+
+### Added
+
+- Added iteration 003 third-person follow camera.
+- Added mouse orbit around the placeholder player with smoothed camera movement.
+- Added tunable third-person camera settings with clamped vertical pitch.
+- Added camera debug overlay values for yaw, pitch, and distance.
+
 ## [0.3.0] - 2026-06-28
 
 ### Added
