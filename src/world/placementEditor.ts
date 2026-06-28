@@ -6,6 +6,7 @@ import {
   type AssetInstanceHandle,
 } from '../game/assets';
 import {
+  createWorldObjectFromLayoutOverride,
   layoutOverrideDocumentVersion,
   parseLayoutOverrideJson,
   serializeLayoutOverrideDocument,
@@ -60,6 +61,8 @@ export interface EditablePlacementObject {
   id: string;
   kind: WorldObjectDefinition['kind'];
   worldObject: WorldObjectDefinition;
+  templateId?: string;
+  isCreated?: boolean;
 }
 
 export interface PlacementTransformDraft {
@@ -84,6 +87,12 @@ export interface PlacementEditor {
   handleKeyDown(event: KeyboardEvent): boolean;
   handleKeyUp(event: KeyboardEvent): boolean;
   placeObjectAt(
+    objectId: string,
+    groundPosition: THREE.Vector3Tuple,
+    options?: { assetId?: string | null; select?: boolean },
+  ): boolean;
+  createObjectFromTemplate(
+    templateId: string,
     objectId: string,
     groundPosition: THREE.Vector3Tuple,
     options?: { assetId?: string | null; select?: boolean },
@@ -200,6 +209,43 @@ export const getEditablePlacementObjectById = (
 ): EditablePlacementObject | null => (
   editableObjects.find((object) => object.id === objectId) ?? null
 );
+
+const cloneTuple = (value: THREE.Vector3Tuple): THREE.Vector3Tuple => [value[0], value[1], value[2]];
+
+export const createPlacementObjectOverrideFromTemplate = (
+  templateObject: WorldObjectDefinition,
+  objectId: string,
+  groundPosition: THREE.Vector3Tuple,
+  options: { assetId?: string | null } = {},
+): LayoutTransformOverride => {
+  const templateAssetId = getObjectAssetId(templateObject);
+  const nextAssetId = options.assetId === undefined ? templateAssetId : options.assetId;
+  const position: THREE.Vector3Tuple = [
+    groundPosition[0],
+    templateObject.position[1],
+    groundPosition[2],
+  ];
+  const override: LayoutTransformOverride = {
+    id: objectId,
+    kind: templateObject.kind,
+    templateId: templateObject.id,
+    active: true,
+    position,
+    rotation: templateObject.rotation ? cloneTuple(templateObject.rotation) : undefined,
+    dimensions: templateObject.dimensions ? cloneTuple(templateObject.dimensions) : undefined,
+    renderMode: nextAssetId ? 'asset' : templateObject.render?.mode ?? 'primitive',
+    assetId: nextAssetId ?? undefined,
+    scaleMultiplier: templateObject.render?.mode === 'asset'
+      ? templateObject.render.scaleMultiplier
+      : templateObject.layoutTransform?.scaleMultiplier,
+    yOffset: templateObject.render?.mode === 'asset'
+      ? templateObject.render.yOffset
+      : templateObject.layoutTransform?.yOffset,
+    fitMode: templateObject.render?.mode === 'asset' ? templateObject.render.fitMode : undefined,
+  };
+
+  return override;
+};
 
 export const getPlacementEditorMoveSpeed = (
   snapSize: number,
@@ -571,37 +617,52 @@ const isChangedDraft = (
 };
 
 const createOverrideFromDraft = (
-  object: WorldObjectDefinition,
+  editableObject: EditablePlacementObject,
   draft: PlacementTransformDraft,
   updatedAt: string,
 ): LayoutTransformOverride | null => {
+  const object = editableObject.worldObject;
   const initial = createPlacementTransformDraft(object);
   const override: LayoutTransformOverride = {
     id: object.id,
     updatedAt,
   };
+  const forceFullRecord = editableObject.isCreated === true;
 
-  if (draft.position.some((value, index) => value !== initial.position[index])) {
+  if (forceFullRecord) {
+    override.kind = object.kind;
+    override.templateId = editableObject.templateId;
+
+    if (object.dimensions) {
+      override.dimensions = [...object.dimensions];
+    }
+
+    if (object.render?.mode === 'asset' && object.render.fitMode) {
+      override.fitMode = object.render.fitMode;
+    }
+  }
+
+  if (forceFullRecord || draft.position.some((value, index) => value !== initial.position[index])) {
     override.position = [...draft.position];
   }
 
-  if (draft.active !== initial.active) {
+  if (forceFullRecord || draft.active !== initial.active) {
     override.active = draft.active;
   }
 
-  if (draft.rotationY !== initial.rotationY) {
+  if (forceFullRecord || draft.rotationY !== initial.rotationY) {
     override.rotation = [0, draft.rotationY, 0];
   }
 
-  if (draft.scaleMultiplier !== initial.scaleMultiplier) {
+  if (forceFullRecord || draft.scaleMultiplier !== initial.scaleMultiplier) {
     override.scaleMultiplier = draft.scaleMultiplier;
   }
 
-  if (draft.yOffset !== initial.yOffset) {
+  if (forceFullRecord || draft.yOffset !== initial.yOffset) {
     override.yOffset = draft.yOffset;
   }
 
-  if (draft.assetId !== initial.assetId) {
+  if (forceFullRecord || draft.assetId !== initial.assetId) {
     if (draft.assetId) {
       override.renderMode = 'asset';
       override.assetId = draft.assetId;
@@ -611,7 +672,8 @@ const createOverrideFromDraft = (
   }
 
   if (
-    draft.gameplayRole !== initial.gameplayRole
+    forceFullRecord
+    || draft.gameplayRole !== initial.gameplayRole
     || draft.interactionAction !== initial.interactionAction
     || draft.destinationName !== initial.destinationName
     || draft.mailboxVariant !== initial.mailboxVariant
@@ -643,7 +705,7 @@ export const createLayoutOverrideDocumentFromPlacementDrafts = (
   overrides: editableObjects
     .map((object) => {
       const draft = draftsByObjectId.get(object.id);
-      return draft ? createOverrideFromDraft(object.worldObject, draft, updatedAt) : null;
+      return draft ? createOverrideFromDraft(object, draft, updatedAt) : null;
     })
     .filter((override): override is LayoutTransformOverride => override !== null),
 });
@@ -658,9 +720,9 @@ export const createPlacementEditor = ({
   hudVariant = 'full',
 }: PlacementEditorOptions): PlacementEditor => {
   const useBuilderHud = hudVariant === 'builder';
-  const editableObjects = createEditablePlacementObjects();
+  const editableObjects: EditablePlacementObject[] = [...createEditablePlacementObjects()];
   const editableObjectsById = new Map(editableObjects.map((object) => [object.id, object]));
-  const editableObjectIds = editableObjects.map((object) => object.id);
+  const getEditableObjectIds = (): readonly string[] => editableObjects.map((object) => object.id);
   const draftsByObjectId = new Map<string, PlacementTransformDraft>();
   const baselinesByObjectUuid = new Map<string, SceneObjectBaseline>();
   const assetPreviewsByObjectId = new Map<string, EditorAssetPreview>();
@@ -805,6 +867,7 @@ export const createPlacementEditor = ({
 
   instructionsText.textContent = [
     'Button Instructions',
+    'Drag palette tiles into the world to create new editable objects.',
     'Preview Asset: put selected GLB on selected object.',
     'Use Primitive: clear selected GLB preview.',
     'Toggle Active: show/hide selected object in editor JSON.',
@@ -814,12 +877,14 @@ export const createPlacementEditor = ({
     'Copy JSON / Save JSON File: export layout for layout:apply.',
     'Delete Selected: remove the selected object from active editor JSON.',
   ].join('\n');
-  objectSelect.append(...editableObjects.map((object, index) => {
+  const createObjectSelectOption = (object: EditablePlacementObject, index: number): HTMLOptionElement => {
     const option = document.createElement('option');
     option.value = String(index);
-    option.textContent = `${object.id} (${object.kind})`;
+    option.textContent = `${object.id} (${object.kind}${object.isCreated ? ', new' : ''})`;
     return option;
-  }));
+  };
+
+  objectSelect.append(...editableObjects.map(createObjectSelectOption));
   assetSelect.append(...assetRegistry.map((asset) => {
     const option = document.createElement('option');
     option.value = asset.id;
@@ -930,6 +995,47 @@ export const createPlacementEditor = ({
     }
 
     return draft;
+  };
+
+  const registerEditableObject = (editableObject: EditablePlacementObject): boolean => {
+    if (editableObjectsById.has(editableObject.id)) {
+      return false;
+    }
+
+    editableObjects.push(editableObject);
+    editableObjectsById.set(editableObject.id, editableObject);
+    objectSelect.append(createObjectSelectOption(editableObject, editableObjects.length - 1));
+    return true;
+  };
+
+  const ensureEditableObjectFromOverride = (
+    override: LayoutTransformOverride,
+  ): EditablePlacementObject | null => {
+    const existingObject = editableObjectsById.get(override.id);
+
+    if (existingObject) {
+      return existingObject;
+    }
+
+    const createdWorldObject = createWorldObjectFromLayoutOverride(
+      override,
+      editableObjects.map((object) => object.worldObject),
+    );
+
+    if (!createdWorldObject) {
+      return null;
+    }
+
+    const editableObject: EditablePlacementObject = {
+      id: createdWorldObject.id,
+      kind: createdWorldObject.kind,
+      worldObject: createdWorldObject,
+      templateId: override.templateId,
+      isCreated: true,
+    };
+
+    registerEditableObject(editableObject);
+    return editableObject;
   };
 
   const captureBaseline = (object: THREE.Object3D): SceneObjectBaseline => {
@@ -1310,7 +1416,7 @@ export const createPlacementEditor = ({
     resetSceneObjects();
 
     document.overrides.forEach((override) => {
-      const editableObject = editableObjectsById.get(override.id);
+      const editableObject = editableObjectsById.get(override.id) ?? ensureEditableObjectFromOverride(override);
 
       if (!editableObject) {
         return;
@@ -1384,7 +1490,7 @@ export const createPlacementEditor = ({
   };
 
   const parseEditorJson = (json: string): LayoutOverrideDocument | null => {
-    const result = parseLayoutOverrideJson(json, editableObjectIds);
+    const result = parseLayoutOverrideJson(json, getEditableObjectIds());
 
     if (!result.ok || !result.document) {
       status = `Import rejected: ${result.errors.join(' ')}`;
@@ -1877,7 +1983,7 @@ export const createPlacementEditor = ({
     const editableObject = editableObjectsById.get(objectId);
 
     if (!editableObject) {
-      status = `No editable object slot found for ${objectId}.`;
+      status = `No editable object found for ${objectId}.`;
       updateHud();
       return false;
     }
@@ -1900,6 +2006,73 @@ export const createPlacementEditor = ({
 
     draftsByObjectId.set(objectId, draft);
     status = `Placed ${objectId}${options.assetId ? ` with ${options.assetId}` : ''}.`;
+    applyDraftToScene(editableObject);
+    updateMarker();
+    updateHud();
+    return true;
+  };
+
+  const createObjectFromTemplate = (
+    templateId: string,
+    objectId: string,
+    groundPosition: THREE.Vector3Tuple,
+    options: { assetId?: string | null; select?: boolean } = {},
+  ): boolean => {
+    const templateObject = editableObjectsById.get(templateId);
+
+    if (!templateObject) {
+      status = `No editable template found for ${templateId}.`;
+      updateHud();
+      return false;
+    }
+
+    if (editableObjectsById.has(objectId)) {
+      status = `Object id already exists: ${objectId}.`;
+      updateHud();
+      return false;
+    }
+
+    const override = createPlacementObjectOverrideFromTemplate(
+      templateObject.worldObject,
+      objectId,
+      groundPosition,
+      { assetId: options.assetId },
+    );
+    const worldObject = createWorldObjectFromLayoutOverride(override, [templateObject.worldObject]);
+
+    if (!worldObject) {
+      status = `Could not create ${objectId} from ${templateId}.`;
+      updateHud();
+      return false;
+    }
+
+    const editableObject: EditablePlacementObject = {
+      id: worldObject.id,
+      kind: worldObject.kind,
+      worldObject,
+      templateId,
+      isCreated: true,
+    };
+
+    pushUndoSnapshot();
+    registerEditableObject(editableObject);
+
+    const nextIndex = editableObjects.findIndex((object) => object.id === objectId);
+    const draft = createPlacementTransformDraft(worldObject);
+    draft.active = true;
+
+    if (options.assetId !== undefined) {
+      draft.assetId = options.assetId;
+    }
+
+    draftsByObjectId.set(objectId, draft);
+
+    if (nextIndex >= 0 && options.select !== false) {
+      selectedIndex = nextIndex;
+      objectSelect.value = String(nextIndex);
+    }
+
+    status = `Created ${objectId}${draft.assetId ? ` with ${draft.assetId}` : ''}.`;
     applyDraftToScene(editableObject);
     updateMarker();
     updateHud();
@@ -2471,6 +2644,7 @@ export const createPlacementEditor = ({
       return isMovementKey(key) || key === 'Shift' || key === 'Alt';
     },
     placeObjectAt,
+    createObjectFromTemplate,
     getEditableObjects() {
       return editableObjects;
     },

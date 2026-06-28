@@ -21,7 +21,7 @@ const worldAssetKindRules: Readonly<Record<string, readonly string[]>> = {
   'nature-tree01': ['tree'],
   'nature-rock': ['rock'],
   'nature-simple-bush': ['bush'],
-  'fantasy-house-001': ['post-office', 'cottage'],
+  'fantasy-house-001': ['cottage', 'post-office'],
   'fantasy-house-002': ['cottage'],
   'fantasy-house-003': ['cottage'],
   'fantasy-barrel-001': ['barrel'],
@@ -73,19 +73,20 @@ const getAssetCandidateObjectIds = (
   asset: AssetDefinition,
   editableObjects: readonly EditablePlacementObject[],
 ): readonly string[] => {
+  const candidateKinds = worldAssetKindRules[asset.id] ?? [];
+  const kindMatches = editableObjects
+    .filter((object) => candidateKinds.includes(object.kind))
+    .map((object) => object.id);
+
+  if (kindMatches.length > 0) {
+    return kindMatches;
+  }
+
   const exactMatches = editableObjects
     .filter((object) => object.worldObject.render?.mode === 'asset' && object.worldObject.render.assetId === asset.id)
     .map((object) => object.id);
 
-  if (exactMatches.length > 0) {
-    return exactMatches;
-  }
-
-  const candidateKinds = worldAssetKindRules[asset.id] ?? [];
-
-  return editableObjects
-    .filter((object) => candidateKinds.includes(object.kind))
-    .map((object) => object.id);
+  return exactMatches;
 };
 
 export const getTownEditorAssetPaletteItems = (
@@ -101,7 +102,7 @@ export const getTownEditorAssetPaletteItems = (
         type: 'asset',
         id: asset.id,
         label: formatAssetLabel(asset.id),
-        detail: `${candidateObjectIds.length} slot${candidateObjectIds.length === 1 ? '' : 's'}`,
+        detail: candidateObjectIds.length > 0 ? 'drag to place' : 'needs a template',
         source: asset.sourcePack,
         candidateObjectIds,
         placeable: candidateObjectIds.length > 0,

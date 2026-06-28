@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.51.0] - 2026-06-28
+
+### Added
+
+- Added generated town-editor object placement so each palette drop creates a fresh `editor-*` world object instead of reusing a limited authored placement slot.
+- Added layout override support for generated object metadata, including `kind` and `templateId`, with runtime merging and source-promotion validation.
+- Added smoke coverage for reusable palette placement, generated object validation, generated object merging, and created-object export.
+
+### Changed
+
+- Updated town-editor palette copy to describe reusable drag placement instead of slot counts.
+- Updated the editor workflow docs to explain generated object ids, template-backed placement, and promotion validation.
+
 ## [0.50.0] - 2026-06-28
 
 ### Added

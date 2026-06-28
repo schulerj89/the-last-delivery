@@ -10,6 +10,23 @@ const generatedOutputPath = path.join(repoRoot, 'src', 'world', 'villageOverride
 const checkOnly = process.argv.includes('--check');
 const layoutOverrideDocumentVersion = 1;
 const assetFitModes = new Set(['none', 'contain', 'cover', 'exact']);
+const worldObjectKinds = new Set([
+  'barrel',
+  'bush',
+  'cart',
+  'cottage',
+  'crate',
+  'delivery-board',
+  'mailbox',
+  'pavement',
+  'post-office',
+  'rock',
+  'sack',
+  'signpost',
+  'spawn-point',
+  'tree',
+  'well',
+]);
 const gameplayRoles = new Set(['decorative', 'player-spawn', 'post-office', 'delivery-board', 'mailbox']);
 const interactionActions = new Set(['none', 'open-delivery-board', 'complete-delivery']);
 const mailboxVariants = new Set(['blue', 'red', 'green']);
@@ -84,8 +101,27 @@ const validateLayoutDocument = (value, knownObjectIds) => {
 
     seenIds.add(override.id);
 
-    if (!knownObjectIds.has(override.id)) {
-      errors.push(`Unknown layout override object id: ${override.id}.`);
+    if (override.kind !== undefined && !worldObjectKinds.has(override.kind)) {
+      errors.push(`Override ${override.id} kind must be a valid world object kind.`);
+    }
+
+    if (
+      override.templateId !== undefined
+      && (typeof override.templateId !== 'string' || !knownObjectIds.has(override.templateId))
+    ) {
+      errors.push(`Override ${override.id} templateId must reference a known object id.`);
+    }
+
+    if (!knownObjectIds.has(override.id) && override.kind === undefined) {
+      errors.push(`Unknown layout override object id ${override.id} must include kind to create a new object.`);
+    }
+
+    if (
+      !knownObjectIds.has(override.id)
+      && override.templateId === undefined
+      && (override.position === undefined || override.dimensions === undefined)
+    ) {
+      errors.push(`Unknown layout override object id ${override.id} must include templateId or both position and dimensions.`);
     }
 
     if (override.active !== undefined && typeof override.active !== 'boolean') {

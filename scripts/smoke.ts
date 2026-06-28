@@ -111,6 +111,7 @@ import {
 } from '../src/world/assetMaterialOverrides';
 import {
   createEmptyLayoutOverrideDocument,
+  createWorldObjectFromLayoutOverride,
   layoutOverrideDocumentVersion,
   mergeWorldObjectOverrides,
   parseLayoutOverrideJson,
@@ -123,6 +124,7 @@ import {
   canUseTownEditorFilePicker,
   clonePlacementDraft,
   createLayoutOverrideDocumentFromPlacementDrafts,
+  createPlacementObjectOverrideFromTemplate,
   createPrimitivePlacementPreviewObject,
   createDraggedPlacementPosition,
   createEditablePlacementObjects,
@@ -679,6 +681,7 @@ const runTownEditorRouteSmoke = (): void => {
 
   assert(townEditorHtml.includes('/src/townEditor.ts'), 'Town editor route should load the isolated editor entry.');
   assert(townEditorScript.includes('createPlacementEditor'), 'Town editor should reuse the placement editor workflow.');
+  assert(townEditorScript.includes('createObjectFromTemplate'), 'Town editor drops should create generated objects from templates.');
   assert(townEditorScript.includes('renderAuthoredWorldObjects: false'), 'Town editor should open on the clean playground canvas.');
   assert(townEditorScript.includes('data-palette-section="marker"'), 'Town editor should include a world marker palette section.');
   assert(townEditorScript.includes('getTownEditorMarkerPaletteItems'), 'Town editor should source draggable world markers from the catalog.');
@@ -699,7 +702,12 @@ const runTownEditorRouteSmoke = (): void => {
   assert(spawnMarkerItem !== undefined && spawnMarkerItem.placeable, 'Town editor should expose a draggable player spawn marker.');
   assert(boardMarkerItem !== undefined && boardMarkerItem.placeable, 'Town editor should expose a draggable delivery board marker.');
   assert(crateItem !== undefined && crateItem.placeable, 'Town editor should expose draggable fantasy crate assets.');
-  assert(crateItem.candidateObjectIds.includes('crate-large'), 'Fantasy crate asset should map to an editable crate slot.');
+  assert(crateItem.candidateObjectIds.includes('crate-large'), 'Fantasy crate asset should map to an editable crate template.');
+  assert(crateItem.detail === 'drag to place', 'Placeable asset cards should describe reusable drag placement.');
+  assert(
+    !assetItems.some((item) => item.detail.toLowerCase().includes('slot')),
+    'Town editor asset cards should not describe placement as limited slots.',
+  );
   assert(
     !assetItems.some((item) => item.id === playerCharacterAssetId || item.source === 'creative-characters-free'),
     'Town editor asset palette should not offer the courier character as a placeable prop.',
@@ -770,7 +778,50 @@ const runLayoutOverrideSmoke = (): void => {
       ...validDocument,
       overrides: [{ id: 'missing-object', position: [0, 0, 0] }],
     }, knownObjectIds).ok,
-    'Unknown layout override object ids should be rejected.',
+    'Unknown layout override object ids without generated object metadata should be rejected.',
+  );
+  const generatedObjectDocument: LayoutOverrideDocument = {
+    version: layoutOverrideDocumentVersion,
+    updatedAt: '2026-06-28T00:00:00.000Z',
+    overrides: [
+      {
+        id: 'editor-fantasy-box-001-1',
+        kind: 'crate',
+        templateId: 'crate-large',
+        active: true,
+        position: [2, 0.5, 3],
+        rotation: [0, 0.25, 0],
+        scaleMultiplier: 1,
+        yOffset: 0,
+        dimensions: [1, 1, 1],
+        renderMode: 'asset',
+        assetId: 'fantasy-box-001',
+        gameplay: {
+          role: 'decorative',
+          action: 'none',
+        },
+        updatedAt: '2026-06-28T00:00:00.000Z',
+      },
+    ],
+  };
+
+  assert(
+    validateLayoutOverrideDocument(generatedObjectDocument, knownObjectIds).ok,
+    'Generated layout objects should validate when they include kind and a known template id.',
+  );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...generatedObjectDocument,
+      overrides: [{ ...generatedObjectDocument.overrides[0], kind: 'spaceship' }],
+    }, knownObjectIds).ok,
+    'Generated layout objects should reject invalid world object kinds.',
+  );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...generatedObjectDocument,
+      overrides: [{ ...generatedObjectDocument.overrides[0], templateId: 'missing-template' }],
+    }, knownObjectIds).ok,
+    'Generated layout objects should reject missing template ids.',
   );
   assert(
     !validateLayoutOverrideDocument({
@@ -828,11 +879,13 @@ const runLayoutOverrideSmoke = (): void => {
   const emptyMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, emptyDocument);
   const generatedMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, generatedVillageLayoutOverrides);
   const overriddenMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, validDocument);
+  const generatedObjectMerged = mergeWorldObjectOverrides(baseVillageWorldObjects, generatedObjectDocument);
   const generatedValidation = validateLayoutOverrideDocument(generatedVillageLayoutOverrides, knownObjectIds);
   const baseBoard = baseVillageWorldObjects.find((object) => object.id === 'delivery-board');
   const overriddenBoard = overriddenMerged.find((object) => object.id === 'delivery-board');
   const overriddenCrate = overriddenMerged.find((object) => object.id === 'crate-large');
   const overriddenMailbox = overriddenMerged.find((object) => object.id === 'mailbox');
+  const generatedCrate = generatedObjectMerged.find((object) => object.id === 'editor-fantasy-box-001-1');
   const boardDeltaX = (validDocument.overrides[0].position?.[0] ?? 0) - (baseBoard?.position[0] ?? 0);
 
   assert(generatedValidation.ok, 'Generated village layout overrides should validate against known object ids.');
@@ -844,6 +897,10 @@ const runLayoutOverrideSmoke = (): void => {
   assert(emptyMerged.length === baseVillageWorldObjects.length, 'Empty generated overrides should not change object count.');
   assert(generatedMerged.length === baseVillageWorldObjects.length, 'Generated overrides should merge without changing object count.');
   assert(overriddenMerged.length === baseVillageWorldObjects.length, 'Layout overrides should merge without changing object count.');
+  assert(generatedObjectMerged.length === baseVillageWorldObjects.length + 1, 'Generated layout object overrides should append new objects.');
+  assert(generatedCrate?.kind === 'crate', 'Generated layout object should preserve its world object kind.');
+  assert(generatedCrate?.render?.mode === 'asset' && generatedCrate.render.assetId === 'fantasy-box-001', 'Generated layout object should preserve asset rendering.');
+  assert(generatedCrate?.collider !== undefined, 'Generated layout object should inherit template collider data.');
   assert(overriddenBoard?.position[0] === -3.25, 'Merged overrides should update object position.');
   assert(overriddenBoard?.dimensions?.[0] === 1.9, 'Merged overrides should update dimensions.');
   assert(overriddenBoard?.collider?.size[0] === 1.9, 'Merged overrides should update collider data.');
@@ -862,9 +919,10 @@ const runLayoutOverrideSmoke = (): void => {
 
   const editableObjects = createEditablePlacementObjects(baseVillageWorldObjects);
   const deliveryBoard = getEditablePlacementObjectById('delivery-board', editableObjects);
+  const crateTemplate = getEditablePlacementObjectById('crate-large', editableObjects);
 
-  if (!deliveryBoard) {
-    throw new Error('Missing delivery board editable object.');
+  if (!deliveryBoard || !crateTemplate) {
+    throw new Error('Missing editable object template for layout override smoke.');
   }
 
   const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
@@ -895,6 +953,47 @@ const runLayoutOverrideSmoke = (): void => {
   assert(
     validateLayoutOverrideDocument(draftDocument, knownObjectIds).ok,
     'Placement draft JSON should validate against known world objects.',
+  );
+
+  const createdOverride = createPlacementObjectOverrideFromTemplate(
+    crateTemplate.worldObject,
+    'editor-fantasy-box-001-2',
+    [3, 0, 4],
+    { assetId: 'fantasy-box-001' },
+  );
+  const createdWorldObject = createWorldObjectFromLayoutOverride(createdOverride, baseVillageWorldObjects);
+
+  assert(createdOverride.kind === 'crate', 'Created placement overrides should include a world object kind.');
+  assert(createdOverride.templateId === 'crate-large', 'Created placement overrides should include a source template id.');
+  assert(createdOverride.position?.[0] === 3 && createdOverride.position[2] === 4, 'Created placement overrides should include drop position.');
+  assert(createdWorldObject?.id === 'editor-fantasy-box-001-2', 'Created placement override should create a world object.');
+
+  const createdEditableObject = createdWorldObject
+    ? {
+      id: createdWorldObject.id,
+      kind: createdWorldObject.kind,
+      worldObject: createdWorldObject,
+      templateId: crateTemplate.id,
+      isCreated: true,
+    }
+    : null;
+
+  assert(createdEditableObject !== null, 'Created editable placement object should initialize for export.');
+
+  const createdDraft = createPlacementTransformDraft(createdEditableObject.worldObject);
+  const createdDraftDocument = createLayoutOverrideDocumentFromPlacementDrafts(
+    new Map([[createdEditableObject.id, createdDraft]]),
+    [...editableObjects, createdEditableObject],
+    '2026-06-28T00:00:00.000Z',
+  );
+
+  assert(createdDraftDocument.overrides.length === 1, 'Created placement drafts should export even before further edits.');
+  assert(createdDraftDocument.overrides[0]?.kind === 'crate', 'Created placement draft JSON should include object kind.');
+  assert(createdDraftDocument.overrides[0]?.templateId === 'crate-large', 'Created placement draft JSON should include template id.');
+  assert(createdDraftDocument.overrides[0]?.assetId === 'fantasy-box-001', 'Created placement draft JSON should include asset id.');
+  assert(
+    validateLayoutOverrideDocument(createdDraftDocument, knownObjectIds).ok,
+    'Created placement draft JSON should validate against known templates.',
   );
   assert(!canUseTownEditorFilePicker({}), 'Town editor file picker detection should fail safely.');
   assert(

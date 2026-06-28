@@ -18,6 +18,28 @@ export type WorldObjectKind =
   | 'tree'
   | 'well';
 
+export const worldObjectKinds = [
+  'barrel',
+  'bush',
+  'cart',
+  'cottage',
+  'crate',
+  'delivery-board',
+  'mailbox',
+  'pavement',
+  'post-office',
+  'rock',
+  'sack',
+  'signpost',
+  'spawn-point',
+  'tree',
+  'well',
+] as const satisfies readonly WorldObjectKind[];
+
+export const isWorldObjectKind = (value: unknown): value is WorldObjectKind => (
+  typeof value === 'string' && worldObjectKinds.includes(value as WorldObjectKind)
+);
+
 export type MailboxVariant = 'red' | 'blue' | 'green';
 export type WorldGameplayRole =
   | 'decorative'

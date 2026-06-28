@@ -9,7 +9,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Use the left asset shelf to browse generated ground pieces and selected runtime GLB assets.
 - Runtime asset cards show a small rendered preview when the GLB can be loaded.
 - World Marker cards provide draggable gameplay/location anchors such as player spawn, post office, delivery board, and mailbox targets.
-- Drag an asset square onto the grass to place it into an editable world-object slot.
+- Drag an asset square onto the grass to create a new editable world object from a safe template.
 - Use the search box to filter the asset shelf.
 - Use the compact right save panel to save, load, copy, import, or export the active layout JSON.
 - The standalone builder starts in the close 3D view. Press `V` to switch to overview when needed.
@@ -17,7 +17,7 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Click a placed object or use `Tab` to select it, then use the keyboard controls to fine tune position, rotation, scale, and Y offset.
 - Press `Delete` or click `Delete Selected` to remove the selected object from the active editor layout.
 - The standalone builder starts on the clean playground canvas with grass and fence only, so authored village objects do not clutter the initial view.
-- Asset squares reuse existing editable object slots. If an asset says it has no slot, add or repurpose an authored world object before it can be placed permanently.
+- Asset squares are reusable. Each drop creates a generated `editor-*` object id that can be moved, scaled, deleted, saved, and promoted.
 - Deleting from the editor does not delete GLB files or registry entries. It marks the selected object inactive in the exported layout JSON.
 
 ## Enter Layout Mode
@@ -84,12 +84,12 @@ Browser edits are temporary until exported and promoted.
 - `Ctrl+O`: reload the active editor JSON from `localStorage`.
 - `Ctrl+Shift+Delete`: clear the saved local draft and in-memory edits.
 - The same actions are available as buttons in the placement HUD.
-- `Save Draft` and `Reload Draft` remain as compatibility buttons for the older draft slot.
+- `Save Draft` and `Reload Draft` remain as compatibility buttons for the older draft storage key.
 
 ## Active JSON
 
 - Active editor JSON is the live layout document used by the browser editor.
-- It can include transform overrides, active/inactive state, and asset preview choices.
+- It can include transform overrides, generated object ids, template ids, active/inactive state, and asset preview choices.
 - Authored world objects remain in the catalog even when the default playground render is empty.
 - Click `Save Active JSON` to persist it in `localStorage`.
 - Click `Load Active JSON` to reload it without refreshing the page.
@@ -141,6 +141,7 @@ Local drafts are loaded on page reload in dev mode. They are not source-controll
 - Paste layout override JSON into the placement HUD text area.
 - Click `Import JSON`.
 - The editor validates the JSON before applying it.
+- Generated object ids are accepted when they include a valid `kind` and either a known `templateId` or full position/dimensions data.
 
 ## Promote To Source
 
@@ -149,6 +150,6 @@ Local drafts are loaded on page reload in dev mode. They are not source-controll
 - Run `npm run layout:apply`.
 - Review `src/world/villageOverrides.generated.ts`.
 - Run validation and commit the generated override file with the layout JSON if the placement is meant to be permanent.
-- Unknown object ids, duplicate ids, invalid tuples, and invalid scale values are rejected.
+- Unknown object ids without generated-object metadata, duplicate ids, invalid tuples, and invalid scale values are rejected.
 
 The apply script does not rewrite `src/world/villageDefinition.ts`. The base layout stays readable, and generated overrides are merged at runtime.

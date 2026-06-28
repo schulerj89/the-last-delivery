@@ -147,6 +147,31 @@ const getPaletteDragPayload = (item: TownEditorPaletteItem): string => (
   JSON.stringify({ type: item.type, id: item.id })
 );
 
+const sanitizeObjectIdPart = (value: string): string => (
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'object'
+);
+
+const getNextGeneratedObjectId = (
+  item: TownEditorPaletteItem,
+  placementCount: number,
+): { objectId: string; nextCount: number } => {
+  const existingObjectIds = new Set(placementEditor.getEditableObjects().map((object) => object.id));
+  let nextCount = Math.max(0, placementCount);
+  let objectId = '';
+
+  do {
+    nextCount += 1;
+    objectId = `editor-${sanitizeObjectIdPart(item.id)}-${nextCount}`;
+  } while (existingObjectIds.has(objectId));
+
+  return { objectId, nextCount };
+};
+
 const getAssetThumbnailDataUrl = (assetId: string): Promise<string> => {
   const cachedThumbnail = thumbnailCacheByAssetId.get(assetId);
 
@@ -289,7 +314,7 @@ const createPaletteCard = (item: TownEditorPaletteItem): HTMLButtonElement => {
   card.addEventListener('click', () => {
     setStatus(item.placeable
       ? `Drag ${item.label} into the world.`
-      : `${item.label} has no authored placement slot yet.`);
+      : `${item.label} needs an editable template before it can be placed.`);
   });
 
   return card;
@@ -342,14 +367,16 @@ const parseDraggedPaletteItem = (event: DragEvent): TownEditorPaletteItem | null
 
 const placePaletteItem = (item: TownEditorPaletteItem): void => {
   const placementCount = placementCountsByItemId.get(item.id) ?? 0;
-  const objectId = resolveTownEditorPlacementCandidate(item, placementCount);
+  const templateId = resolveTownEditorPlacementCandidate(item, placementCount);
 
-  if (!objectId) {
-    setStatus(`${item.label} has no editable object slot yet.`);
+  if (!templateId) {
+    setStatus(`${item.label} needs an editable template before it can be placed.`);
     return;
   }
 
-  const placed = placementEditor.placeObjectAt(
+  const { objectId, nextCount } = getNextGeneratedObjectId(item, placementCount);
+  const placed = placementEditor.createObjectFromTemplate(
+    templateId,
     objectId,
     [dropPoint.x, 0, dropPoint.z],
     item.type === 'asset'
@@ -362,7 +389,7 @@ const placePaletteItem = (item: TownEditorPaletteItem): void => {
     return;
   }
 
-  placementCountsByItemId.set(item.id, placementCount + 1);
+  placementCountsByItemId.set(item.id, nextCount);
   setStatus(`Placed ${item.label} as ${objectId}. Save/export from the right panel.`);
 };
 

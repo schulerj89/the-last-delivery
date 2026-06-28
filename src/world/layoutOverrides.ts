@@ -7,8 +7,10 @@ import type {
   WorldInteractableDefinition,
   WorldMailboxDefinition,
   WorldObjectDefinition,
+  WorldObjectKind,
   WorldObjectiveAnchorDefinition,
 } from './types';
+import { isWorldObjectKind } from './types';
 import {
   isMailboxVariant,
   isWorldGameplayRole,
@@ -19,6 +21,8 @@ export const layoutOverrideDocumentVersion = 1;
 
 export interface LayoutTransformOverride {
   id: string;
+  kind?: WorldObjectKind;
+  templateId?: string;
   active?: boolean;
   position?: THREE.Vector3Tuple;
   rotation?: THREE.Vector3Tuple;
@@ -165,11 +169,37 @@ export const validateLayoutOverrideDocument = (
 
       seenIds.add(id);
 
-      if (requireKnownIds && !knownObjectIdSet.has(id)) {
-        errors.push(`Unknown layout override object id: ${id}.`);
+      const override: LayoutTransformOverride = { id };
+
+      if (entry.kind !== undefined) {
+        if (isWorldObjectKind(entry.kind)) {
+          override.kind = entry.kind;
+        } else {
+          errors.push(`Override ${id} kind must be a valid world object kind.`);
+        }
       }
 
-      const override: LayoutTransformOverride = { id };
+      if (entry.templateId !== undefined) {
+        if (typeof entry.templateId === 'string' && entry.templateId.trim().length > 0) {
+          if (!requireKnownIds || knownObjectIdSet.has(entry.templateId)) {
+            override.templateId = entry.templateId;
+          } else {
+            errors.push(`Override ${id} templateId must reference a known object id.`);
+          }
+        } else {
+          errors.push(`Override ${id} templateId must be a non-empty string when provided.`);
+        }
+      }
+
+      const isKnownObjectId = !requireKnownIds || knownObjectIdSet.has(id);
+
+      if (!isKnownObjectId && entry.kind === undefined) {
+        errors.push(`Unknown layout override object id ${id} must include kind to create a new object.`);
+      }
+
+      if (!isKnownObjectId && entry.templateId === undefined && (entry.position === undefined || entry.dimensions === undefined)) {
+        errors.push(`Unknown layout override object id ${id} must include templateId or both position and dimensions.`);
+      }
 
       if (entry.active !== undefined) {
         if (typeof entry.active === 'boolean') {
@@ -425,20 +455,59 @@ const cloneWorldObject = (object: WorldObjectDefinition): WorldObjectDefinition 
   layoutTransform: object.layoutTransform ? { ...object.layoutTransform } : undefined,
 });
 
-export const mergeWorldObjectOverrides = (
-  worldObjects: readonly WorldObjectDefinition[],
-  document: LayoutOverrideDocument,
-): readonly WorldObjectDefinition[] => {
-  const overridesById = new Map(document.overrides.map((override) => [override.id, override]));
+const createStandaloneWorldObjectFromOverride = (
+  override: LayoutTransformOverride,
+): WorldObjectDefinition | null => {
+  if (!override.kind) {
+    return null;
+  }
 
-  return worldObjects.map((object) => {
-    const override = overridesById.get(object.id);
+  return {
+    id: override.id,
+    kind: override.kind,
+    active: override.active,
+    position: override.position ? cloneTuple(override.position) : [0, 0, 0],
+    rotation: override.rotation ? cloneTuple(override.rotation) : undefined,
+    dimensions: override.dimensions ? cloneTuple(override.dimensions) : [1, 1, 1],
+    render: override.renderMode === 'asset' && override.assetId
+      ? {
+        mode: 'asset',
+        assetId: override.assetId,
+        scaleMultiplier: override.scaleMultiplier,
+        yOffset: override.yOffset,
+        rotation: override.rotation ? cloneTuple(override.rotation) : undefined,
+        fitMode: override.fitMode,
+      }
+      : { mode: 'primitive' },
+    collider: override.collider === undefined || override.collider === null
+      ? undefined
+      : cloneCollider(override.collider),
+    interactable: override.interactable === undefined || override.interactable === null
+      ? undefined
+      : cloneInteractable(override.interactable),
+    objectiveAnchor: override.objectiveAnchor === undefined || override.objectiveAnchor === null
+      ? undefined
+      : cloneObjectiveAnchor(override.objectiveAnchor),
+    mailbox: override.mailbox === undefined || override.mailbox === null
+      ? undefined
+      : cloneMailbox(override.mailbox),
+    gameplay: override.gameplay === undefined || override.gameplay === null
+      ? undefined
+      : cloneGameplay(override.gameplay),
+  };
+};
 
-    if (!override) {
-      return cloneWorldObject(object);
-    }
+const applyLayoutTransformOverride = (
+  object: WorldObjectDefinition,
+  override: LayoutTransformOverride,
+): WorldObjectDefinition => {
+  const nextObject = cloneWorldObject(object);
 
-    const nextObject = cloneWorldObject(object);
+  nextObject.id = override.id;
+
+  if (override.kind) {
+    nextObject.kind = override.kind;
+  }
 
     if (override.active !== undefined) {
       nextObject.active = override.active;
@@ -537,5 +606,46 @@ export const mergeWorldObjectOverrides = (
     }
 
     return nextObject;
+};
+
+export const createWorldObjectFromLayoutOverride = (
+  override: LayoutTransformOverride,
+  worldObjects: readonly WorldObjectDefinition[],
+): WorldObjectDefinition | null => {
+  const templateObject = override.templateId
+    ? worldObjects.find((object) => object.id === override.templateId)
+    : undefined;
+  const baseObject = templateObject ?? createStandaloneWorldObjectFromOverride(override);
+
+  if (!baseObject) {
+    return null;
+  }
+
+  return applyLayoutTransformOverride(baseObject, override);
+};
+
+export const mergeWorldObjectOverrides = (
+  worldObjects: readonly WorldObjectDefinition[],
+  document: LayoutOverrideDocument,
+): readonly WorldObjectDefinition[] => {
+  const overridesById = new Map(document.overrides.map((override) => [override.id, override]));
+  const baseObjectIds = new Set(worldObjects.map((object) => object.id));
+  const mergedObjects = worldObjects.map((object) => {
+    const override = overridesById.get(object.id);
+    return override ? applyLayoutTransformOverride(object, override) : cloneWorldObject(object);
   });
+
+  document.overrides.forEach((override) => {
+    if (baseObjectIds.has(override.id)) {
+      return;
+    }
+
+    const createdObject = createWorldObjectFromLayoutOverride(override, worldObjects);
+
+    if (createdObject) {
+      mergedObjects.push(createdObject);
+    }
+  });
+
+  return mergedObjects;
 };
