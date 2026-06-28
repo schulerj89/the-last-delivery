@@ -1,0 +1,18 @@
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  overflow: hidden;
+  background: #16191f;
+}
+
+canvas {
+  display: block;
+}
+
