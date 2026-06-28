@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import './style.css';
 import { disposeAssetCache, getAssetRuntimeStats } from './game/assets';
-import { createThirdPersonCameraController } from './game/camera';
+import {
+  createThirdPersonCameraController,
+  thirdPersonCameraSettings,
+  type ThirdPersonCameraController,
+} from './game/camera';
 import { createDevDebugPanelManager } from './game/debug/debugUiManager';
 import {
   createDeliveryBoardOverlay,
@@ -14,7 +18,10 @@ import {
   createPerformanceMonitor,
   getCappedPixelRatio,
 } from './game/performance';
-import { createPlayerController } from './game/player';
+import {
+  createPlayerController,
+  resolveMovementBasisFromCameraYaw,
+} from './game/player';
 import { createResourceTracker } from './game/resources';
 import {
   createVillageLayoutDebugView,
@@ -80,7 +87,17 @@ scene.add(deliveryBoardObjectiveMarker);
 const deliveryTargetObjectiveMarker = appResources.trackObject3D(createDeliveryTargetObjectiveMarker());
 scene.add(deliveryTargetObjectiveMarker);
 
-const player = createPlayerController({ collisionWorld: playgroundCollisionWorld });
+let followCamera: ThirdPersonCameraController | null = null;
+const player = createPlayerController({
+  collisionWorld: playgroundCollisionWorld,
+  movementBasisProvider: (forward, right) => {
+    resolveMovementBasisFromCameraYaw(
+      followCamera?.getState().yaw ?? thirdPersonCameraSettings.initialYaw,
+      forward,
+      right,
+    );
+  },
+});
 const playerRootHelper = new THREE.AxesHelper(0.8);
 playerRootHelper.name = 'debug:player-root-axis';
 playerRootHelper.visible = false;
@@ -89,7 +106,7 @@ appResources.trackObject3D(player.object);
 scene.add(player.object);
 
 const delivery = createDeliveryController();
-const followCamera = createThirdPersonCameraController({
+followCamera = createThirdPersonCameraController({
   camera,
   target: player.object,
   domElement: renderer.domElement,
@@ -221,7 +238,7 @@ const dispose = (): void => {
     playerRootHelper.material.dispose();
   }
   player.dispose();
-  followCamera.dispose();
+  followCamera?.dispose();
   interaction.dispose();
   deliveryBoardOverlay.dispose();
   deliveryGuidanceOverlay.dispose();
@@ -261,14 +278,18 @@ const animate = (): void => {
     && setObjectiveMarkerTarget(deliveryTargetObjectiveMarker, deliveryState.activeTargetWorldObjectId);
   updateObjectiveMarker(deliveryBoardObjectiveMarker, elapsedSeconds);
   updateObjectiveMarker(deliveryTargetObjectiveMarker, elapsedSeconds);
-  followCamera.update(deltaSeconds);
+  followCamera?.update(deltaSeconds);
   deliveryGuidanceOverlay.update(deliveryState);
   deliveryBoardOverlay.update(deliveryState);
   renderer.render(scene, layoutDebugView.isActive() ? layoutDebugView.camera : camera);
   const performanceSnapshot = performanceMonitor.update(rawDeltaSeconds, renderer, getAssetRuntimeStats());
   debugUi.update({
     player: player.getState(),
-    camera: followCamera.getState(),
+    camera: followCamera?.getState() ?? {
+      yaw: thirdPersonCameraSettings.initialYaw,
+      pitch: thirdPersonCameraSettings.initialPitch,
+      distance: thirdPersonCameraSettings.distance,
+    },
     delivery: deliveryState,
     performance: performanceSnapshot,
     layoutModeActive: layoutDebugView.isActive(),

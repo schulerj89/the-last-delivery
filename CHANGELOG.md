@@ -2,6 +2,14 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.39.1] - 2026-06-28
+
+### Fixed
+
+- Fixed player movement to use the third-person camera controller yaw for screen-relative WASD movement instead of a stale camera transform.
+- Fixed player facing yaw so the courier faces the actual movement direction for left/right movement.
+- Added smoke checks for camera-yaw movement mapping and player facing direction.
+
 ## [0.39.0] - 2026-06-28
 
 ### Added

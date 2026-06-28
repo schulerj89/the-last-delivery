@@ -1,5 +1,12 @@
 export { createPlayerDebugOverlay } from './debugOverlay';
-export { createPlayerController, playerMovementSettings } from './playerController';
+export {
+  createPlayerController,
+  getPlayerYawForDirection,
+  playerMovementSettings,
+  resolveMovementBasis,
+  resolveMovementBasisFromCameraYaw,
+  resolvePlayerInputDirection,
+} from './playerController';
 export {
   createInPlacePlayerAnimationClip,
   fitAndAlignCharacterModel,

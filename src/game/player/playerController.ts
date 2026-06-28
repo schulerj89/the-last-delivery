@@ -18,6 +18,48 @@ export const playerMovementSettings: PlayerMovementSettings = {
 
 const movementKeys = new Set(['w', 'a', 's', 'd']);
 
+export const resolveMovementBasis = (
+  movementBasisProvider: PlayerControllerOptions['movementBasisProvider'] | undefined,
+  forward: THREE.Vector3,
+  right: THREE.Vector3,
+): void => {
+  if (movementBasisProvider) {
+    movementBasisProvider(forward, right);
+    forward.y = 0;
+    right.y = 0;
+  } else {
+    forward.set(0, 0, -1);
+    right.set(1, 0, 0);
+  }
+
+  if (forward.lengthSq() > 0.0001) {
+    forward.normalize();
+  } else {
+    forward.set(0, 0, -1);
+  }
+
+  if (right.lengthSq() > 0.0001) {
+    right.normalize();
+  } else {
+    right.set(-forward.z, 0, forward.x).normalize();
+  }
+};
+
+export const resolveMovementBasisFromCameraYaw = (
+  cameraYaw: number,
+  forward: THREE.Vector3,
+  right: THREE.Vector3,
+): void => {
+  if (!Number.isFinite(cameraYaw)) {
+    forward.set(0, 0, -1);
+    right.set(1, 0, 0);
+    return;
+  }
+
+  forward.set(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw)).normalize();
+  right.set(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw)).normalize();
+};
+
 const applyDeceleration = (velocity: THREE.Vector3, deltaSeconds: number): void => {
   const speed = velocity.length();
 
@@ -29,23 +71,28 @@ const applyDeceleration = (velocity: THREE.Vector3, deltaSeconds: number): void 
   velocity.multiplyScalar(nextSpeed / speed);
 };
 
-const getInputDirection = (pressedKeys: Set<string>, target: THREE.Vector3): THREE.Vector3 => {
+export const resolvePlayerInputDirection = (
+  pressedKeys: ReadonlySet<string>,
+  target: THREE.Vector3,
+  forward: THREE.Vector3,
+  right: THREE.Vector3,
+): THREE.Vector3 => {
   target.set(0, 0, 0);
 
   if (pressedKeys.has('w')) {
-    target.z -= 1;
+    target.add(forward);
   }
 
   if (pressedKeys.has('s')) {
-    target.z += 1;
+    target.sub(forward);
   }
 
   if (pressedKeys.has('a')) {
-    target.x -= 1;
+    target.sub(right);
   }
 
   if (pressedKeys.has('d')) {
-    target.x += 1;
+    target.add(right);
   }
 
   if (target.lengthSq() > 0) {
@@ -55,7 +102,9 @@ const getInputDirection = (pressedKeys: Set<string>, target: THREE.Vector3): THR
   return target;
 };
 
-const getYawForDirection = (direction: THREE.Vector3): number => Math.atan2(direction.x, -direction.z);
+export const getPlayerYawForDirection = (direction: THREE.Vector3): number => (
+  Math.atan2(-direction.x, -direction.z)
+);
 
 const rotateToward = (object: THREE.Object3D, targetYaw: number, deltaSeconds: number): void => {
   const currentYaw = object.rotation.y;
@@ -63,7 +112,10 @@ const rotateToward = (object: THREE.Object3D, targetYaw: number, deltaSeconds: n
   object.rotation.y = currentYaw + deltaYaw * Math.min(1, playerMovementSettings.rotationSnapSpeed * deltaSeconds);
 };
 
-export const createPlayerController = ({ collisionWorld }: PlayerControllerOptions = {}): PlayerController => {
+export const createPlayerController = ({
+  collisionWorld,
+  movementBasisProvider,
+}: PlayerControllerOptions = {}): PlayerController => {
   const visual = createPlayerVisual(console, {
     collisionRadius: playerMovementSettings.radius,
     debugEnabled: import.meta.env.DEV,
@@ -72,6 +124,8 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
   const pressedKeys = new Set<string>();
   const velocity = new THREE.Vector3();
   const inputDirection = new THREE.Vector3();
+  const movementForward = new THREE.Vector3();
+  const movementRight = new THREE.Vector3();
   let lastCollisionHits: string[] = [];
   let hitBoundsLastFrame = false;
 
@@ -125,7 +179,8 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
     object,
     update(deltaSeconds) {
       const stepSeconds = Math.min(deltaSeconds, playerMovementSettings.maxDeltaSeconds);
-      getInputDirection(pressedKeys, inputDirection);
+      resolveMovementBasis(movementBasisProvider, movementForward, movementRight);
+      resolvePlayerInputDirection(pressedKeys, inputDirection, movementForward, movementRight);
 
       if (inputDirection.lengthSq() > 0) {
         velocity.addScaledVector(inputDirection, playerMovementSettings.acceleration * stepSeconds);
@@ -161,7 +216,7 @@ export const createPlayerController = ({ collisionWorld }: PlayerControllerOptio
       }
 
       if (velocity.lengthSq() > 0.001) {
-        rotateToward(object, getYawForDirection(velocity), stepSeconds);
+        rotateToward(object, getPlayerYawForDirection(velocity), stepSeconds);
       }
 
       visual.update(stepSeconds, velocity.length());

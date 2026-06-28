@@ -54,12 +54,16 @@ import {
   createPlayerVisual,
   fitAndAlignCharacterModel,
   getPlayerMotionAnimationState,
+  getPlayerYawForDirection,
   isPlayerRootMotionTrackName,
   playerCharacterAnimationAssetId,
   playerCharacterAssetId,
   playerCharacterVisualSettings,
   playerMovementSettings,
+  resolveMovementBasis,
+  resolveMovementBasisFromCameraYaw,
   resolveVisibleCharacterMeshNames,
+  resolvePlayerInputDirection,
   selectPlayerIdleAnimationClip,
   selectPlayerMotionAnimationClip,
 } from '../src/game/player';
@@ -1304,6 +1308,38 @@ const runResourceTrackerSmoke = (): void => {
 const runModuleSmoke = (): void => {
   assert(playerMovementSettings.maxSpeed > 0, 'Player max speed should be positive.');
   assert(playerMovementSettings.radius > 0, 'Player collision radius should be positive.');
+
+  const movementForward = new Vector3();
+  const movementRight = new Vector3();
+  const movementDirection = new Vector3();
+  resolveMovementBasisFromCameraYaw(0, movementForward, movementRight);
+  assert(movementForward.distanceTo(new Vector3(0, 0, -1)) < 0.001, 'Camera-yaw movement should use camera forward for W.');
+  assert(movementRight.distanceTo(new Vector3(1, 0, 0)) < 0.001, 'Camera-yaw movement should use camera right for D.');
+  resolveMovementBasis((forward, right) => {
+    resolveMovementBasisFromCameraYaw(0, forward, right);
+  }, movementForward, movementRight);
+  resolvePlayerInputDirection(new Set(['a']), movementDirection, movementForward, movementRight);
+  assert(movementDirection.distanceTo(new Vector3(-1, 0, 0)) < 0.001, 'A should move left relative to the camera.');
+  resolvePlayerInputDirection(new Set(['d']), movementDirection, movementForward, movementRight);
+  assert(movementDirection.distanceTo(new Vector3(1, 0, 0)) < 0.001, 'D should move right relative to the camera.');
+  resolveMovementBasisFromCameraYaw(Math.PI / 2, movementForward, movementRight);
+  resolvePlayerInputDirection(new Set(['w', 'a']), movementDirection, movementForward, movementRight);
+  const expectedUpLeft = movementForward.clone().sub(movementRight).normalize();
+  assert(Math.abs(movementDirection.length() - 1) < 0.001, 'Diagonal camera-relative movement should normalize to one.');
+  assert(movementDirection.distanceTo(expectedUpLeft) < 0.001, 'W+A should move up-left relative to a rotated camera basis.');
+  assert(
+    new Vector3(0, 0, -1)
+      .applyAxisAngle(new Vector3(0, 1, 0), getPlayerYawForDirection(new Vector3(1, 0, 0)))
+      .distanceTo(new Vector3(1, 0, 0)) < 0.001,
+    'Player yaw should face right when moving right.',
+  );
+  assert(
+    new Vector3(0, 0, -1)
+      .applyAxisAngle(new Vector3(0, 1, 0), getPlayerYawForDirection(new Vector3(-1, 0, 0)))
+      .distanceTo(new Vector3(-1, 0, 0)) < 0.001,
+    'Player yaw should face left when moving left.',
+  );
+
   assert(playerCharacterAssetId === 'creative-courier-character', 'Player character asset id should point to the selected courier asset.');
   assert(playerCharacterAnimationAssetId === 'creative-courier-character-animations', 'Player character animation asset id should point to the selected courier animation source.');
   assert(selectedCharacterAssetIdSet.has(playerCharacterAssetId), 'Player character asset id should be part of selected character assets.');

@@ -22,6 +22,7 @@ export interface PlayerMovementSettings {
 
 export interface PlayerControllerOptions {
   collisionWorld?: CollisionWorld;
+  movementBasisProvider?: (forward: THREE.Vector3, right: THREE.Vector3) => void;
 }
 
 export interface PlayerController {
