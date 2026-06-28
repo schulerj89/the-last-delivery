@@ -2,6 +2,12 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.7.1] - 2026-06-28
+
+### Fixed
+
+- Clarified pre-delivery mailbox interaction so players are directed to start at the delivery board.
+
 ## [0.7.0] - 2026-06-28
 
 ### Added

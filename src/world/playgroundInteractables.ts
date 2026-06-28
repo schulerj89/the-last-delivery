@@ -10,12 +10,12 @@ export const createPlaygroundInteractables = (delivery: DeliveryController): rea
     prompt: () => (
       delivery.getState().status === 'delivery-accepted'
         ? 'Complete delivery'
-        : 'Check mailbox'
+        : 'Start at delivery board'
     ),
     interact: () => (
       delivery.getState().status === 'delivery-accepted'
         ? delivery.completeDelivery()
-        : 'Mailbox checked.'
+        : 'Check the delivery board first.'
     ),
   },
   {
