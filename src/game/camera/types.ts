@@ -2,13 +2,17 @@ import type * as THREE from 'three';
 
 export interface ThirdPersonCameraSettings {
   distance: number;
+  minDistance: number;
+  maxDistance: number;
   minPitch: number;
   maxPitch: number;
   initialYaw: number;
   initialPitch: number;
   orbitSensitivity: number;
+  zoomSensitivity: number;
   positionSmoothness: number;
   targetSmoothness: number;
+  zoomSmoothness: number;
   targetOffset: THREE.Vector3;
 }
 

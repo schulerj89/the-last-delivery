@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.41.0] - 2026-06-28
+
+### Added
+
+- Added mouse-wheel zoom for the third-person camera with tunable minimum distance, maximum distance, sensitivity, and smoothing.
+- Added smoke checks for camera zoom limits and wheel direction behavior.
+
 ## [0.40.1] - 2026-06-28
 
 ### Fixed

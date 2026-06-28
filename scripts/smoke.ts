@@ -36,7 +36,11 @@ import {
   selectedFantasyAssetIds,
   selectedNatureAssetIds,
 } from '../src/game/assets';
-import { thirdPersonCameraSettings } from '../src/game/camera';
+import {
+  clampCameraDistance,
+  getZoomedCameraDistance,
+  thirdPersonCameraSettings,
+} from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import {
   createDebugUiState,
@@ -1510,7 +1514,30 @@ const runModuleSmoke = (): void => {
   playerVisual.dispose();
 
   assert(thirdPersonCameraSettings.distance > 0, 'Camera distance should be positive.');
+  assert(thirdPersonCameraSettings.minDistance > 0, 'Camera min distance should be positive.');
+  assert(
+    thirdPersonCameraSettings.maxDistance > thirdPersonCameraSettings.minDistance,
+    'Camera zoom distance limits should be ordered.',
+  );
+  assert(thirdPersonCameraSettings.zoomSensitivity > 0, 'Camera zoom sensitivity should be positive.');
+  assert(thirdPersonCameraSettings.zoomSmoothness > 0, 'Camera zoom smoothing should be positive.');
   assert(thirdPersonCameraSettings.minPitch < thirdPersonCameraSettings.maxPitch, 'Camera pitch limits should be ordered.');
+  assert(
+    clampCameraDistance(0) === thirdPersonCameraSettings.minDistance,
+    'Camera distance should clamp to the minimum zoom.',
+  );
+  assert(
+    clampCameraDistance(999) === thirdPersonCameraSettings.maxDistance,
+    'Camera distance should clamp to the maximum zoom.',
+  );
+  assert(
+    getZoomedCameraDistance(thirdPersonCameraSettings.distance, -100) < thirdPersonCameraSettings.distance,
+    'Mouse wheel up should zoom the camera in.',
+  );
+  assert(
+    getZoomedCameraDistance(thirdPersonCameraSettings.distance, 100) > thirdPersonCameraSettings.distance,
+    'Mouse wheel down should zoom the camera out.',
+  );
   assert(playgroundCollisionWorld.boxes.length >= 2, 'Playground collision boxes should initialize.');
   assert(
     playgroundCollisionWorld.boxes.length === villageWorldObjects.filter((object) => object.collider).length,

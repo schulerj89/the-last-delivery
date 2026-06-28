@@ -8,15 +8,33 @@ import type {
 
 export const thirdPersonCameraSettings: ThirdPersonCameraSettings = {
   distance: 7.25,
+  minDistance: 2.75,
+  maxDistance: 11.5,
   minPitch: THREE.MathUtils.degToRad(12),
   maxPitch: THREE.MathUtils.degToRad(62),
   initialYaw: THREE.MathUtils.degToRad(45),
   initialPitch: THREE.MathUtils.degToRad(34),
   orbitSensitivity: 0.006,
+  zoomSensitivity: 0.003,
   positionSmoothness: 12,
   targetSmoothness: 16,
+  zoomSmoothness: 18,
   targetOffset: new THREE.Vector3(0, 0.85, 0),
 };
+
+export const clampCameraDistance = (
+  distance: number,
+  settings = thirdPersonCameraSettings,
+): number => THREE.MathUtils.clamp(distance, settings.minDistance, settings.maxDistance);
+
+export const getZoomedCameraDistance = (
+  currentDistance: number,
+  wheelDeltaY: number,
+  settings = thirdPersonCameraSettings,
+): number => clampCameraDistance(
+  currentDistance + wheelDeltaY * settings.zoomSensitivity,
+  settings,
+);
 
 const getSmoothingAlpha = (smoothness: number, deltaSeconds: number): number => (
   1 - Math.exp(-smoothness * deltaSeconds)
@@ -45,6 +63,8 @@ export const createThirdPersonCameraController = ({
 }: ThirdPersonCameraOptions): ThirdPersonCameraController => {
   let yaw = settings.initialYaw;
   let pitch = settings.initialPitch;
+  let targetDistance = clampCameraDistance(settings.distance, settings);
+  let currentDistance = targetDistance;
   let isOrbiting = false;
   let pointerId: number | null = null;
 
@@ -56,7 +76,7 @@ export const createThirdPersonCameraController = ({
   const snapToTarget = (): void => {
     desiredTarget.copy(target.position).add(settings.targetOffset);
     smoothedTarget.copy(desiredTarget);
-    desiredPosition.copy(desiredTarget).add(getCameraOffset(yaw, pitch, settings.distance, offset));
+    desiredPosition.copy(desiredTarget).add(getCameraOffset(yaw, pitch, currentDistance, offset));
     camera.position.copy(desiredPosition);
     camera.lookAt(smoothedTarget);
   };
@@ -84,6 +104,11 @@ export const createThirdPersonCameraController = ({
     );
   };
 
+  const handleWheel = (event: WheelEvent): void => {
+    event.preventDefault();
+    targetDistance = getZoomedCameraDistance(targetDistance, event.deltaY, settings);
+  };
+
   const stopOrbiting = (event: PointerEvent): void => {
     if (event.pointerId !== pointerId) {
       return;
@@ -101,13 +126,19 @@ export const createThirdPersonCameraController = ({
   domElement.addEventListener('pointermove', handlePointerMove);
   domElement.addEventListener('pointerup', stopOrbiting);
   domElement.addEventListener('pointercancel', stopOrbiting);
+  domElement.addEventListener('wheel', handleWheel, { passive: false });
   snapToTarget();
 
   return {
     camera,
     update(deltaSeconds) {
+      currentDistance = THREE.MathUtils.lerp(
+        currentDistance,
+        targetDistance,
+        getSmoothingAlpha(settings.zoomSmoothness, deltaSeconds),
+      );
       desiredTarget.copy(target.position).add(settings.targetOffset);
-      desiredPosition.copy(desiredTarget).add(getCameraOffset(yaw, pitch, settings.distance, offset));
+      desiredPosition.copy(desiredTarget).add(getCameraOffset(yaw, pitch, currentDistance, offset));
 
       smoothedTarget.lerp(desiredTarget, getSmoothingAlpha(settings.targetSmoothness, deltaSeconds));
       camera.position.lerp(desiredPosition, getSmoothingAlpha(settings.positionSmoothness, deltaSeconds));
@@ -117,7 +148,7 @@ export const createThirdPersonCameraController = ({
       return {
         yaw,
         pitch,
-        distance: settings.distance,
+        distance: currentDistance,
       };
     },
     dispose() {
@@ -125,6 +156,7 @@ export const createThirdPersonCameraController = ({
       domElement.removeEventListener('pointermove', handlePointerMove);
       domElement.removeEventListener('pointerup', stopOrbiting);
       domElement.removeEventListener('pointercancel', stopOrbiting);
+      domElement.removeEventListener('wheel', handleWheel);
     },
   };
 };
