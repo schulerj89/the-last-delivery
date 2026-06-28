@@ -1,4 +1,11 @@
-import { Vector3 } from 'three';
+import {
+  BoxGeometry,
+  Mesh,
+  MeshBasicMaterial,
+  Object3D,
+  Texture,
+  Vector3,
+} from 'three';
 import {
   assetRegistry,
   getSelectedNatureAssets,
@@ -9,6 +16,14 @@ import { thirdPersonCameraSettings } from '../src/game/camera';
 import { resolvePlayerCollision } from '../src/game/collision';
 import { createDeliveryController, deliveryJobs } from '../src/game/delivery';
 import { playerMovementSettings } from '../src/game/player';
+import {
+  clampFrameDelta,
+  createPerformanceMonitor,
+  createPerformanceSnapshot,
+  getCappedPixelRatio,
+  performanceBudgetConfig,
+} from '../src/game/performance';
+import { createResourceTracker } from '../src/game/resources';
 import { createPlayground } from '../src/world/playground';
 import { playgroundCollisionWorld } from '../src/world/playgroundCollision';
 import { createPlaygroundInteractables } from '../src/world/playgroundInteractables';
@@ -263,6 +278,140 @@ const runInteractionSmoke = (): void => {
   assert(delivery.getState().completedCount === 1, 'Mailbox completion should increment delivery count.');
 };
 
+const runPerformanceSmoke = (): void => {
+  assert(performanceBudgetConfig.targetFps === 60, 'Performance target FPS should be 60.');
+  assert(performanceBudgetConfig.warningFps === 50, 'Performance warning FPS should be 50.');
+  assert(performanceBudgetConfig.badFps === 30, 'Performance bad FPS should be 30.');
+  assert(performanceBudgetConfig.targetFrameMs === 16.67, 'Performance target frame ms should be 16.67.');
+  assert(performanceBudgetConfig.badFps < performanceBudgetConfig.warningFps, 'Bad FPS threshold should be below warning FPS.');
+  assert(performanceBudgetConfig.warningFps < performanceBudgetConfig.targetFps, 'Warning FPS threshold should be below target FPS.');
+  assert(performanceBudgetConfig.warningDrawCalls === 200, 'Draw-call warning budget should be 200.');
+  assert(performanceBudgetConfig.warningTriangles === 250_000, 'Triangle warning budget should be 250000.');
+  assert(performanceBudgetConfig.maxPixelRatio > 0, 'Pixel ratio cap should be positive.');
+  assert(performanceBudgetConfig.maxDeltaSeconds > 0, 'Delta clamp should be positive.');
+  assert(getCappedPixelRatio(4) === performanceBudgetConfig.maxPixelRatio, 'High device pixel ratio should be capped.');
+  assert(clampFrameDelta(999) === performanceBudgetConfig.maxDeltaSeconds, 'Large frame delta should be clamped.');
+  assert(clampFrameDelta(1 / 60) > 0, 'Normal frame delta should stay positive.');
+
+  const rendererInfo = {
+    info: {
+      render: {
+        calls: 12,
+        triangles: 345,
+      },
+      memory: {
+        geometries: 6,
+        textures: 2,
+      },
+    },
+  };
+  const snapshot = createPerformanceSnapshot(16.67, rendererInfo, 17, 22);
+
+  assert(snapshot.currentFps > 0, 'Performance snapshot should calculate current FPS.');
+  assert(snapshot.averageFps > 0, 'Performance snapshot should calculate average FPS.');
+  assert(snapshot.frameTimeMs === 16.67, 'Performance snapshot should include frame time.');
+  assert(snapshot.averageFrameTimeMs === 17, 'Performance snapshot should include average frame time.');
+  assert(snapshot.worstFrameTimeMs === 22, 'Performance snapshot should include worst frame time.');
+  assert(snapshot.renderCalls === 12, 'Performance snapshot should include render calls.');
+  assert(snapshot.triangles === 345, 'Performance snapshot should include triangles.');
+  assert(snapshot.geometries === 6, 'Performance snapshot should include geometry count.');
+  assert(snapshot.textures === 2, 'Performance snapshot should include texture count.');
+
+  const monitor = createPerformanceMonitor();
+  const monitoredSnapshot = monitor.update(1 / 60, rendererInfo);
+  assert(monitoredSnapshot.renderCalls === 12, 'Performance monitor should read renderer info.');
+  assert(monitoredSnapshot.averageFrameTimeMs > 0, 'Performance monitor should track frame-time averages.');
+  monitor.dispose();
+  assert(monitor.getSnapshot().frameTimeMs === 0, 'Performance monitor should reset on dispose.');
+};
+
+const runResourceTrackerSmoke = (): void => {
+  const tracker = createResourceTracker();
+  const geometry = tracker.trackGeometry(new BoxGeometry(1, 1, 1));
+  const materialTexture = new Texture();
+  const trackedTexture = tracker.trackTexture(new Texture());
+  const material = tracker.trackMaterial(new MeshBasicMaterial({ map: materialTexture }));
+  const parent = new Object3D();
+  const root = tracker.trackObject3D(new Object3D());
+  let cleanupRan = false;
+  let geometryDisposed = false;
+  let materialDisposed = false;
+  let materialTextureDisposed = false;
+  let trackedTextureDisposed = false;
+
+  geometry.addEventListener('dispose', () => {
+    geometryDisposed = true;
+  });
+  material.addEventListener('dispose', () => {
+    materialDisposed = true;
+  });
+  materialTexture.addEventListener('dispose', () => {
+    materialTextureDisposed = true;
+  });
+  trackedTexture.addEventListener('dispose', () => {
+    trackedTextureDisposed = true;
+  });
+  tracker.addCleanup(() => {
+    cleanupRan = true;
+  });
+  parent.add(root);
+
+  tracker.dispose();
+  tracker.dispose();
+
+  assert(cleanupRan, 'Resource tracker cleanup callback should run.');
+  assert(root.parent === null, 'Tracked Object3D roots should be removed from their parent.');
+  assert(geometryDisposed, 'Tracked BufferGeometry should be disposed.');
+  assert(materialDisposed, 'Tracked Material should be disposed.');
+  assert(materialTextureDisposed, 'Texture references on tracked materials should be disposed.');
+  assert(trackedTextureDisposed, 'Tracked Texture should be disposed.');
+
+  const rootOnlyTracker = createResourceTracker();
+  const rootOnlyParent = new Object3D();
+  const rootOnly = new Object3D();
+  const sharedGeometry = new BoxGeometry(1, 1, 1);
+  const sharedMaterial = new MeshBasicMaterial();
+  let sharedGeometryDisposed = false;
+  let sharedMaterialDisposed = false;
+
+  sharedGeometry.addEventListener('dispose', () => {
+    sharedGeometryDisposed = true;
+  });
+  sharedMaterial.addEventListener('dispose', () => {
+    sharedMaterialDisposed = true;
+  });
+  rootOnly.add(new Mesh(sharedGeometry, sharedMaterial));
+  rootOnlyParent.add(rootOnly);
+  rootOnlyTracker.trackObject3D(rootOnly);
+  rootOnlyTracker.dispose();
+
+  assert(rootOnly.parent === null, 'Default Object3D tracking should remove roots.');
+  assert(!sharedGeometryDisposed, 'Default Object3D tracking should not dispose child geometry.');
+  assert(!sharedMaterialDisposed, 'Default Object3D tracking should not dispose child material.');
+  sharedGeometry.dispose();
+  sharedMaterial.dispose();
+
+  const ownedRootTracker = createResourceTracker();
+  const ownedRoot = new Object3D();
+  const ownedGeometry = new BoxGeometry(1, 1, 1);
+  const ownedMaterial = new MeshBasicMaterial();
+  let ownedGeometryDisposed = false;
+  let ownedMaterialDisposed = false;
+
+  ownedGeometry.addEventListener('dispose', () => {
+    ownedGeometryDisposed = true;
+  });
+  ownedMaterial.addEventListener('dispose', () => {
+    ownedMaterialDisposed = true;
+  });
+  ownedRoot.add(new Mesh(ownedGeometry, ownedMaterial));
+  ownedRootTracker.trackObject3D(ownedRoot, { disposeResources: true });
+  ownedRootTracker.dispose();
+
+  assert(ownedGeometryDisposed, 'Owned Object3D tracking should optionally dispose child geometry.');
+  assert(ownedMaterialDisposed, 'Owned Object3D tracking should optionally dispose child material.');
+};
+
 const runModuleSmoke = (): void => {
   assert(playerMovementSettings.maxSpeed > 0, 'Player max speed should be positive.');
   assert(playerMovementSettings.radius > 0, 'Player collision radius should be positive.');
@@ -319,6 +468,8 @@ runAssetRegistrySmoke();
 runWorldDefinitionSmoke();
 runDeliveryStateSmoke();
 runInteractionSmoke();
+runPerformanceSmoke();
+runResourceTrackerSmoke();
 runModuleSmoke();
 
 console.info('Smoke checks passed.');

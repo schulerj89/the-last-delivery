@@ -2,6 +2,17 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.21.0] - 2026-06-28
+
+### Added
+
+- Added a performance monitor for FPS, frame time, recent frame-time averages, worst recent frame time, draw calls, triangles, geometries, and textures.
+- Added a performance debug overlay panel and debug-only budget warnings for FPS, frame time, draw calls, and triangles.
+- Added a configurable renderer pixel-ratio cap with a default max of `1.5`.
+- Added a global frame-delta clamp so tab stalls do not advance gameplay with huge deltas.
+- Added an ownership-aware resource tracker for Object3D roots, geometries, materials, material texture references, textures, and cleanup callbacks.
+- Added smoke checks for performance budgets, pixel-ratio capping, delta clamping, performance snapshots, and resource disposal behavior.
+
 ## [0.20.0] - 2026-06-28
 
 ### Added

@@ -40,6 +40,11 @@ canvas {
   top: 214px;
 }
 
+.debug-overlay--performance {
+  top: 336px;
+  min-width: 220px;
+}
+
 .interaction-prompt,
 .interaction-message {
   position: absolute;

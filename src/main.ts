@@ -8,7 +8,14 @@ import {
   createDeliveryGuidanceOverlay,
 } from './game/delivery';
 import { createInteractionController } from './game/interaction';
+import {
+  clampFrameDelta,
+  createPerformanceDebugOverlay,
+  createPerformanceMonitor,
+  getCappedPixelRatio,
+} from './game/performance';
 import { createPlayerController, createPlayerDebugOverlay } from './game/player';
+import { createResourceTracker } from './game/resources';
 import { createPlayground } from './world/playground';
 import { playgroundCollisionWorld } from './world/playgroundCollision';
 import { createPlaygroundCollisionDebugView } from './world/playgroundCollisionDebug';
@@ -28,27 +35,31 @@ if (!app) {
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x16191f);
+const appResources = createResourceTracker();
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(getCappedPixelRatio(window.devicePixelRatio));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 app.append(renderer.domElement);
 
-scene.add(createPlayground());
+const playground = appResources.trackObject3D(createPlayground());
+scene.add(playground);
 
 const collisionDebugView = createPlaygroundCollisionDebugView(playgroundCollisionWorld);
+appResources.trackObject3D(collisionDebugView.object);
 scene.add(collisionDebugView.object);
 
-const deliveryBoardObjectiveMarker = createDeliveryBoardObjectiveMarker();
+const deliveryBoardObjectiveMarker = appResources.trackObject3D(createDeliveryBoardObjectiveMarker());
 scene.add(deliveryBoardObjectiveMarker);
 
-const deliveryTargetObjectiveMarker = createDeliveryTargetObjectiveMarker();
+const deliveryTargetObjectiveMarker = appResources.trackObject3D(createDeliveryTargetObjectiveMarker());
 scene.add(deliveryTargetObjectiveMarker);
 
 const player = createPlayerController({ collisionWorld: playgroundCollisionWorld });
+appResources.trackObject3D(player.object);
 scene.add(player.object);
 
 const delivery = createDeliveryController();
@@ -61,6 +72,12 @@ const followCamera = createThirdPersonCameraController({
 const cameraDebugOverlay = createCameraDebugOverlay(app);
 const deliveryDebugOverlay = createDeliveryDebugOverlay(app);
 const deliveryGuidanceOverlay = createDeliveryGuidanceOverlay(app);
+const performanceMonitor = createPerformanceMonitor({
+  config: {
+    debugWarningsEnabled: import.meta.env.DEV,
+  },
+});
+const performanceDebugOverlay = createPerformanceDebugOverlay(app);
 const deliveryBoardOverlay = createDeliveryBoardOverlay({
   delivery,
   parent: app,
@@ -74,11 +91,13 @@ const interaction = createInteractionController({
 });
 
 const ambientLight = new THREE.HemisphereLight(0xe8f1ff, 0x253329, 1.8);
+appResources.trackObject3D(ambientLight);
 scene.add(ambientLight);
 
 const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
 keyLight.position.set(3, 5, 4);
 keyLight.castShadow = true;
+appResources.trackObject3D(keyLight);
 scene.add(keyLight);
 
 let animationFrameId: number | null = null;
@@ -87,7 +106,7 @@ let isDisposed = false;
 const handleResize = (): void => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(getCappedPixelRatio(window.devicePixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
 };
 
@@ -119,6 +138,9 @@ const dispose = (): void => {
   cameraDebugOverlay.dispose();
   deliveryDebugOverlay.dispose();
   deliveryGuidanceOverlay.dispose();
+  performanceMonitor.dispose();
+  performanceDebugOverlay.dispose();
+  appResources.dispose();
   renderer.dispose();
   renderer.domElement.remove();
 };
@@ -133,7 +155,8 @@ const animate = (): void => {
     return;
   }
 
-  const deltaSeconds = clock.getDelta();
+  const rawDeltaSeconds = clock.getDelta();
+  const deltaSeconds = clampFrameDelta(rawDeltaSeconds);
   const elapsedSeconds = clock.elapsedTime;
 
   player.update(deltaSeconds);
@@ -151,6 +174,7 @@ const animate = (): void => {
   deliveryGuidanceOverlay.update(deliveryState);
   deliveryBoardOverlay.update(deliveryState);
   renderer.render(scene, camera);
+  performanceDebugOverlay.update(performanceMonitor.update(rawDeltaSeconds, renderer));
   animationFrameId = window.requestAnimationFrame(animate);
 };
 
