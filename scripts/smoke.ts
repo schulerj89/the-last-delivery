@@ -1393,11 +1393,13 @@ const runLayoutDebugSmoke = (): void => {
   const importantObjects = getImportantLayoutObjects();
   const importantIds = new Set(importantObjects.map((object) => object.id));
   const importantRoles = new Set(importantObjects.map((object) => getWorldObjectGameplay(object).role));
+  const importantSpawn = importantObjects.find((object) => getWorldObjectGameplay(object).role === 'player-spawn');
   const importantDeliveryBoard = importantObjects.find((object) => getWorldObjectGameplay(object).role === 'delivery-board');
   assert(importantObjects.length > 0, 'Important layout objects should resolve without requiring every original authored id.');
   assert(importantIds.size === importantObjects.length, 'Important layout object ids should be unique.');
   assert(importantRoles.has('player-spawn'), 'Important layout objects should include the active player spawn.');
   assert(importantRoles.has('delivery-board'), 'Important layout objects should include an active delivery board, including generated replacements.');
+  assert(importantSpawn !== undefined, 'Layout debug should resolve the active player spawn object.');
   assert(importantDeliveryBoard !== undefined, 'Layout debug should resolve the active delivery board object.');
 
   const objectCounts = getLayoutObjectCountsByKind();
@@ -1424,7 +1426,10 @@ const runLayoutDebugSmoke = (): void => {
   assert(layoutDebugView.object.getObjectByName(`layout:interactable:${importantDeliveryBoard.id}`) !== undefined, 'Layout debug view should include delivery board interactable radius helpers.');
   assert(layoutDebugView.object.getObjectByName(`layout:collider:${importantDeliveryBoard.id}`) !== undefined, 'Layout debug view should include delivery board collider outlines.');
   assert(layoutDebugView.object.getObjectByName(`layout:objective-anchor:${importantDeliveryBoard.id}`) !== undefined, 'Layout debug view should include delivery board objective anchor helpers.');
-  assert(layoutDebugView.object.getObjectByName('layout:label:spawn') !== undefined, 'Layout debug view should include important object labels.');
+  assert(
+    layoutDebugView.object.getObjectByName(importantSpawn.id === 'player-spawn' ? 'layout:label:spawn' : `layout:label:${importantSpawn.id}`) !== undefined,
+    'Layout debug view should include active player spawn labels.',
+  );
   assert(layoutDebugView.toggle(), 'Layout debug view should toggle active.');
   assert(layoutDebugView.object.visible, 'Layout debug view object should be visible while active.');
   assert(layoutDebugView.toggleCameraMode() === 'close', 'Layout debug view should toggle to close camera mode.');

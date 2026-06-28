@@ -2,102 +2,26 @@ import type { LayoutOverrideDocument } from './layoutOverrides';
 
 export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
   "version": 1,
-  "updatedAt": "2026-06-28T19:43:05.104Z",
+  "updatedAt": "2026-06-28T19:57:33.612Z",
   "overrides": [
     {
       "id": "player-spawn",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "position": [
-        5.25,
-        0,
-        42.75
-      ]
-    },
-    {
-      "id": "delivery-board",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "active": false
     },
     {
-      "id": "cottage-west",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "position": [
-        -2,
-        0.9,
-        19.25
-      ],
-      "active": false,
-      "renderMode": "primitive"
+      "id": "delivery-board",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "active": false
     },
     {
-      "id": "cottage-east",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "position": [
-        -13.25,
-        0.9,
-        11.5
-      ],
-      "scaleMultiplier": 4.719999999999992
-    },
-    {
-      "id": "tree-east",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "position": [
-        12.5,
-        1.3,
-        1.75
-      ],
-      "active": false,
-      "renderMode": "primitive"
-    },
-    {
-      "id": "tree-south",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "active": false,
-      "renderMode": "primitive"
-    },
-    {
-      "id": "crate-large",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "position": [
-        -7.5,
-        0.5,
-        8.75
-      ],
-      "active": false,
-      "renderMode": "primitive"
-    },
-    {
-      "id": "crate-small-a",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "active": false,
-      "renderMode": "primitive"
-    },
-    {
-      "id": "barrel-north-b",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "position": [
-        10.75,
-        0.29,
-        9
-      ],
-      "active": false,
-      "renderMode": "primitive"
-    },
-    {
-      "id": "cart-south-path",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
-      "position": [
-        10,
-        0.45,
-        9.5
-      ],
-      "active": false,
-      "renderMode": "primitive"
+      "id": "post-office",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "active": false
     },
     {
       "id": "editor-pavement-tile-square-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -127,7 +51,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -157,7 +81,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-plaza-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-plaza",
       "dimensions": [
@@ -187,7 +111,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -217,7 +141,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-long-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-long",
       "dimensions": [
@@ -247,7 +171,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -277,7 +201,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -307,7 +231,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -337,7 +261,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -367,7 +291,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -397,7 +321,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -427,7 +351,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-long-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-long",
       "dimensions": [
@@ -457,7 +381,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-3",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -487,7 +411,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-2-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -517,7 +441,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -547,7 +471,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -577,7 +501,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -607,7 +531,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -637,7 +561,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-2-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -667,7 +591,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-2-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -697,7 +621,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-3",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -727,7 +651,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-4",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -757,7 +681,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-2-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -787,7 +711,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -817,7 +741,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -847,7 +771,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -877,7 +801,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -907,7 +831,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-fantasy-house-003-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "cottage",
       "templateId": "cottage-west",
       "dimensions": [
@@ -938,7 +862,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -968,7 +892,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -998,7 +922,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1028,7 +952,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1058,7 +982,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1088,7 +1012,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1118,7 +1042,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-2-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1148,7 +1072,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-2-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1178,7 +1102,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-2-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1208,7 +1132,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-2-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1238,7 +1162,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1268,7 +1192,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-2-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1298,7 +1222,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-3-copy-5-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1328,7 +1252,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1358,7 +1282,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1388,7 +1312,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1418,7 +1342,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1448,7 +1372,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1478,7 +1402,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1508,7 +1432,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1538,7 +1462,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1568,7 +1492,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1598,7 +1522,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1628,7 +1552,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1658,7 +1582,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1688,7 +1612,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1718,7 +1642,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1748,7 +1672,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1778,7 +1702,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1808,7 +1732,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1838,7 +1762,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1868,7 +1792,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1898,7 +1822,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-delivery-board-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "delivery-board",
       "templateId": "delivery-board",
       "dimensions": [
@@ -1928,7 +1852,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-mailbox-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "mailbox",
       "templateId": "mailbox",
       "dimensions": [
@@ -1963,7 +1887,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -1993,7 +1917,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2023,7 +1947,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-4-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2053,7 +1977,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-1-copy-1-copy-1-copy-1-copy-1-copy-3-copy-1-copy-1-copy-1-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2083,7 +2007,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-mailbox-east-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "mailbox",
       "templateId": "mailbox-east",
       "dimensions": [
@@ -2118,7 +2042,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-4",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2148,7 +2072,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-5",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2178,7 +2102,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-1-copy-5-copy-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2187,7 +2111,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
         4
       ],
       "position": [
-        -15,
+        -14.75,
         0.025,
         6.5
       ],
@@ -2208,7 +2132,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-fantasy-house-002-1",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "cottage",
       "templateId": "cottage-west",
       "dimensions": [
@@ -2217,9 +2141,9 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
         2.4
       ],
       "position": [
-        -17.923220323501862,
+        -15,
         0.9,
-        33.47276635315046
+        33.25
       ],
       "active": true,
       "rotation": [
@@ -2239,7 +2163,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-2",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2269,7 +2193,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-3",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2299,7 +2223,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-4",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2329,7 +2253,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-5",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2359,7 +2283,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-6",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2389,7 +2313,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
     },
     {
       "id": "editor-pavement-tile-square-4-copy-7",
-      "updatedAt": "2026-06-28T19:43:05.104Z",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
       "kind": "pavement",
       "templateId": "pavement-tile-square",
       "dimensions": [
@@ -2398,7 +2322,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
         4
       ],
       "position": [
-        -19,
+        -18.75,
         0.025,
         29.75
       ],
@@ -2414,6 +2338,465 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = {
       "mailbox": null,
       "gameplay": {
         "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-8",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -11,
+        0.025,
+        37.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-9",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -15,
+        0.025,
+        37.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-10",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -18.75,
+        0.025,
+        37.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-2",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -14.75,
+        0.025,
+        14.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-pavement-tile-square-4-copy-1-copy-1-copy-3",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "pavement",
+      "templateId": "pavement-tile-square",
+      "dimensions": [
+        4,
+        0.05,
+        4
+      ],
+      "position": [
+        -14.75,
+        0.025,
+        10.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-box-001-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "crate",
+      "templateId": "crate-large",
+      "dimensions": [
+        1,
+        1,
+        1
+      ],
+      "position": [
+        -14.5,
+        0.5,
+        36.25
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-box-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-box-001-2",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "crate",
+      "templateId": "crate-small-a",
+      "dimensions": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "position": [
+        -15.5,
+        0.35,
+        36
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-box-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-box-001-3",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "crate",
+      "templateId": "crate-small-b",
+      "dimensions": [
+        0.7,
+        0.7,
+        0.7
+      ],
+      "position": [
+        -14.5,
+        0.35,
+        37.25
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-box-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-pointer-001-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "signpost",
+      "templateId": "signpost-post-office",
+      "dimensions": [
+        0.85,
+        1.4,
+        0.85
+      ],
+      "position": [
+        1.25,
+        0.7,
+        25.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1.8500000000000008,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-pointer-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-barrel-001-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "barrel",
+      "templateId": "barrel-north-a",
+      "dimensions": [
+        0.52,
+        0.64,
+        0.52
+      ],
+      "position": [
+        24.02537402324342,
+        0.32,
+        29.385088908153985
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 2.25,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-barrel-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-barrel-001-1-copy-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "barrel",
+      "templateId": "barrel-north-a",
+      "dimensions": [
+        0.52,
+        0.64,
+        0.52
+      ],
+      "position": [
+        25.25,
+        0.32,
+        29.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 2.25,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-barrel-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-barrel-001-1-copy-1-copy-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "barrel",
+      "templateId": "barrel-north-a",
+      "dimensions": [
+        0.52,
+        0.64,
+        0.52
+      ],
+      "position": [
+        22.75,
+        0.32,
+        29.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 2.25,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-barrel-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-cart-001-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "cart",
+      "templateId": "cart-south-path",
+      "dimensions": [
+        1.7,
+        0.9,
+        1.05
+      ],
+      "position": [
+        6.243000992482754,
+        0.45,
+        35.22691357905475
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1.7500000000000007,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-cart-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "decorative",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-fantasy-house-001-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "post-office",
+      "templateId": "post-office",
+      "dimensions": [
+        3,
+        1.85,
+        2.3
+      ],
+      "position": [
+        -13.25,
+        0.93,
+        10.75
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 3.949999999999994,
+      "yOffset": 0,
+      "renderMode": "asset",
+      "assetId": "fantasy-house-001",
+      "mailbox": null,
+      "gameplay": {
+        "role": "post-office",
+        "action": "none"
+      }
+    },
+    {
+      "id": "editor-player-spawn-1",
+      "updatedAt": "2026-06-28T19:57:33.612Z",
+      "kind": "spawn-point",
+      "templateId": "player-spawn",
+      "dimensions": [
+        1.2,
+        0.1,
+        1.2
+      ],
+      "position": [
+        5.75,
+        0,
+        43.5
+      ],
+      "active": true,
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scaleMultiplier": 1,
+      "yOffset": 0,
+      "renderMode": "primitive",
+      "mailbox": null,
+      "gameplay": {
+        "role": "player-spawn",
         "action": "none"
       }
     }

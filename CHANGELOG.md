@@ -2,6 +2,13 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.53.5] - 2026-06-28
+
+### Changed
+
+- Promoted the current active town editor layout JSON with 92 validated overrides.
+- Updated the generated village layout overrides to match the active layout JSON.
+
 ## [0.53.4] - 2026-06-28
 
 ### Fixed
