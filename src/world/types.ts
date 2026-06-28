@@ -56,6 +56,7 @@ export type WorldRenderDefinition =
 export interface WorldObjectDefinition {
   id: string;
   kind: WorldObjectKind;
+  active?: boolean;
   position: THREE.Vector3Tuple;
   rotation?: THREE.Vector3Tuple;
   dimensions?: THREE.Vector3Tuple;

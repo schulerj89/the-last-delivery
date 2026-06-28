@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 import {
+  assetRegistry,
+  createModelInstance,
+  fitAssetObjectToBounds,
+  type AssetInstanceHandle,
+} from '../game/assets';
+import {
   layoutOverrideDocumentVersion,
   parseLayoutOverrideJson,
   serializeLayoutOverrideDocument,
@@ -7,10 +13,12 @@ import {
   type LayoutTransformOverride,
 } from './layoutOverrides';
 import type { WorldObjectDefinition } from './types';
+import { applyAssetMaterialOverrides } from './assetMaterialOverrides';
 import { villageWorldObjects } from './villageDefinition';
 
 export const placementEditorConfig = {
   draftStorageKey: 'the-last-delivery:village-layout-draft',
+  activeStorageKey: 'the-last-delivery:town-editor-active-json',
   snapValues: [0.1, 0.25, 1] as const,
   defaultSnapIndex: 1,
   rotationStepRadians: THREE.MathUtils.degToRad(15),
@@ -34,10 +42,12 @@ export interface EditablePlacementObject {
 
 export interface PlacementTransformDraft {
   id: string;
+  active: boolean;
   position: THREE.Vector3Tuple;
   rotationY: number;
   scaleMultiplier: number;
   yOffset: number;
+  assetId: string | null;
 }
 
 export interface PlacementEditor {
@@ -79,6 +89,26 @@ interface DragOffset {
 
 type PlacementDraftSnapshot = Array<[string, PlacementTransformDraft]>;
 
+interface EditorAssetPreview {
+  assetId: string;
+  instance: AssetInstanceHandle;
+  disposeMaterialOverrides: () => void;
+  requestId: number;
+}
+
+interface BrowserFileHandle {
+  getFile(): Promise<File>;
+  createWritable(): Promise<{
+    write(data: string): Promise<void>;
+    close(): Promise<void>;
+  }>;
+}
+
+type BrowserFilePickerWindow = Window & {
+  showOpenFilePicker?: (options?: unknown) => Promise<BrowserFileHandle[]>;
+  showSaveFilePicker?: (options?: unknown) => Promise<BrowserFileHandle>;
+};
+
 const formatNumber = (value: number): string => (
   Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2)
 );
@@ -90,6 +120,18 @@ const formatTuple = (values: readonly number[]): string => (
 const getAssetRenderSettings = (object: WorldObjectDefinition): Extract<WorldObjectDefinition['render'], { mode: 'asset' }> | undefined => (
   object.render?.mode === 'asset' ? object.render : undefined
 );
+
+const getObjectAssetId = (object: WorldObjectDefinition): string | null => (
+  getAssetRenderSettings(object)?.assetId ?? null
+);
+
+export const canUseTownEditorFilePicker = (
+  value: unknown = typeof window === 'undefined' ? undefined : window,
+): boolean => {
+  const maybeWindow = value as BrowserFilePickerWindow;
+  return typeof maybeWindow.showOpenFilePicker === 'function'
+    && typeof maybeWindow.showSaveFilePicker === 'function';
+};
 
 export const getPlacementEditorSnapValues = (): readonly number[] => placementEditorConfig.snapValues;
 
@@ -161,10 +203,12 @@ export const createDraggedPlacementPosition = (
 
 export const clonePlacementDraft = (draft: PlacementTransformDraft): PlacementTransformDraft => ({
   id: draft.id,
+  active: draft.active,
   position: [...draft.position],
   rotationY: draft.rotationY,
   scaleMultiplier: draft.scaleMultiplier,
   yOffset: draft.yOffset,
+  assetId: draft.assetId,
 });
 
 export const capPlacementHistoryLength = <T>(
@@ -181,10 +225,12 @@ export const createPlacementTransformDraft = (
 
   return {
     id: object.id,
+    active: object.active !== false,
     position: [...object.position],
     rotationY: assetRenderSettings?.rotation?.[1] ?? object.rotation?.[1] ?? 0,
     scaleMultiplier: assetRenderSettings?.scaleMultiplier ?? object.layoutTransform?.scaleMultiplier ?? 1,
     yOffset: assetRenderSettings?.yOffset ?? object.layoutTransform?.yOffset ?? 0,
+    assetId: assetRenderSettings?.assetId ?? null,
   };
 };
 
@@ -196,21 +242,22 @@ export const serializePlacementTransform = (
   const lines = [
     `{`,
     `  id: '${object.id}',`,
+    `  active: ${draft.active},`,
     `  position: ${formatTuple(draft.position)},`,
     `  rotation: ${formatTuple([0, draft.rotationY, 0])},`,
   ];
 
-  if (assetRenderSettings) {
+  if (draft.assetId) {
     lines.push(
       `  render: {`,
       `    mode: 'asset',`,
-      `    assetId: '${assetRenderSettings.assetId}',`,
+      `    assetId: '${draft.assetId}',`,
       `    scaleMultiplier: ${formatNumber(draft.scaleMultiplier)},`,
       `    yOffset: ${formatNumber(draft.yOffset)},`,
       `    rotation: ${formatTuple([0, draft.rotationY, 0])},`,
       `  },`,
     );
-  } else if (draft.scaleMultiplier !== 1 || draft.yOffset !== 0) {
+  } else if (assetRenderSettings || draft.scaleMultiplier !== 1 || draft.yOffset !== 0) {
     lines.push(`  // scaleMultiplier ${formatNumber(draft.scaleMultiplier)} and yOffset ${formatNumber(draft.yOffset)} are temporary for primitive render.`);
   }
 
@@ -367,7 +414,9 @@ const isChangedDraft = (
 ): boolean => {
   const initial = createPlacementTransformDraft(object);
 
-  return draft.position.some((value, index) => value !== initial.position[index])
+  return draft.active !== initial.active
+    || draft.assetId !== initial.assetId
+    || draft.position.some((value, index) => value !== initial.position[index])
     || draft.rotationY !== initial.rotationY
     || draft.scaleMultiplier !== initial.scaleMultiplier
     || draft.yOffset !== initial.yOffset;
@@ -388,6 +437,10 @@ const createOverrideFromDraft = (
     override.position = [...draft.position];
   }
 
+  if (draft.active !== initial.active) {
+    override.active = draft.active;
+  }
+
   if (draft.rotationY !== initial.rotationY) {
     override.rotation = [0, draft.rotationY, 0];
   }
@@ -398,6 +451,15 @@ const createOverrideFromDraft = (
 
   if (draft.yOffset !== initial.yOffset) {
     override.yOffset = draft.yOffset;
+  }
+
+  if (draft.assetId !== initial.assetId) {
+    if (draft.assetId) {
+      override.renderMode = 'asset';
+      override.assetId = draft.assetId;
+    } else {
+      override.renderMode = 'primitive';
+    }
   }
 
   return Object.keys(override).length > 2 ? override : null;
@@ -431,6 +493,7 @@ export const createPlacementEditor = ({
   const editableObjectIds = editableObjects.map((object) => object.id);
   const draftsByObjectId = new Map<string, PlacementTransformDraft>();
   const baselinesByObjectUuid = new Map<string, SceneObjectBaseline>();
+  const assetPreviewsByObjectId = new Map<string, EditorAssetPreview>();
   const marker = createSelectionMarker();
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
@@ -440,10 +503,23 @@ export const createPlacementEditor = ({
   const overlay = document.createElement('div');
   const summary = document.createElement('pre');
   const controls = document.createElement('div');
+  const objectPanel = document.createElement('div');
+  const objectSelect = document.createElement('select');
+  const objectProperties = document.createElement('pre');
+  const assetPanel = document.createElement('div');
+  const assetSelect = document.createElement('select');
+  const assetProperties = document.createElement('pre');
+  const toggleActiveButton = document.createElement('button');
+  const applyAssetButton = document.createElement('button');
+  const clearAssetButton = document.createElement('button');
   const saveDraftButton = document.createElement('button');
+  const saveActiveButton = document.createElement('button');
   const loadDraftButton = document.createElement('button');
+  const loadActiveButton = document.createElement('button');
   const clearDraftButton = document.createElement('button');
   const copyJsonButton = document.createElement('button');
+  const openJsonFileButton = document.createElement('button');
+  const saveJsonFileButton = document.createElement('button');
   const importJsonButton = document.createElement('button');
   const importTextArea = document.createElement('textarea');
   const helpOverlay = document.createElement('div');
@@ -459,6 +535,7 @@ export const createPlacementEditor = ({
   let active = false;
   let helpVisible = false;
   let continuousMoveHistoryPushed = false;
+  let assetPreviewRequestId = 0;
   let snapIndex = placementEditorConfig.defaultSnapIndex;
   let status = draftPersistenceEnabled
     ? 'Tab selects editable objects. Drafts can be saved locally or copied as JSON.'
@@ -468,19 +545,51 @@ export const createPlacementEditor = ({
   overlay.hidden = true;
   summary.className = 'placement-editor-hud__summary';
   controls.className = 'placement-editor-hud__controls';
+  objectPanel.className = 'placement-editor-hud__panel';
+  assetPanel.className = 'placement-editor-hud__panel';
+  objectSelect.className = 'placement-editor-hud__select';
+  assetSelect.className = 'placement-editor-hud__select';
+  objectProperties.className = 'placement-editor-hud__properties';
+  assetProperties.className = 'placement-editor-hud__properties';
+  toggleActiveButton.type = 'button';
+  toggleActiveButton.textContent = 'Toggle Active';
+  applyAssetButton.type = 'button';
+  applyAssetButton.textContent = 'Preview Asset';
+  clearAssetButton.type = 'button';
+  clearAssetButton.textContent = 'Use Primitive';
   saveDraftButton.type = 'button';
   saveDraftButton.textContent = 'Save Draft';
+  saveActiveButton.type = 'button';
+  saveActiveButton.textContent = 'Save Active JSON';
   loadDraftButton.type = 'button';
   loadDraftButton.textContent = 'Reload Draft';
+  loadActiveButton.type = 'button';
+  loadActiveButton.textContent = 'Load Active JSON';
   clearDraftButton.type = 'button';
   clearDraftButton.textContent = 'Clear Draft';
   copyJsonButton.type = 'button';
   copyJsonButton.textContent = 'Copy JSON';
+  openJsonFileButton.type = 'button';
+  openJsonFileButton.textContent = 'Open JSON File';
+  saveJsonFileButton.type = 'button';
+  saveJsonFileButton.textContent = 'Save JSON File';
   importJsonButton.type = 'button';
   importJsonButton.textContent = 'Import JSON';
   importTextArea.className = 'placement-editor-hud__import';
-  importTextArea.placeholder = 'Paste layout override JSON here.';
+  importTextArea.placeholder = 'Paste active town editor JSON or layout override JSON here.';
   importTextArea.spellcheck = false;
+  objectSelect.append(...editableObjects.map((object, index) => {
+    const option = document.createElement('option');
+    option.value = String(index);
+    option.textContent = `${object.id} (${object.kind})`;
+    return option;
+  }));
+  assetSelect.append(...assetRegistry.map((asset) => {
+    const option = document.createElement('option');
+    option.value = asset.id;
+    option.textContent = `${asset.id} (${asset.sourcePack})`;
+    return option;
+  }));
   helpOverlay.className = 'placement-editor-help';
   helpOverlay.hidden = true;
   helpOverlay.textContent = [
@@ -491,11 +600,27 @@ export const createPlacementEditor = ({
     'Q / E rotate  Z / X scale  [ / ] Y offset',
     '1 / 2 / 3 snap size',
     'Ctrl+Z undo  Ctrl+Shift+Z or Ctrl+Y redo',
-    'Ctrl+S save draft  Ctrl+O reload  Ctrl+Shift+Delete clear',
-    'C copy selected TS  Shift+C copy JSON  Paste JSON then Import JSON',
+    'Ctrl+S save active JSON  Ctrl+O reload active JSON  Ctrl+Shift+Delete clear',
+    'C copy selected TS  Shift+C copy active JSON',
+    'Object panel toggles active state. Asset panel previews registered GLBs.',
   ].join('\n');
-  controls.append(saveDraftButton, loadDraftButton, clearDraftButton, copyJsonButton, importJsonButton);
-  overlay.append(summary, controls, importTextArea);
+  objectPanel.append(objectSelect, objectProperties);
+  assetPanel.append(assetSelect, assetProperties);
+  controls.append(
+    toggleActiveButton,
+    applyAssetButton,
+    clearAssetButton,
+    saveActiveButton,
+    loadActiveButton,
+    saveDraftButton,
+    loadDraftButton,
+    clearDraftButton,
+    copyJsonButton,
+    openJsonFileButton,
+    saveJsonFileButton,
+    importJsonButton,
+  );
+  overlay.append(summary, objectPanel, assetPanel, controls, importTextArea);
   parent.append(overlay);
   parent.append(helpOverlay);
 
@@ -541,7 +666,134 @@ export const createPlacementEditor = ({
       baseline.object.position.copy(baseline.position);
       baseline.object.rotation.copy(baseline.rotation);
       baseline.object.scale.copy(baseline.scale);
+      baseline.object.visible = true;
     });
+    assetPreviewsByObjectId.forEach((preview) => {
+      preview.disposeMaterialOverrides();
+      preview.instance.dispose();
+    });
+    assetPreviewsByObjectId.clear();
+  };
+
+  const disposeAssetPreview = (objectId: string): void => {
+    const preview = assetPreviewsByObjectId.get(objectId);
+
+    if (!preview) {
+      return;
+    }
+
+    preview.disposeMaterialOverrides();
+    preview.instance.dispose();
+    assetPreviewsByObjectId.delete(objectId);
+  };
+
+  const setSceneObjectsVisible = (objectId: string, visible: boolean): void => {
+    findEditableSceneObjects(sceneRoot, objectId).forEach((sceneObject) => {
+      captureBaseline(sceneObject);
+      sceneObject.visible = visible;
+    });
+  };
+
+  const createPreviewRequestId = (): number => {
+    assetPreviewRequestId += 1;
+    return assetPreviewRequestId;
+  };
+
+  const fitAssetPreviewToDraft = (
+    previewObject: THREE.Object3D,
+    editableObject: EditablePlacementObject,
+    draft: PlacementTransformDraft,
+  ): void => {
+    fitAssetObjectToBounds(previewObject, {
+      targetPosition: draft.position,
+      targetDimensions: editableObject.worldObject.dimensions,
+      rotation: [0, draft.rotationY, 0],
+      scaleMultiplier: draft.scaleMultiplier,
+      yOffset: draft.yOffset,
+      fitMode: editableObject.worldObject.render?.mode === 'asset'
+        ? editableObject.worldObject.render.fitMode
+        : undefined,
+    });
+  };
+
+  const updateAssetPreviewTransform = (
+    editableObject: EditablePlacementObject,
+    draft: PlacementTransformDraft,
+  ): void => {
+    const preview = assetPreviewsByObjectId.get(editableObject.id);
+
+    if (!preview) {
+      return;
+    }
+
+    fitAssetPreviewToDraft(preview.instance.object, editableObject, draft);
+  };
+
+  const loadAssetPreview = (
+    editableObject: EditablePlacementObject,
+    draft: PlacementTransformDraft,
+  ): void => {
+    const assetId = draft.assetId;
+
+    if (!active || !draft.active || !assetId) {
+      disposeAssetPreview(editableObject.id);
+      setSceneObjectsVisible(editableObject.id, draft.active);
+      return;
+    }
+
+    const currentPreview = assetPreviewsByObjectId.get(editableObject.id);
+
+    if (currentPreview?.assetId === assetId) {
+      updateAssetPreviewTransform(editableObject, draft);
+      setSceneObjectsVisible(editableObject.id, false);
+      currentPreview.instance.object.visible = true;
+      return;
+    }
+
+    disposeAssetPreview(editableObject.id);
+    setSceneObjectsVisible(editableObject.id, false);
+    const requestId = createPreviewRequestId();
+    status = `Loading ${assetId} preview for ${editableObject.id}.`;
+    updateHud();
+
+    void createModelInstance(assetId)
+      .then((instance) => {
+        const currentDraft = draftsByObjectId.get(editableObject.id);
+
+        if (!active || !currentDraft || currentDraft.assetId !== assetId || !currentDraft.active) {
+          instance.dispose();
+          return;
+        }
+
+        const previousPreview = assetPreviewsByObjectId.get(editableObject.id);
+
+        if (previousPreview && previousPreview.requestId > requestId) {
+          instance.dispose();
+          return;
+        }
+
+        instance.object.name = `placement-editor:asset-preview:${editableObject.id}`;
+        instance.object.userData.label = instance.object.name;
+        fitAssetPreviewToDraft(instance.object, editableObject, currentDraft);
+        const disposeMaterialOverrides = applyAssetMaterialOverrides(instance.object, editableObject.worldObject);
+        assetPreviewsByObjectId.set(editableObject.id, {
+          assetId,
+          instance,
+          disposeMaterialOverrides,
+          requestId,
+        });
+        sceneRoot.add(instance.object);
+        setSceneObjectsVisible(editableObject.id, false);
+        status = `Previewing ${assetId} on ${editableObject.id}.`;
+        updateHud();
+      })
+      .catch((error: unknown) => {
+        if (draftsByObjectId.get(editableObject.id)?.assetId === assetId) {
+          setSceneObjectsVisible(editableObject.id, draft.active);
+          status = `Asset preview failed: ${error instanceof Error ? error.message : String(error)}`;
+          updateHud();
+        }
+      });
   };
 
   const createDraftSnapshot = (): PlacementDraftSnapshot => (
@@ -639,6 +891,13 @@ export const createPlacementEditor = ({
       return;
     }
 
+    if (!draft.active) {
+      setSceneObjectsVisible(selectedObject.id, false);
+      disposeAssetPreview(selectedObject.id);
+      updateMarker();
+      return;
+    }
+
     const initialDraft = createPlacementTransformDraft(selectedObject.worldObject);
     const sceneObjects = findEditableSceneObjects(sceneRoot, selectedObject.id);
     const pivot = new THREE.Vector3(...selectedObject.worldObject.position);
@@ -659,7 +918,15 @@ export const createPlacementEditor = ({
       sceneObject.rotation.copy(baseline.rotation);
       sceneObject.rotation.y = baseline.rotation.y + rotationDelta;
       sceneObject.scale.copy(baseline.scale).multiplyScalar(scaleRatio);
+      sceneObject.visible = draft.assetId ? false : true;
     });
+
+    if (draft.assetId) {
+      loadAssetPreview(selectedObject, draft);
+    } else {
+      disposeAssetPreview(selectedObject.id);
+      setSceneObjectsVisible(selectedObject.id, true);
+    }
 
     updateMarker();
   };
@@ -697,6 +964,10 @@ export const createPlacementEditor = ({
 
       const draft = createPlacementTransformDraft(editableObject.worldObject);
 
+      if (override.active !== undefined) {
+        draft.active = override.active;
+      }
+
       if (override.position) {
         draft.position = [...override.position];
       }
@@ -711,6 +982,12 @@ export const createPlacementEditor = ({
 
       if (override.yOffset !== undefined) {
         draft.yOffset = override.yOffset;
+      }
+
+      if (override.renderMode === 'primitive') {
+        draft.assetId = null;
+      } else if (override.assetId !== undefined) {
+        draft.assetId = override.assetId;
       }
 
       draftsByObjectId.set(override.id, draft);
@@ -750,6 +1027,55 @@ export const createPlacementEditor = ({
     })()
   );
 
+  const hasStoredActiveJson = (): boolean => (
+    canUseDraftStorage()
+    && window.localStorage.getItem(placementEditorConfig.activeStorageKey) !== null
+  );
+
+  const getCurrentEditorJson = (): string => (
+    serializeLayoutOverrideDocument(createCurrentOverrideDocument())
+  );
+
+  const saveActiveJsonToStorage = (): void => {
+    if (!canUseDraftStorage()) {
+      status = 'Active JSON storage is available only in dev mode.';
+      updateHud();
+      return;
+    }
+
+    window.localStorage.setItem(placementEditorConfig.activeStorageKey, getCurrentEditorJson());
+    status = 'Saved active town editor JSON to localStorage.';
+    updateHud();
+  };
+
+  const loadActiveJsonFromStorage = (silentMissing = false): void => {
+    if (!canUseDraftStorage()) {
+      status = 'Active JSON storage is available only in dev mode.';
+      updateHud();
+      return;
+    }
+
+    const storedDocument = window.localStorage.getItem(placementEditorConfig.activeStorageKey);
+
+    if (!storedDocument) {
+      if (!silentMissing) {
+        status = 'No active town editor JSON found.';
+        updateHud();
+      }
+      return;
+    }
+
+    const document = parseEditorJson(storedDocument);
+
+    if (document) {
+      applyOverrideDocumentToDrafts(
+        document,
+        `Loaded active town editor JSON with ${document.overrides.length} override(s).`,
+        !silentMissing,
+      );
+    }
+  };
+
   const saveDraftToStorage = (): void => {
     if (!canUseDraftStorage()) {
       status = 'Local draft storage is available only in dev mode.';
@@ -759,7 +1085,7 @@ export const createPlacementEditor = ({
 
     window.localStorage.setItem(
       placementEditorConfig.draftStorageKey,
-      serializeLayoutOverrideDocument(createCurrentOverrideDocument()),
+      getCurrentEditorJson(),
     );
     status = 'Saved layout draft to localStorage.';
     updateHud();
@@ -796,6 +1122,7 @@ export const createPlacementEditor = ({
   const clearDraftStorage = (): void => {
     if (canUseDraftStorage()) {
       window.localStorage.removeItem(placementEditorConfig.draftStorageKey);
+      window.localStorage.removeItem(placementEditorConfig.activeStorageKey);
     }
 
     pushUndoSnapshot();
@@ -804,6 +1131,75 @@ export const createPlacementEditor = ({
     status = 'Cleared local layout draft and temporary edits.';
     updateMarker();
     updateHud();
+  };
+
+  const openJsonFile = async (): Promise<void> => {
+    const maybeWindow = window as BrowserFilePickerWindow;
+
+    if (!canUseTownEditorFilePicker(maybeWindow) || !maybeWindow.showOpenFilePicker) {
+      status = 'JSON file picker is unavailable in this browser. Use paste/import instead.';
+      updateHud();
+      return;
+    }
+
+    try {
+      const handles = await maybeWindow.showOpenFilePicker({
+        multiple: false,
+        types: [
+          {
+            description: 'The Last Delivery layout JSON',
+            accept: { 'application/json': ['.json'] },
+          },
+        ],
+      });
+      const handle = handles[0];
+
+      if (!handle) {
+        status = 'No JSON file selected.';
+        updateHud();
+        return;
+      }
+
+      const file = await handle.getFile();
+      const document = parseEditorJson(await file.text());
+
+      if (document) {
+        applyOverrideDocumentToDrafts(document, `Loaded ${file.name} with ${document.overrides.length} override(s).`);
+      }
+    } catch (error) {
+      status = `Open JSON cancelled or failed: ${error instanceof Error ? error.message : String(error)}`;
+      updateHud();
+    }
+  };
+
+  const saveJsonFile = async (): Promise<void> => {
+    const maybeWindow = window as BrowserFilePickerWindow;
+
+    if (!canUseTownEditorFilePicker(maybeWindow) || !maybeWindow.showSaveFilePicker) {
+      status = 'JSON file save is unavailable in this browser. Use Copy JSON instead.';
+      updateHud();
+      return;
+    }
+
+    try {
+      const handle = await maybeWindow.showSaveFilePicker({
+        suggestedName: 'village-layout.json',
+        types: [
+          {
+            description: 'The Last Delivery layout JSON',
+            accept: { 'application/json': ['.json'] },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(getCurrentEditorJson());
+      await writable.close();
+      status = 'Saved active town editor JSON file.';
+      updateHud();
+    } catch (error) {
+      status = `Save JSON cancelled or failed: ${error instanceof Error ? error.message : String(error)}`;
+      updateHud();
+    }
   };
 
   const importDraftFromPanel = (): void => {
@@ -882,12 +1278,73 @@ export const createPlacementEditor = ({
     updateHud();
   };
 
+  const updateObjectPropertiesPanel = (
+    selectedObject: EditablePlacementObject | null,
+    draft: PlacementTransformDraft | null,
+  ): void => {
+    objectSelect.value = selectedIndex >= 0 ? String(selectedIndex) : '';
+
+    if (!selectedObject || !draft) {
+      objectProperties.textContent = [
+        'Object Properties',
+        'No object selected.',
+        `${editableObjects.length} editable objects available.`,
+      ].join('\n');
+      return;
+    }
+
+    const object = selectedObject.worldObject;
+    objectProperties.textContent = [
+      'Object Properties',
+      `id: ${object.id}`,
+      `kind: ${object.kind}`,
+      `active: ${draft.active ? 'yes' : 'no'}`,
+      `position: ${formatTuple(draft.position)}`,
+      `dimensions: ${object.dimensions ? formatTuple(object.dimensions) : 'none'}`,
+      `collider: ${object.collider ? `pos ${formatTuple(object.collider.position)} size ${formatTuple(object.collider.size)}` : 'none'}`,
+      `interactable: ${object.interactable ? `pos ${formatTuple(object.interactable.position)} radius ${formatNumber(object.interactable.radius)}` : 'none'}`,
+      `objective: ${object.objectiveAnchor ? formatTuple(object.objectiveAnchor.position) : 'none'}`,
+      `mailbox: ${object.mailbox?.destinationName ?? 'none'}`,
+    ].join('\n');
+  };
+
+  const updateAssetPropertiesPanel = (
+    selectedObject: EditablePlacementObject | null,
+    draft: PlacementTransformDraft | null,
+  ): void => {
+    const selectedAssetId = draft?.assetId ?? (selectedObject ? getObjectAssetId(selectedObject.worldObject) : null);
+    const selectedAsset = assetRegistry.find((asset) => asset.id === (assetSelect.value || selectedAssetId))
+      ?? assetRegistry[0];
+
+    if (selectedAsset) {
+      assetSelect.value = selectedAsset.id;
+    }
+
+    assetProperties.textContent = selectedAsset
+      ? [
+        'Asset Catalog',
+        `selected: ${selectedAsset.id}`,
+        `current object asset: ${draft?.assetId ?? 'primitive'}`,
+        `source: ${selectedAsset.sourcePack}`,
+        `url: ${selectedAsset.url}`,
+        `defaultScale: ${formatNumber(selectedAsset.defaultScale)}`,
+        `budget: ${formatNumber(selectedAsset.maxRecommendedBytes / 1024)} KB`,
+        selectedAsset.notes ? `notes: ${selectedAsset.notes}` : 'notes: none',
+      ].join('\n')
+      : [
+        'Asset Catalog',
+        'No registered assets found.',
+      ].join('\n');
+  };
+
   const updateHud = (): void => {
     const selectedObject = getSelectedObject();
     const draft = getSelectedDraft();
     const snap = getCurrentSnap();
 
     overlay.hidden = !active;
+    updateObjectPropertiesPanel(selectedObject, draft);
+    updateAssetPropertiesPanel(selectedObject, draft);
 
     if (!active) {
       return;
@@ -896,8 +1353,8 @@ export const createPlacementEditor = ({
     if (!selectedObject || !draft) {
       summary.textContent = [
         'Placement Editor',
-        'Warning: browser edits are temporary until exported and promoted.',
-        'Ctrl+S save draft  Ctrl+O reload  Ctrl+Shift+Delete clear',
+        'Active JSON drives live editor previews; source changes still require layout:apply.',
+        'Ctrl+S save active JSON  Ctrl+O reload  Ctrl+Shift+Delete clear',
         `Snap ${snap}`,
         'Selected: none',
         status,
@@ -908,14 +1365,15 @@ export const createPlacementEditor = ({
     const renderSettings = getAssetRenderSettings(selectedObject.worldObject);
     summary.textContent = [
       'Placement Editor',
-      'Warning: browser edits are temporary until exported and promoted.',
+      'Active JSON drives live editor previews; source changes still require layout:apply.',
       `Selected ${selectedObject.id} (${selectedObject.kind})`,
+      `Active ${draft.active ? 'yes' : 'no'}`,
       `Position ${formatTuple(draft.position)}`,
       `RotationY ${formatNumber(THREE.MathUtils.radToDeg(draft.rotationY))}deg`,
       `Scale ${formatNumber(draft.scaleMultiplier)}  Y offset ${formatNumber(draft.yOffset)}`,
-      `Render ${renderSettings ? renderSettings.assetId : selectedObject.worldObject.render?.mode ?? 'primitive'}`,
+      `Render ${draft.assetId ?? renderSettings?.assetId ?? selectedObject.worldObject.render?.mode ?? 'primitive'}`,
       `Snap ${snap}  Edited ${isChangedDraft(selectedObject.worldObject, draft) ? 'yes' : 'no'}`,
-      'Ctrl+S save  Ctrl+O reload  Shift+C copy JSON',
+      'Ctrl+S save active  Ctrl+O reload active  Shift+C copy JSON',
       status,
     ].join('\n');
   };
@@ -1057,9 +1515,9 @@ export const createPlacementEditor = ({
   };
 
   const copyAll = (): void => {
-    void copyText(serializePlacementTransforms(draftsByObjectId, editableObjects))
+    void copyText(getCurrentEditorJson())
       .then((copied) => {
-        status = copied ? 'Copied layout override JSON.' : 'Clipboard unavailable; layout override JSON logged to console.';
+        status = copied ? 'Copied active town editor JSON.' : 'Clipboard unavailable; active JSON logged to console.';
         updateHud();
       })
       .catch(() => {
@@ -1166,17 +1624,103 @@ export const createPlacementEditor = ({
     loadDraftFromStorage();
   };
 
+  const handleLoadActiveButtonClick = (): void => {
+    loadActiveJsonFromStorage();
+  };
+
+  const handleObjectSelectChange = (): void => {
+    const nextIndex = Number(objectSelect.value);
+
+    if (Number.isInteger(nextIndex)) {
+      selectIndex(nextIndex);
+    }
+  };
+
+  const toggleSelectedActive = (): void => {
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (!selectedObject || !draft) {
+      status = 'No selected object to toggle.';
+      updateHud();
+      return;
+    }
+
+    pushUndoSnapshot();
+    draft.active = !draft.active;
+    status = `${selectedObject.id} active ${draft.active ? 'on' : 'off'}.`;
+    applyDraftToScene(selectedObject);
+    updateHud();
+  };
+
+  const applySelectedAsset = (): void => {
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+    const selectedAssetId = assetSelect.value;
+
+    if (!selectedObject || !draft || !selectedAssetId) {
+      status = 'Select an object and asset first.';
+      updateHud();
+      return;
+    }
+
+    pushUndoSnapshot();
+    draft.assetId = selectedAssetId;
+    draft.active = true;
+    status = `Assigned ${selectedAssetId} to ${selectedObject.id}.`;
+    applyDraftToScene(selectedObject);
+    updateHud();
+  };
+
+  const clearSelectedAsset = (): void => {
+    const selectedObject = getSelectedObject();
+    const draft = getSelectedDraft();
+
+    if (!selectedObject || !draft) {
+      status = 'No selected object to switch to primitive.';
+      updateHud();
+      return;
+    }
+
+    pushUndoSnapshot();
+    draft.assetId = null;
+    status = `${selectedObject.id} will use its primitive renderer.`;
+    applyDraftToScene(selectedObject);
+    updateHud();
+  };
+
+  const handleOpenJsonFileClick = (): void => {
+    void openJsonFile();
+  };
+
+  const handleSaveJsonFileClick = (): void => {
+    void saveJsonFile();
+  };
+
+  objectSelect.addEventListener('change', handleObjectSelectChange);
+  assetSelect.addEventListener('change', updateHud);
+  toggleActiveButton.addEventListener('click', toggleSelectedActive);
+  applyAssetButton.addEventListener('click', applySelectedAsset);
+  clearAssetButton.addEventListener('click', clearSelectedAsset);
+  saveActiveButton.addEventListener('click', saveActiveJsonToStorage);
+  loadActiveButton.addEventListener('click', handleLoadActiveButtonClick);
   saveDraftButton.addEventListener('click', saveDraftToStorage);
   loadDraftButton.addEventListener('click', handleLoadDraftButtonClick);
   clearDraftButton.addEventListener('click', clearDraftStorage);
   copyJsonButton.addEventListener('click', copyAll);
+  openJsonFileButton.addEventListener('click', handleOpenJsonFileClick);
+  saveJsonFileButton.addEventListener('click', handleSaveJsonFileClick);
   importJsonButton.addEventListener('click', importDraftFromPanel);
   domElement.addEventListener('pointerdown', handlePointerDown);
   domElement.addEventListener('pointermove', updateDragFromPointer);
   domElement.addEventListener('pointerup', stopDragging);
   domElement.addEventListener('pointercancel', stopDragging);
   if (draftPersistenceEnabled) {
-    loadDraftFromStorage(true);
+    if (hasStoredActiveJson()) {
+      loadActiveJsonFromStorage(true);
+    } else {
+      loadDraftFromStorage(true);
+    }
   }
   updateHud();
 
@@ -1219,13 +1763,13 @@ export const createPlacementEditor = ({
         || event.target instanceof HTMLInputElement;
 
       if (event.ctrlKey && key === 's') {
-        saveDraftToStorage();
+        saveActiveJsonToStorage();
         event.preventDefault();
         return true;
       }
 
       if (event.ctrlKey && key === 'o') {
-        loadDraftFromStorage();
+        loadActiveJsonFromStorage();
         event.preventDefault();
         return true;
       }
@@ -1356,10 +1900,19 @@ export const createPlacementEditor = ({
     },
     dispose() {
       resetSceneObjects();
+      objectSelect.removeEventListener('change', handleObjectSelectChange);
+      assetSelect.removeEventListener('change', updateHud);
+      toggleActiveButton.removeEventListener('click', toggleSelectedActive);
+      applyAssetButton.removeEventListener('click', applySelectedAsset);
+      clearAssetButton.removeEventListener('click', clearSelectedAsset);
+      saveActiveButton.removeEventListener('click', saveActiveJsonToStorage);
+      loadActiveButton.removeEventListener('click', handleLoadActiveButtonClick);
       saveDraftButton.removeEventListener('click', saveDraftToStorage);
       loadDraftButton.removeEventListener('click', handleLoadDraftButtonClick);
       clearDraftButton.removeEventListener('click', clearDraftStorage);
       copyJsonButton.removeEventListener('click', copyAll);
+      openJsonFileButton.removeEventListener('click', handleOpenJsonFileClick);
+      saveJsonFileButton.removeEventListener('click', handleSaveJsonFileClick);
       importJsonButton.removeEventListener('click', importDraftFromPanel);
       domElement.removeEventListener('pointerdown', handlePointerDown);
       domElement.removeEventListener('pointermove', updateDragFromPointer);

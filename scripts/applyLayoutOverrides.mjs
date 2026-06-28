@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const editsPath = path.join(repoRoot, 'layout-edits', 'village-layout.json');
 const villageDefinitionPath = path.join(repoRoot, 'src', 'world', 'villageDefinition.ts');
+const assetRegistryPath = path.join(repoRoot, 'src', 'game', 'assets', 'assetRegistry.ts');
 const generatedOutputPath = path.join(repoRoot, 'src', 'world', 'villageOverrides.generated.ts');
 const checkOnly = process.argv.includes('--check');
 const layoutOverrideDocumentVersion = 1;
@@ -14,6 +15,17 @@ const formatRelative = (filePath) => path.relative(repoRoot, filePath).replaceAl
 
 const readKnownObjectIds = () => {
   const source = readFileSync(villageDefinitionPath, 'utf8');
+  const ids = new Set();
+
+  for (const match of source.matchAll(/^\s+id:\s+'([^']+)'/gm)) {
+    ids.add(match[1]);
+  }
+
+  return ids;
+};
+
+const readKnownAssetIds = () => {
+  const source = readFileSync(assetRegistryPath, 'utf8');
   const ids = new Set();
 
   for (const match of source.matchAll(/^\s+id:\s+'([^']+)'/gm)) {
@@ -73,6 +85,10 @@ const validateLayoutDocument = (value, knownObjectIds) => {
       errors.push(`Unknown layout override object id: ${override.id}.`);
     }
 
+    if (override.active !== undefined && typeof override.active !== 'boolean') {
+      errors.push(`Override ${override.id} active must be a boolean.`);
+    }
+
     if (override.position !== undefined && !isFiniteTuple3(override.position)) {
       errors.push(`Override ${override.id} position must be a finite [x, y, z] tuple.`);
     }
@@ -100,10 +116,68 @@ const validateLayoutDocument = (value, knownObjectIds) => {
     }
 
     if (
+      override.dimensions !== undefined
+      && (!isFiniteTuple3(override.dimensions) || !override.dimensions.every((component) => component > 0))
+    ) {
+      errors.push(`Override ${override.id} dimensions must be a positive [x, y, z] tuple.`);
+    }
+
+    if (
+      override.renderMode !== undefined
+      && override.renderMode !== 'primitive'
+      && override.renderMode !== 'asset'
+    ) {
+      errors.push(`Override ${override.id} renderMode must be primitive or asset.`);
+    }
+
+    if (
+      override.assetId !== undefined
+      && (typeof override.assetId !== 'string' || !knownAssetIds.has(override.assetId))
+    ) {
+      errors.push(`Override ${override.id} assetId must reference a known asset.`);
+    }
+
+    if (override.renderMode === 'asset' && typeof override.assetId !== 'string') {
+      errors.push(`Override ${override.id} renderMode asset requires assetId.`);
+    }
+
+    if (
       override.fitMode !== undefined
       && (typeof override.fitMode !== 'string' || !assetFitModes.has(override.fitMode))
     ) {
       errors.push(`Override ${override.id} fitMode must be a valid asset fit mode.`);
+    }
+
+    if (override.collider !== undefined) {
+      if (override.collider !== null && (
+        !isRecord(override.collider)
+        || !isFiniteTuple3(override.collider.position)
+        || !isFiniteTuple3(override.collider.size)
+        || !override.collider.size.every((component) => component > 0)
+      )) {
+        errors.push(`Override ${override.id} collider must be null or include position and positive size tuples.`);
+      }
+    }
+
+    if (override.interactable !== undefined) {
+      if (override.interactable !== null && (
+        !isRecord(override.interactable)
+        || !isFiniteTuple3(override.interactable.position)
+        || typeof override.interactable.radius !== 'number'
+        || !Number.isFinite(override.interactable.radius)
+        || override.interactable.radius <= 0
+      )) {
+        errors.push(`Override ${override.id} interactable must be null or include position and positive radius.`);
+      }
+    }
+
+    if (override.objectiveAnchor !== undefined) {
+      if (override.objectiveAnchor !== null && (
+        !isRecord(override.objectiveAnchor)
+        || !isFiniteTuple3(override.objectiveAnchor.position)
+      )) {
+        errors.push(`Override ${override.id} objectiveAnchor must be null or include a position tuple.`);
+      }
     }
 
     if (
@@ -131,6 +205,7 @@ export const generatedVillageLayoutOverrides: LayoutOverrideDocument = ${JSON.st
 `;
 
 const knownObjectIds = readKnownObjectIds();
+const knownAssetIds = readKnownAssetIds();
 const document = readLayoutDocument();
 
 if (!document) {

@@ -13,6 +13,8 @@ The layout editor is a developer-only tool for tuning the village in the browser
 - Press `F4` to cycle debug detail between hidden, compact, and expanded.
 - Press `F5` to show or hide expanded performance details.
 - Press `F10` to toggle gameplay collision boxes.
+- The Object panel lists editable world objects and their current collision, interactable, objective, and destination data.
+- The Asset panel lists registered runtime GLB assets that are safe to preview.
 
 ## Move Objects
 
@@ -43,10 +45,31 @@ Browser edits are temporary until exported and promoted.
 
 ## Save Draft Edits
 
-- `Ctrl+S`: save current edited transforms to `localStorage`.
-- `Ctrl+O`: reload the saved local draft.
+- `Ctrl+S`: save the active editor JSON to `localStorage`.
+- `Ctrl+O`: reload the active editor JSON from `localStorage`.
 - `Ctrl+Shift+Delete`: clear the saved local draft and in-memory edits.
 - The same actions are available as buttons in the placement HUD.
+- `Save Draft` and `Reload Draft` remain as compatibility buttons for the older draft slot.
+
+## Active JSON
+
+- Active editor JSON is the live layout document used by the browser editor.
+- It can include transform overrides, active/inactive state, and asset preview choices.
+- Click `Save Active JSON` to persist it in `localStorage`.
+- Click `Load Active JSON` to reload it without refreshing the page.
+- Click `Copy JSON` or press `Shift+C` to copy the active JSON.
+- In browsers with the File System Access API, `Open JSON File` and `Save JSON File` can load/save a real `.json` file directly.
+
+Browser file saving is explicit. The editor does not silently write source files.
+
+## Assets And Activity
+
+- Select an object from the Object panel.
+- Click `Toggle Active` to hide or show that object in the live editor.
+- Select a registered asset from the Asset panel.
+- Click `Preview Asset` to load that GLB onto the selected object using the current transform and dimensions.
+- Click `Use Primitive` to clear the asset preview and export a primitive render override.
+- Collision remains authored from the world object data; visual asset previews do not create mesh collision.
 
 ## Drag Placement
 
@@ -61,7 +84,7 @@ Local drafts are loaded on page reload in dev mode. They are not source-controll
 
 ## Export JSON
 
-- `Shift+C`: copy all edited transforms as layout override JSON.
+- `Shift+C`: copy all edited transforms and active editor settings as JSON.
 - Or click `Copy JSON` in the placement HUD.
 - Single-object `C` still copies a TypeScript snippet for quick inspection.
 
@@ -70,23 +93,14 @@ Local drafts are loaded on page reload in dev mode. They are not source-controll
 - Paste layout override JSON into the placement HUD text area.
 - Click `Import JSON`.
 - The editor validates the JSON before applying it.
+
+## Promote To Source
+
+- Save or paste the active editor JSON into `layout-edits/village-layout.json`.
+- Run `npm run layout:check`.
+- Run `npm run layout:apply`.
+- Review `src/world/villageOverrides.generated.ts`.
+- Run validation and commit the generated override file with the layout JSON if the placement is meant to be permanent.
 - Unknown object ids, duplicate ids, invalid tuples, and invalid scale values are rejected.
-
-## Promote Edits Into Source
-
-1. Paste the exported JSON into `layout-edits/village-layout.json`.
-2. Run `npm run layout:check`.
-3. Run `npm run layout:apply`.
-4. Review `src/world/villageOverrides.generated.ts`.
-5. Run validation:
-
-```sh
-npm run typecheck
-npm run smoke
-npm run build
-npm run validate
-```
-
-6. Commit `layout-edits/village-layout.json` and `src/world/villageOverrides.generated.ts` with the gameplay/source changes they support.
 
 The apply script does not rewrite `src/world/villageDefinition.ts`. The base layout stays readable, and generated overrides are merged at runtime.

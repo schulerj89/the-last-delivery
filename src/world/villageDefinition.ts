@@ -441,7 +441,7 @@ export const baseVillageWorldObjects: readonly WorldObjectDefinition[] = [
 export const villageWorldObjects: readonly WorldObjectDefinition[] = mergeWorldObjectOverrides(
   baseVillageWorldObjects,
   generatedVillageLayoutOverrides,
-);
+).filter((worldObject) => worldObject.active !== false);
 
 export const getWorldObject = (id: string): WorldObjectDefinition => {
   const object = villageWorldObjects.find((worldObject) => worldObject.id === id);

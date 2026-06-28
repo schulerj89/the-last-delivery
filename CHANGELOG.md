@@ -2,6 +2,16 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.43.0] - 2026-06-28
+
+### Added
+
+- Expanded the F2 placement editor with object and asset catalog panels for inspecting world object properties, colliders, interactables, objective anchors, mailbox destinations, and registered runtime GLB assets.
+- Added active editor JSON persistence in `localStorage`, copy/import support, and optional browser file-picker open/save controls for explicit `.json` workflows.
+- Added live object active/inactive toggles and selected-asset preview loading through the existing GLB asset manager.
+- Extended layout override JSON validation and promotion to support active state, asset/render choices, dimensions, colliders, interactables, and objective anchors.
+- Added smoke checks for active editor JSON fields, asset id validation, and browser file-picker capability detection.
+
 ## [0.42.0] - 2026-06-28
 
 ### Added

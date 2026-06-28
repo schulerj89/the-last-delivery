@@ -112,6 +112,7 @@ import {
 } from '../src/world/layoutOverrides';
 import {
   capPlacementHistoryLength,
+  canUseTownEditorFilePicker,
   createLayoutOverrideDocumentFromPlacementDrafts,
   createDraggedPlacementPosition,
   createEditablePlacementObjects,
@@ -609,11 +610,24 @@ const runLayoutOverrideSmoke = (): void => {
     overrides: [
       {
         id: 'delivery-board',
+        active: true,
         position: [-3.25, 0, 7.25],
         rotation: [0, Math.PI / 2, 0],
         scaleMultiplier: 1.1,
         yOffset: 0.15,
         fitMode: 'contain',
+        dimensions: [1.9, 1.8, 0.5],
+        collider: {
+          position: [-3.25, 0.9, 7.25],
+          size: [1.9, 1.8, 0.5],
+        },
+        updatedAt: '2026-06-28T00:00:00.000Z',
+      },
+      {
+        id: 'crate-large',
+        active: false,
+        renderMode: 'asset',
+        assetId: 'fantasy-box-001',
         updatedAt: '2026-06-28T00:00:00.000Z',
       },
     ],
@@ -635,6 +649,27 @@ const runLayoutOverrideSmoke = (): void => {
     }, knownObjectIds).ok,
     'Duplicate layout override ids should be rejected.',
   );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...validDocument,
+      overrides: [{ id: 'delivery-board', active: 'yes' }],
+    }, knownObjectIds).ok,
+    'Invalid active flags should be rejected.',
+  );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...validDocument,
+      overrides: [{ id: 'delivery-board', renderMode: 'asset' }],
+    }, knownObjectIds).ok,
+    'Asset render overrides should require an asset id.',
+  );
+  assert(
+    !validateLayoutOverrideDocument({
+      ...validDocument,
+      overrides: [{ id: 'delivery-board', assetId: 'missing-asset' }],
+    }, knownObjectIds).ok,
+    'Unknown asset ids should be rejected.',
+  );
 
   const serializedDocument = serializeLayoutOverrideDocument(validDocument);
   const parsedDocument = parseLayoutOverrideJson(serializedDocument, knownObjectIds);
@@ -652,6 +687,7 @@ const runLayoutOverrideSmoke = (): void => {
   const generatedValidation = validateLayoutOverrideDocument(generatedVillageLayoutOverrides, knownObjectIds);
   const baseBoard = baseVillageWorldObjects.find((object) => object.id === 'delivery-board');
   const overriddenBoard = overriddenMerged.find((object) => object.id === 'delivery-board');
+  const overriddenCrate = overriddenMerged.find((object) => object.id === 'crate-large');
   const boardDeltaX = (validDocument.overrides[0].position?.[0] ?? 0) - (baseBoard?.position[0] ?? 0);
 
   assert(generatedValidation.ok, 'Generated village layout overrides should validate against known object ids.');
@@ -664,6 +700,10 @@ const runLayoutOverrideSmoke = (): void => {
   assert(generatedMerged.length === baseVillageWorldObjects.length, 'Generated overrides should merge without changing object count.');
   assert(overriddenMerged.length === baseVillageWorldObjects.length, 'Layout overrides should merge without changing object count.');
   assert(overriddenBoard?.position[0] === -3.25, 'Merged overrides should update object position.');
+  assert(overriddenBoard?.dimensions?.[0] === 1.9, 'Merged overrides should update dimensions.');
+  assert(overriddenBoard?.collider?.size[0] === 1.9, 'Merged overrides should update collider data.');
+  assert(overriddenCrate?.active === false, 'Merged overrides should preserve inactive state.');
+  assert(overriddenCrate?.render?.mode === 'asset' && overriddenCrate.render.assetId === 'fantasy-box-001', 'Merged overrides should update asset render choices.');
   assert(
     Math.abs((overriddenBoard?.interactable?.position[0] ?? 0) - ((baseBoard?.interactable?.position[0] ?? 0) + boardDeltaX)) < 0.001,
     'Merged position overrides should move interactable anchors by delta.',
@@ -678,10 +718,12 @@ const runLayoutOverrideSmoke = (): void => {
   }
 
   const draft = createPlacementTransformDraft(deliveryBoard.worldObject);
+  draft.active = false;
   draft.position = [-3.25, 0, 7.25];
   draft.rotationY = Math.PI / 2;
   draft.scaleMultiplier = 1.1;
   draft.yOffset = 0.15;
+  draft.assetId = 'fantasy-pointer-001';
 
   const draftDocument = createLayoutOverrideDocumentFromPlacementDrafts(
     new Map([[deliveryBoard.id, draft]]),
@@ -691,9 +733,19 @@ const runLayoutOverrideSmoke = (): void => {
 
   assert(draftDocument.overrides.length === 1, 'Placement drafts should create layout override JSON.');
   assert(draftDocument.overrides[0]?.id === 'delivery-board', 'Placement draft JSON should include object id.');
+  assert(draftDocument.overrides[0]?.active === false, 'Placement draft JSON should include active state changes.');
+  assert(draftDocument.overrides[0]?.assetId === 'fantasy-pointer-001', 'Placement draft JSON should include asset choices.');
   assert(
     validateLayoutOverrideDocument(draftDocument, knownObjectIds).ok,
     'Placement draft JSON should validate against known world objects.',
+  );
+  assert(!canUseTownEditorFilePicker({}), 'Town editor file picker detection should fail safely.');
+  assert(
+    canUseTownEditorFilePicker({
+      showOpenFilePicker: () => Promise.resolve([]),
+      showSaveFilePicker: () => Promise.reject(new Error('not used')),
+    }),
+    'Town editor file picker detection should accept supported browser APIs.',
   );
 };
 

@@ -1,17 +1,29 @@
 import type * as THREE from 'three';
 import type { AssetFitMode } from '../game/assets';
-import { isAssetFitMode } from '../game/assets';
-import type { WorldObjectDefinition } from './types';
+import { isAssetFitMode, isKnownAssetId } from '../game/assets';
+import type {
+  WorldColliderDefinition,
+  WorldInteractableDefinition,
+  WorldObjectDefinition,
+  WorldObjectiveAnchorDefinition,
+} from './types';
 
 export const layoutOverrideDocumentVersion = 1;
 
 export interface LayoutTransformOverride {
   id: string;
+  active?: boolean;
   position?: THREE.Vector3Tuple;
   rotation?: THREE.Vector3Tuple;
   scaleMultiplier?: number;
   yOffset?: number;
   fitMode?: AssetFitMode;
+  dimensions?: THREE.Vector3Tuple;
+  renderMode?: 'primitive' | 'asset';
+  assetId?: string;
+  collider?: WorldColliderDefinition | null;
+  interactable?: WorldInteractableDefinition | null;
+  objectiveAnchor?: WorldObjectiveAnchorDefinition | null;
   updatedAt?: string;
 }
 
@@ -38,6 +50,26 @@ const isFiniteVector3Tuple = (value: unknown): value is THREE.Vector3Tuple => (
 );
 
 const cloneTuple = (value: THREE.Vector3Tuple): THREE.Vector3Tuple => [value[0], value[1], value[2]];
+
+const cloneCollider = (
+  collider: WorldColliderDefinition,
+): WorldColliderDefinition => ({
+  position: cloneTuple(collider.position),
+  size: cloneTuple(collider.size),
+});
+
+const cloneInteractable = (
+  interactable: WorldInteractableDefinition,
+): WorldInteractableDefinition => ({
+  position: cloneTuple(interactable.position),
+  radius: interactable.radius,
+});
+
+const cloneObjectiveAnchor = (
+  objectiveAnchor: WorldObjectiveAnchorDefinition,
+): WorldObjectiveAnchorDefinition => ({
+  position: cloneTuple(objectiveAnchor.position),
+});
 
 const addDelta = (
   value: THREE.Vector3Tuple,
@@ -117,6 +149,14 @@ export const validateLayoutOverrideDocument = (
 
       const override: LayoutTransformOverride = { id };
 
+      if (entry.active !== undefined) {
+        if (typeof entry.active === 'boolean') {
+          override.active = entry.active;
+        } else {
+          errors.push(`Override ${id} active must be a boolean.`);
+        }
+      }
+
       if (entry.position !== undefined) {
         if (isFiniteVector3Tuple(entry.position)) {
           override.position = cloneTuple(entry.position);
@@ -154,6 +194,86 @@ export const validateLayoutOverrideDocument = (
           override.fitMode = entry.fitMode;
         } else {
           errors.push(`Override ${id} fitMode must be a valid asset fit mode.`);
+        }
+      }
+
+      if (entry.dimensions !== undefined) {
+        if (isFiniteVector3Tuple(entry.dimensions) && entry.dimensions.every((component) => component > 0)) {
+          override.dimensions = cloneTuple(entry.dimensions);
+        } else {
+          errors.push(`Override ${id} dimensions must be a positive [x, y, z] tuple.`);
+        }
+      }
+
+      if (entry.renderMode !== undefined) {
+        if (entry.renderMode === 'primitive' || entry.renderMode === 'asset') {
+          override.renderMode = entry.renderMode;
+        } else {
+          errors.push(`Override ${id} renderMode must be primitive or asset.`);
+        }
+      }
+
+      if (entry.assetId !== undefined) {
+        if (typeof entry.assetId === 'string' && isKnownAssetId(entry.assetId)) {
+          override.assetId = entry.assetId;
+        } else {
+          errors.push(`Override ${id} assetId must reference a known asset.`);
+        }
+      }
+
+      if (entry.renderMode === 'asset' && typeof entry.assetId !== 'string') {
+        errors.push(`Override ${id} renderMode asset requires assetId.`);
+      }
+
+      if (entry.collider !== undefined) {
+        if (entry.collider === null) {
+          override.collider = null;
+        } else if (
+          isRecord(entry.collider)
+          && isFiniteVector3Tuple(entry.collider.position)
+          && isFiniteVector3Tuple(entry.collider.size)
+          && entry.collider.size.every((component) => component > 0)
+        ) {
+          override.collider = {
+            position: cloneTuple(entry.collider.position),
+            size: cloneTuple(entry.collider.size),
+          };
+        } else {
+          errors.push(`Override ${id} collider must be null or include position and positive size tuples.`);
+        }
+      }
+
+      if (entry.interactable !== undefined) {
+        if (entry.interactable === null) {
+          override.interactable = null;
+        } else if (
+          isRecord(entry.interactable)
+          && isFiniteVector3Tuple(entry.interactable.position)
+          && typeof entry.interactable.radius === 'number'
+          && Number.isFinite(entry.interactable.radius)
+          && entry.interactable.radius > 0
+        ) {
+          override.interactable = {
+            position: cloneTuple(entry.interactable.position),
+            radius: entry.interactable.radius,
+          };
+        } else {
+          errors.push(`Override ${id} interactable must be null or include position and positive radius.`);
+        }
+      }
+
+      if (entry.objectiveAnchor !== undefined) {
+        if (entry.objectiveAnchor === null) {
+          override.objectiveAnchor = null;
+        } else if (
+          isRecord(entry.objectiveAnchor)
+          && isFiniteVector3Tuple(entry.objectiveAnchor.position)
+        ) {
+          override.objectiveAnchor = {
+            position: cloneTuple(entry.objectiveAnchor.position),
+          };
+        } else {
+          errors.push(`Override ${id} objectiveAnchor must be null or include a position tuple.`);
         }
       }
 
@@ -241,6 +361,10 @@ export const mergeWorldObjectOverrides = (
 
     const nextObject = cloneWorldObject(object);
 
+    if (override.active !== undefined) {
+      nextObject.active = override.active;
+    }
+
     if (override.position) {
       const delta: THREE.Vector3Tuple = [
         override.position[0] - object.position[0],
@@ -263,6 +387,10 @@ export const mergeWorldObjectOverrides = (
       }
     }
 
+    if (override.dimensions) {
+      nextObject.dimensions = cloneTuple(override.dimensions);
+    }
+
     if (override.rotation) {
       nextObject.rotation = cloneTuple(override.rotation);
 
@@ -270,6 +398,24 @@ export const mergeWorldObjectOverrides = (
         nextObject.render = {
           ...nextObject.render,
           rotation: cloneTuple(override.rotation),
+        };
+      }
+    }
+
+    if (override.renderMode === 'primitive') {
+      nextObject.render = { mode: 'primitive' };
+    } else if (override.assetId !== undefined || override.renderMode === 'asset') {
+      const currentAssetRender = nextObject.render?.mode === 'asset' ? nextObject.render : undefined;
+      const assetId = override.assetId ?? currentAssetRender?.assetId;
+
+      if (assetId) {
+        nextObject.render = {
+          mode: 'asset',
+          assetId,
+          scaleMultiplier: currentAssetRender?.scaleMultiplier,
+          yOffset: currentAssetRender?.yOffset,
+          rotation: currentAssetRender?.rotation,
+          fitMode: currentAssetRender?.fitMode,
         };
       }
     }
@@ -289,6 +435,18 @@ export const mergeWorldObjectOverrides = (
           yOffset: override.yOffset ?? nextObject.layoutTransform?.yOffset,
         };
       }
+    }
+
+    if (override.collider !== undefined) {
+      nextObject.collider = override.collider === null ? undefined : cloneCollider(override.collider);
+    }
+
+    if (override.interactable !== undefined) {
+      nextObject.interactable = override.interactable === null ? undefined : cloneInteractable(override.interactable);
+    }
+
+    if (override.objectiveAnchor !== undefined) {
+      nextObject.objectiveAnchor = override.objectiveAnchor === null ? undefined : cloneObjectiveAnchor(override.objectiveAnchor);
     }
 
     return nextObject;
