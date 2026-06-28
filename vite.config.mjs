@@ -10,6 +10,7 @@ export default defineConfig({
       input: {
         main: resolve(rootDir, 'index.html'),
         animationHarness: resolve(rootDir, 'animation-harness.html'),
+        townEditor: resolve(rootDir, 'town-editor.html'),
       },
     },
   },

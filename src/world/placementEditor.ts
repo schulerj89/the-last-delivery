@@ -75,6 +75,12 @@ export interface PlacementEditor {
   update(deltaSeconds: number): void;
   handleKeyDown(event: KeyboardEvent): boolean;
   handleKeyUp(event: KeyboardEvent): boolean;
+  placeObjectAt(
+    objectId: string,
+    groundPosition: THREE.Vector3Tuple,
+    options?: { assetId?: string | null; select?: boolean },
+  ): boolean;
+  getEditableObjects(): readonly EditablePlacementObject[];
   getSelectedObjectId(): string | null;
   dispose(): void;
 }
@@ -1746,6 +1752,43 @@ export const createPlacementEditor = ({
     return nearestIndex;
   };
 
+  const placeObjectAt = (
+    objectId: string,
+    groundPosition: THREE.Vector3Tuple,
+    options: { assetId?: string | null; select?: boolean } = {},
+  ): boolean => {
+    const editableObject = editableObjectsById.get(objectId);
+
+    if (!editableObject) {
+      status = `No editable object slot found for ${objectId}.`;
+      updateHud();
+      return false;
+    }
+
+    const nextIndex = editableObjects.findIndex((object) => object.id === objectId);
+
+    if (nextIndex >= 0 && options.select !== false) {
+      selectedIndex = nextIndex;
+      objectSelect.value = String(nextIndex);
+    }
+
+    pushUndoSnapshot();
+    const draft = draftsByObjectId.get(objectId) ?? createPlacementTransformDraft(editableObject.worldObject);
+    draft.active = true;
+    draft.position = [groundPosition[0], draft.position[1], groundPosition[2]];
+
+    if (options.assetId !== undefined) {
+      draft.assetId = options.assetId;
+    }
+
+    draftsByObjectId.set(objectId, draft);
+    status = `Placed ${objectId}${options.assetId ? ` with ${options.assetId}` : ''}.`;
+    applyDraftToScene(editableObject);
+    updateMarker();
+    updateHud();
+    return true;
+  };
+
   const nudgeSelected = (dx: number, dz: number, recordHistory = true): void => {
     const selectedObject = getSelectedObject();
     const draft = getSelectedDraft();
@@ -2282,6 +2325,10 @@ export const createPlacementEditor = ({
       }
 
       return isMovementKey(key) || key === 'Shift' || key === 'Alt';
+    },
+    placeObjectAt,
+    getEditableObjects() {
+      return editableObjects;
     },
     getSelectedObjectId() {
       return getSelectedObject()?.id ?? null;

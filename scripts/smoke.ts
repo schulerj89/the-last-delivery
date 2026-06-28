@@ -168,6 +168,11 @@ import {
   isWorldGameplayRole,
   isWorldInteractionAction,
 } from '../src/world/worldObjectGameplay';
+import {
+  getTownEditorAssetPaletteItems,
+  getTownEditorGeneratedPaletteItems,
+  resolveTownEditorPlacementCandidate,
+} from '../src/world/townEditorCatalog';
 
 function assert(condition: boolean, message: string): asserts condition {
   if (!condition) {
@@ -642,6 +647,48 @@ const runAnimationHarnessSmoke = (): void => {
   assert(
     viteConfig.includes('animation-harness.html'),
     'Vite build config should include the animation harness HTML entry.',
+  );
+};
+
+const runTownEditorRouteSmoke = (): void => {
+  const townEditorHtmlUrl = new URL('../town-editor.html', import.meta.url);
+  const townEditorScriptUrl = new URL('../src/townEditor.ts', import.meta.url);
+  const townEditorCssUrl = new URL('../src/townEditor.css', import.meta.url);
+  const viteConfigUrl = new URL('../vite.config.mjs', import.meta.url);
+
+  assert(nodeFileSystem.existsSync(townEditorHtmlUrl), 'Town editor HTML route should exist.');
+  assert(nodeFileSystem.existsSync(townEditorScriptUrl), 'Town editor script should exist.');
+  assert(nodeFileSystem.existsSync(townEditorCssUrl), 'Town editor styles should exist.');
+
+  const townEditorHtml = nodeFileSystem.readFileSync(townEditorHtmlUrl, 'utf8');
+  const townEditorScript = nodeFileSystem.readFileSync(townEditorScriptUrl, 'utf8');
+  const viteConfig = nodeFileSystem.readFileSync(viteConfigUrl, 'utf8');
+  const editableObjects = createEditablePlacementObjects();
+  const generatedItems = getTownEditorGeneratedPaletteItems(editableObjects);
+  const assetItems = getTownEditorAssetPaletteItems(editableObjects);
+  const pavementItem = generatedItems.find((item) => item.id === 'pavement-tile-square');
+  const crateItem = assetItems.find((item) => item.id === 'fantasy-box-001');
+
+  assert(townEditorHtml.includes('/src/townEditor.ts'), 'Town editor route should load the isolated editor entry.');
+  assert(townEditorScript.includes('createPlacementEditor'), 'Town editor should reuse the placement editor workflow.');
+  assert(townEditorScript.includes('renderAuthoredWorldObjects: false'), 'Town editor should open on the clean playground canvas.');
+  assert(viteConfig.includes('town-editor.html'), 'Vite build config should include the town editor HTML entry.');
+  assert(generatedItems.length > 0, 'Town editor generated palette should initialize.');
+  assert(assetItems.length > 0, 'Town editor asset palette should initialize.');
+  assert(pavementItem !== undefined && pavementItem.placeable, 'Town editor should expose draggable pavement squares.');
+  assert(crateItem !== undefined && crateItem.placeable, 'Town editor should expose draggable fantasy crate assets.');
+  assert(crateItem.candidateObjectIds.includes('crate-large'), 'Fantasy crate asset should map to an editable crate slot.');
+  assert(
+    !assetItems.some((item) => item.id === playerCharacterAssetId || item.source === 'creative-characters-free'),
+    'Town editor asset palette should not offer the courier character as a placeable prop.',
+  );
+  assert(
+    resolveTownEditorPlacementCandidate(crateItem, 0) !== null,
+    'Town editor should resolve an initial placement candidate.',
+  );
+  assert(
+    resolveTownEditorPlacementCandidate({ ...crateItem, placeable: false }, 0) === null,
+    'Town editor should safely reject unplaceable palette items.',
   );
 };
 
@@ -1875,6 +1922,7 @@ await runAssetCacheSmoke();
 runAssetFittingSmoke();
 runVisualPolishSmoke();
 runAnimationHarnessSmoke();
+runTownEditorRouteSmoke();
 runLayoutOverrideSmoke();
 runWorldDefinitionSmoke();
 runVillageLayoutConfigSmoke();

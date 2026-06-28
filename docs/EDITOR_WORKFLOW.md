@@ -2,6 +2,17 @@
 
 The layout editor is a developer-only tool for tuning the village in the browser and promoting the result back into source control.
 
+## Standalone Town Builder
+
+- Run `npm run dev`.
+- Open `/town-editor.html`.
+- Use the left asset shelf to browse generated ground pieces and selected runtime GLB assets.
+- Drag an asset square onto the grass to place it into an editable world-object slot.
+- Use the search box to filter the asset shelf.
+- Use the placement HUD to fine tune position, rotation, scale, Y offset, gameplay role, action, destination, and JSON import/export.
+- The standalone builder starts on the clean playground canvas with grass and fence only, so authored village objects do not clutter the initial view.
+- Asset squares reuse existing editable object slots. If an asset says it has no slot, add or repurpose an authored world object before it can be placed permanently.
+
 ## Enter Layout Mode
 
 - Run `npm run dev`.

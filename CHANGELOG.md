@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.48.0] - 2026-06-28
+
+### Added
+
+- Added a standalone `/town-editor.html` builder route with a left-side asset shelf for dragging generated ground pieces and selected runtime GLB assets into the clean playground.
+- Added a town editor catalog that maps palette asset cards to editable world-object slots while keeping the courier character out of prop placement.
+- Added placement editor APIs for external drag/drop placement and editable object inspection.
+- Added smoke coverage for the standalone town editor route, Vite build input, palette initialization, and draggable slot resolution.
+
+### Changed
+
+- Documented the standalone town builder workflow alongside the existing in-game F2 layout editor.
+
 ## [0.47.0] - 2026-06-28
 
 ### Added
