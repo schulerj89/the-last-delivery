@@ -9,6 +9,7 @@ import { createPlaygroundInteractables } from '../src/world/playgroundInteractab
 import {
   createDeliveryBoardObjectiveMarker,
   createDeliveryTargetObjectiveMarker,
+  objectiveMarkerSettings,
   resolveObjectiveAnchorForWorldObject,
   setObjectiveMarkerTarget,
   updateObjectiveMarker,
@@ -69,6 +70,7 @@ const runWorldDefinitionSmoke = (): void => {
     assert(target.interactable !== undefined, `Delivery job target should be interactable: ${job.id}`);
     assert(target.objectiveAnchor !== undefined, `Delivery job target should have an objective anchor: ${job.id}`);
     assert(job.destinationName.trim().length > 0, `Delivery job should have a destination name: ${job.id}`);
+    assert(job.destinationName.includes('House Mailbox'), `Delivery job destination should be player-readable: ${job.id}`);
     assert(job.description.trim().length > 0, `Delivery job should have a description: ${job.id}`);
     assert(Number.isFinite(job.reward) && job.reward > 0, `Delivery job reward should be positive: ${job.id}`);
   });
@@ -183,6 +185,10 @@ const runModuleSmoke = (): void => {
   const playground = createPlayground();
   assert(playground.name === 'village:square-blockout', 'Village square blockout should initialize.');
   assert(playground.children.length > 20, 'Village square should include primitive blockout children.');
+  assert(playground.getObjectByName('village:label-post-office') !== undefined, 'Post office label sign should initialize.');
+  assert(playground.getObjectByName('village:label-blue-house') !== undefined, 'Blue house label sign should initialize.');
+  assert(playground.getObjectByName('village:label-red-house') !== undefined, 'Red house label sign should initialize.');
+  assert(playground.getObjectByName('village:label-side-path') !== undefined, 'Side path label sign should initialize.');
 
   const resolved = resolvePlayerCollision(
     new Vector3(99, 0, 99),
@@ -196,6 +202,8 @@ const runModuleSmoke = (): void => {
   const marker = createDeliveryTargetObjectiveMarker();
   assert(marker.name === 'objective:delivery-target', 'Delivery target objective marker should initialize.');
   assert(marker.visible === false, 'Delivery target objective marker should start hidden.');
+  assert(marker.getObjectByName('objective:delivery-target:halo') !== undefined, 'Delivery target objective marker should include a readable halo.');
+  assert(objectiveMarkerSettings.bobAmplitude >= 0.1, 'Objective marker bob should be readable from distance.');
   assert(resolveObjectiveAnchorForWorldObject(deliveryJobs[0].targetWorldObjectId).length === 3, 'Objective marker should resolve active target anchors.');
   assert(setObjectiveMarkerTarget(marker, deliveryJobs[0].targetWorldObjectId), 'Objective marker should accept an active target.');
   assert(marker.userData.targetWorldObjectId === deliveryJobs[0].targetWorldObjectId, 'Objective marker should track target object id.');

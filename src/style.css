@@ -63,13 +63,31 @@ canvas {
 }
 
 .interaction-message {
-  top: 28px;
+  top: 58px;
   border-color: rgb(124 242 207 / 52%);
 }
 
 .interaction-prompt[hidden],
 .interaction-message[hidden] {
   display: none;
+}
+
+.delivery-guidance {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-sizing: border-box;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 8px 14px;
+  color: #16191f;
+  background: #f0ca72;
+  border: 1px solid rgb(255 255 255 / 48%);
+  border-radius: 4px;
+  box-shadow: 0 8px 18px rgb(0 0 0 / 24%);
+  font: 700 14px/1.25 Arial, sans-serif;
+  text-align: center;
+  pointer-events: none;
 }
 
 .delivery-board-overlay {

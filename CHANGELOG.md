@@ -2,6 +2,19 @@
 
 All notable changes to The Last Delivery will be documented in this file.
 
+## [0.16.0] - 2026-06-28
+
+### Added
+
+- Added simple village sign labels for the post office, blue house, red house, and side path.
+- Added a player-facing active destination guidance line.
+- Added smoke checks for village labels, clearer delivery destination names, and objective marker readability.
+
+### Changed
+
+- Improved house, path, mailbox, and interactable color separation for village readability.
+- Enlarged the objective marker with a halo and stronger bobbing so active targets read from farther away.
+
 ## [0.15.0] - 2026-06-28
 
 ### Added

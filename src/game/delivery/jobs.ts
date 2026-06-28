@@ -4,8 +4,8 @@ export const deliveryJobs: readonly DeliveryJob[] = [
   {
     id: 'west-cottage-letter',
     title: 'West Cottage Letter',
-    destinationName: 'West cottage',
-    description: 'Drop the first letter at the blue mailbox near the west cottage.',
+    destinationName: 'Blue House Mailbox',
+    description: 'Drop the first letter at the blue house mailbox.',
     targetInteractableId: 'mailbox',
     targetWorldObjectId: 'mailbox',
     reward: 10,
@@ -13,8 +13,8 @@ export const deliveryJobs: readonly DeliveryJob[] = [
   {
     id: 'east-mailbox-parcel',
     title: 'East Mailbox Parcel',
-    destinationName: 'East cottage',
-    description: 'Take a small parcel to the mailbox beside the east cottage.',
+    destinationName: 'Red House Mailbox',
+    description: 'Take a small parcel to the red house mailbox.',
     targetInteractableId: 'mailbox-east',
     targetWorldObjectId: 'mailbox-east',
     reward: 14,
@@ -22,8 +22,8 @@ export const deliveryJobs: readonly DeliveryJob[] = [
   {
     id: 'west-cottage-notice',
     title: 'West Cottage Notice',
-    destinationName: 'West cottage',
-    description: 'Return to the west cottage mailbox with the village notice.',
+    destinationName: 'Blue House Mailbox',
+    description: 'Return to the blue house mailbox with the village notice.',
     targetInteractableId: 'mailbox',
     targetWorldObjectId: 'mailbox',
     reward: 8,

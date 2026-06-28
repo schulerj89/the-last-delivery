@@ -15,19 +15,27 @@ const fencePostThickness = 0.18;
 
 const materials = {
   ground: new THREE.MeshStandardMaterial({ color: 0x38473d, roughness: 0.9 }),
-  path: new THREE.MeshStandardMaterial({ color: 0x8a7861, roughness: 0.95 }),
+  path: new THREE.MeshStandardMaterial({ color: 0xb59668, roughness: 0.95 }),
+  sidePath: new THREE.MeshStandardMaterial({ color: 0x6f958e, roughness: 0.95 }),
+  pathEdge: new THREE.MeshStandardMaterial({ color: 0xe7d3a1, roughness: 0.9 }),
   fence: new THREE.MeshStandardMaterial({ color: 0x8d7657, roughness: 0.75 }),
   crate: new THREE.MeshStandardMaterial({ color: 0x9a6435, roughness: 0.85 }),
   crateStrap: new THREE.MeshStandardMaterial({ color: 0x5a3826, roughness: 0.8 }),
   barrel: new THREE.MeshStandardMaterial({ color: 0x7c4f34, roughness: 0.82 }),
   rock: new THREE.MeshStandardMaterial({ color: 0x68716d, roughness: 0.9 }),
   houseWall: new THREE.MeshStandardMaterial({ color: 0xb9a178, roughness: 0.85 }),
+  houseWallBlue: new THREE.MeshStandardMaterial({ color: 0x4f88b8, roughness: 0.82 }),
+  houseWallRed: new THREE.MeshStandardMaterial({ color: 0xb35d52, roughness: 0.82 }),
+  houseWallGreen: new THREE.MeshStandardMaterial({ color: 0x7b9b68, roughness: 0.84 }),
   houseRoof: new THREE.MeshStandardMaterial({ color: 0x6d3d35, roughness: 0.8 }),
+  houseRoofBlue: new THREE.MeshStandardMaterial({ color: 0x2b4f6d, roughness: 0.8 }),
+  houseRoofRed: new THREE.MeshStandardMaterial({ color: 0x6f2f2b, roughness: 0.8 }),
+  houseRoofGreen: new THREE.MeshStandardMaterial({ color: 0x3f5b3e, roughness: 0.82 }),
   houseDoor: new THREE.MeshStandardMaterial({ color: 0x4f3428, roughness: 0.75 }),
   houseWindow: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, roughness: 0.45 }),
   wellStone: new THREE.MeshStandardMaterial({ color: 0x7a827d, roughness: 0.9 }),
   wellWater: new THREE.MeshStandardMaterial({ color: 0x347da3, roughness: 0.45 }),
-  mailbox: new THREE.MeshStandardMaterial({ color: 0x2d7bc0, roughness: 0.5 }),
+  mailbox: new THREE.MeshStandardMaterial({ color: 0x1f8eea, roughness: 0.5 }),
   mailboxDoor: new THREE.MeshStandardMaterial({ color: 0x9fd8ff, roughness: 0.45 }),
   mailboxFlag: new THREE.MeshStandardMaterial({ color: 0xe85c42, roughness: 0.45 }),
   board: new THREE.MeshStandardMaterial({ color: 0x164338, roughness: 0.65 }),
@@ -36,6 +44,55 @@ const materials = {
   boardPin: new THREE.MeshStandardMaterial({ color: 0xef5d45, roughness: 0.5 }),
   interactablePad: new THREE.MeshStandardMaterial({ color: 0x3baea3, roughness: 0.8 }),
   spawnPad: new THREE.MeshStandardMaterial({ color: 0xf2d16b, roughness: 0.75 }),
+  signPost: new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 0.78 }),
+  signPanel: new THREE.MeshStandardMaterial({ color: 0xf0ca72, roughness: 0.72 }),
+  signFallback: new THREE.MeshBasicMaterial({ color: 0xf8f2dc }),
+};
+
+interface HouseMaterialSet {
+  wall: THREE.Material;
+  roof: THREE.Material;
+}
+
+const getHouseMaterials = (id: string): HouseMaterialSet => {
+  if (id === 'cottage-west') {
+    return { wall: materials.houseWallBlue, roof: materials.houseRoofBlue };
+  }
+
+  if (id === 'cottage-east') {
+    return { wall: materials.houseWallRed, roof: materials.houseRoofRed };
+  }
+
+  return { wall: materials.houseWallGreen, roof: materials.houseRoofGreen };
+};
+
+const createLabelMaterial = (text: string, accentColor: string): THREE.Material => {
+  if (typeof document === 'undefined') {
+    return materials.signFallback;
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 160;
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    return materials.signFallback;
+  }
+
+  context.fillStyle = '#f8f2dc';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = accentColor;
+  context.fillRect(0, 0, canvas.width, 18);
+  context.fillStyle = '#17201f';
+  context.font = '700 46px Arial';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, canvas.width / 2, canvas.height / 2 + 12, canvas.width - 44);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
 };
 
 const nameObject = <T extends THREE.Object3D>(object: T, name: string): T => {
@@ -241,18 +298,37 @@ const addPathSegment = (
   start: THREE.Vector2,
   end: THREE.Vector2,
   width: number,
+  material: THREE.Material,
 ): void => {
   const delta = new THREE.Vector2().subVectors(end, start);
   const length = delta.length();
   const center = new THREE.Vector2().addVectors(start, end).multiplyScalar(0.5);
   const rotationY = -Math.atan2(delta.y, delta.x);
+  const edgeOffset = new THREE.Vector2(-delta.y, delta.x).normalize().multiplyScalar(width / 2 + 0.05);
 
   addSurface(
     group,
     name,
     [length, 0.04, width],
     [center.x, 0.025, center.y],
-    materials.path,
+    material,
+    rotationY,
+  );
+
+  addSurface(
+    group,
+    `${name}:edge-left`,
+    [length, 0.045, 0.08],
+    [center.x + edgeOffset.x, 0.035, center.y + edgeOffset.y],
+    materials.pathEdge,
+    rotationY,
+  );
+  addSurface(
+    group,
+    `${name}:edge-right`,
+    [length, 0.045, 0.08],
+    [center.x - edgeOffset.x, 0.035, center.y - edgeOffset.y],
+    materials.pathEdge,
     rotationY,
   );
 };
@@ -269,6 +345,7 @@ const addPaths = (group: THREE.Group): void => {
     new THREE.Vector2(mailboxPathPoint[0], mailboxPathPoint[2]),
     new THREE.Vector2(boardPathPoint[0], boardPathPoint[2]),
     1.35,
+    materials.path,
   );
   addPathSegment(
     group,
@@ -276,6 +353,7 @@ const addPaths = (group: THREE.Group): void => {
     new THREE.Vector2(playerSpawnPosition[0], playerSpawnPosition[2]),
     new THREE.Vector2(well.position[0], well.position[2]),
     1.05,
+    materials.sidePath,
   );
 };
 
@@ -284,6 +362,7 @@ const addHouse = (
   name: string,
   position: THREE.Vector2,
   size: THREE.Vector3Tuple,
+  materialSet: HouseMaterialSet,
 ): void => {
   const [width, height, depth] = size;
 
@@ -292,12 +371,12 @@ const addHouse = (
     `${name}:body`,
     size,
     [position.x, height / 2, position.y],
-    materials.houseWall,
+    materialSet.wall,
   );
 
   const roof = new THREE.Mesh(
     new THREE.ConeGeometry(Math.max(width, depth) * 0.72, 0.78, 4),
-    materials.houseRoof,
+    materialSet.roof,
   );
   roof.name = `${name}:roof`;
   roof.userData.label = roof.name;
@@ -337,8 +416,43 @@ const addHouses = (group: THREE.Group): void => {
       `village:${cottage.id}`,
       new THREE.Vector2(cottage.position[0], cottage.position[2]),
       getDimensions(cottage),
+      getHouseMaterials(cottage.id),
     );
   });
+};
+
+const addLabelSign = (
+  group: THREE.Group,
+  name: string,
+  text: string,
+  position: THREE.Vector3Tuple,
+  accentColor: string,
+  rotationY = 0,
+): void => {
+  const sign = nameObject(new THREE.Group(), name);
+  sign.position.set(...position);
+  sign.rotation.y = rotationY;
+
+  addBox(sign, `${name}:post`, [0.12, 1, 0.12], [0, 0.5, 0], materials.signPost);
+  addBox(sign, `${name}:panel`, [1.55, 0.52, 0.08], [0, 1.24, 0], materials.signPanel);
+
+  const label = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.42, 0.42),
+    createLabelMaterial(text, accentColor),
+  );
+  label.name = `${name}:text`;
+  label.userData.label = label.name;
+  label.position.set(0, 1.24, 0.052);
+  sign.add(label);
+
+  group.add(sign);
+};
+
+const addVillageLabels = (group: THREE.Group): void => {
+  addLabelSign(group, 'village:label-post-office', 'Post Office', [4.55, 0, -4.25], '#3baea3');
+  addLabelSign(group, 'village:label-blue-house', 'Blue House', [-4.95, 0, 2.25], '#4f88b8', Math.PI * 0.08);
+  addLabelSign(group, 'village:label-red-house', 'Red House', [5.6, 0, 1], '#b35d52', -Math.PI * 0.12);
+  addLabelSign(group, 'village:label-side-path', 'Side Path', [0.9, 0, -1.05], '#6f958e', -Math.PI * 0.35);
 };
 
 const addPostOffice = (group: THREE.Group): void => {
@@ -501,6 +615,7 @@ export const createPlayground = (): THREE.Group => {
   addVillageProps(playground);
   addMailboxes(playground);
   addDeliveryBoard(playground);
+  addVillageLabels(playground);
 
   return playground;
 };
